@@ -9,6 +9,7 @@ import {
 import AppLayout from "@/layout/app.layout";
 import BaseLayout from "@/layout/base.layout";
 import NotFound from "@/page/errors/NotFound";
+import WorkspaceRedirect from "@/page/workspace/WorkspaceRedirect";
 
 function AppRoutes() {
   return (
@@ -35,6 +36,8 @@ function AppRoutes() {
         {/* Protected Route */}
         <Route path="/" element={<ProtectedRoute />}>
           <Route element={<AppLayout />}>
+            {/* Redirect /workspace to /workspace/:workspaceId */}
+            <Route path="workspace" element={<WorkspaceRedirect />} />
             {protectedRoutePaths.map((route) => (
               <Route
                 key={route.path}

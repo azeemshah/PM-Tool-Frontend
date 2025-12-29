@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
-import GoogleOauthButton from "@/components/auth/google-oauth-button";
 import { useMutation } from "@tanstack/react-query";
 import { registerMutationFn } from "@/lib/api";
+import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
@@ -32,40 +32,38 @@ const SignUp = () => {
   const { mutate, isPending } = useMutation({
     mutationFn: registerMutationFn,
   });
+
   const formSchema = z.object({
-    name: z.string().trim().min(1, {
-      message: "Name is required",
+    firstName: z.string().trim().min(1, { message: 'First name is required' }),
+    lastName: z.string().trim().min(1, { message: 'Last name is required' }),
+    email: z.string().trim().email('Invalid email address').min(1, {
+      message: 'Email is required',
     }),
-    email: z.string().trim().email("Invalid email address").min(1, {
-      message: "Workspace name is required",
-    }),
-    password: z.string().trim().min(1, {
-      message: "Password is required",
-    }),
+    password: z.string().trim().min(8, { message: 'Password is required' }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      email: "",
-      password: "",
+      firstName: '',
+      lastName: '',
+      email: '',
+      password: '',
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate(values, {
-      onSuccess: () => {
-        navigate("/");
+    mutate(values as any, {
+      onSuccess: (data: any) => {
+        if (data?.accessToken) {
+          API.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+        }
+        navigate('/');
       },
-      onError: (error) => {
+      onError: (error: any) => {
         console.log(error);
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
+        toast({ title: 'Error', description: error.message, variant: 'destructive' });
       },
     });
   };
@@ -78,7 +76,7 @@ const SignUp = () => {
           className="flex items-center gap-2 self-center font-medium"
         >
           <Logo />
-          Team Sync.
+          TM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
@@ -94,26 +92,37 @@ const SignUp = () => {
                   <div className="grid gap-6">
                     <div className="grid gap-2">
                       <div className="grid gap-2">
-                        <FormField
-                          control={form.control}
-                          name="name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                                Name
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  placeholder="Joh Doe"
-                                  className="!h-[48px]"
-                                  {...field}
-                                />
-                              </FormControl>
+                        <div className="grid grid-cols-2 gap-2">
+                          <FormField
+                            control={form.control}
+                            name="firstName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="dark:text-[#f1f7feb5] text-sm">First name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="John" className="!h-[48px]" {...field} />
+                                </FormControl>
 
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={form.control}
+                            name="lastName"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="dark:text-[#f1f7feb5] text-sm">Last name</FormLabel>
+                                <FormControl>
+                                  <Input placeholder="Doe" className="!h-[48px]" {...field} />
+                                </FormControl>
+
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
                       </div>
                       <div className="grid gap-2">
                         <FormField

@@ -20,9 +20,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
-import GoogleOauthButton from "@/components/auth/google-oauth-button";
 import { useMutation } from "@tanstack/react-query";
 import { loginMutationFn } from "@/lib/api";
+import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
@@ -58,9 +58,14 @@ const SignIn = () => {
     mutate(values, {
       onSuccess: (data) => {
         const user = data.user;
+        // set Authorization header for subsequent requests
+        if (data.accessToken) {
+          API.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+        }
         console.log(user);
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
-        navigate(decodedUrl || `/workspace/${user.currentWorkspace}`);
+        const workspaceId = user?.currentWorkspace?._id || user?.currentWorkspace;
+        navigate(decodedUrl || (workspaceId ? `/workspace/${workspaceId}` : `/workspace`));
       },
       onError: (error) => {
         toast({
@@ -80,7 +85,7 @@ const SignIn = () => {
           className="flex items-center gap-2 self-center font-medium"
         >
           <Logo />
-          Team Sync.
+          TM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
@@ -94,8 +99,8 @@ const SignIn = () => {
               <Form {...form}>
                 <form onSubmit={form.handleSubmit(onSubmit)}>
                   <div className="grid gap-6">
-                   
-                    
+
+
                     <div className="grid gap-3">
                       <div className="grid gap-2">
                         <FormField

@@ -202,6 +202,23 @@ if (!baseURL) {
     async (error: any) => {
       const { data, status } = error.response || {};
 
+      // Attempt to refresh access token on 401 responses and retry once
+      const originalRequest = error.config;
+      if (status === 401 && !originalRequest?._retry) {
+        originalRequest._retry = true;
+        try {
+          const refreshResp = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+          const accessToken = refreshResp?.data?.accessToken;
+          if (accessToken) {
+            API.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
+            originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
+            return API(originalRequest);
+          }
+        } catch (refreshErr) {
+          // ignore - redirect to login below
+        }
+      }
+
       if (data === "Unauthorized" && status === 401) {
         window.location.href = "/";
       }

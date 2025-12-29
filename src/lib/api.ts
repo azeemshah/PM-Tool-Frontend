@@ -33,10 +33,38 @@ export const loginMutationFn = async (
   return response.data;
 };
 
-export const registerMutationFn = async (data: registerType) =>
-  await API.post("/auth/register", data);
+export const registerMutationFn = async (data: registerType) => {
+  const response = await API.post("/auth/register", data);
+  return response.data;
+};
 
+export const refreshTokenMutationFn = async (): Promise<{ accessToken: string }> => {
+  const response = await API.post('/auth/refresh');
+  return response.data;
+};
+
+export const forgotPasswordMutationFn = async (data: { email: string }) => {
+  const response = await API.post('/auth/forgot-password', data);
+  return response.data;
+};
+
+export const resetPasswordMutationFn = async (data: { token: string; newPassword: string }) => {
+  const response = await API.post('/auth/reset-password', data);
+  return response.data;
+};
+
+export const changePasswordMutationFn = async (data: { currentPassword: string; newPassword: string }) => {
+  const response = await API.post('/auth/change-password', data);
+  return response.data;
+};
 export const logoutMutationFn = async () => await API.post("/auth/logout");
+export const logoutAndClearAuth = async () => {
+  const response = await API.post('/auth/logout');
+  try {
+    delete API.defaults.headers.common['Authorization'];
+  } catch (e) {}
+  return response.data;
+};
 
 export const getCurrentUserQueryFn =
   async (): Promise<CurrentUserResponseType> => {
