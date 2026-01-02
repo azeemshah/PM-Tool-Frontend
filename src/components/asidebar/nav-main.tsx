@@ -43,6 +43,11 @@ export function NavMain() {
       icon: LayoutDashboard,
     },
     {
+      title: "Board",
+      url: `/workspace/${workspaceId}/board`,
+      icon: LayoutDashboard,
+    },
+    {
       title: "Tasks",
       url: `/workspace/${workspaceId}/tasks`,
       icon: CheckCircle,

@@ -14,6 +14,22 @@ export const TaskPriorityEnum = {
 export type TaskStatusEnumType = keyof typeof TaskStatusEnum;
 export type TaskPriorityEnumType = keyof typeof TaskPriorityEnum;
 
+export const SubtaskStatusEnum = {
+  BACKLOG: "BACKLOG",
+  TODO: "TODO",
+  IN_PROGRESS: "IN_PROGRESS",
+  IN_REVIEW: "IN_REVIEW",
+  DONE: "DONE",
+} as const;
+
+export const SubtaskPriorityEnum = {
+  LOW: "LOW",
+  MEDIUM: "MEDIUM",
+  HIGH: "HIGH",
+} as const;
+export type SubtaskStatusEnumType = keyof typeof SubtaskStatusEnum;
+export type SubtaskPriorityEnumType = keyof typeof SubtaskPriorityEnum;
+
 export const Permissions = {
   CREATE_WORKSPACE: "CREATE_WORKSPACE",
   DELETE_WORKSPACE: "DELETE_WORKSPACE",

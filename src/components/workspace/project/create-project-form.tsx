@@ -36,6 +36,7 @@ export default function CreateProjectForm({
   const workspaceId = useWorkspaceId();
 
   const [emoji, setEmoji] = useState("📊");
+  const [openPopover, setOpenPopover] = useState(false);
 
   const { mutate, isPending } = useMutation({
     mutationFn: createProjectMutationFn,
@@ -56,8 +57,10 @@ export default function CreateProjectForm({
     },
   });
 
-  const handleEmojiSelection = (emoji: string) => {
-    setEmoji(emoji);
+  const handleEmojiSelection = (selectedEmoji: string) => {
+    console.log("Emoji selected in form:", selectedEmoji);
+    setEmoji(selectedEmoji);
+    setOpenPopover(false); // Close popover after selection
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
@@ -66,10 +69,11 @@ export default function CreateProjectForm({
       workspaceId,
       data: {
         emoji,
-        ...values,
+        name: values.name || '',
+        description: values.description || '',
       },
     };
-    mutate(payload, {
+    mutate(payload as any, {
       onSuccess: (data) => {
         const project = data.project;
         queryClient.invalidateQueries({
@@ -115,17 +119,20 @@ export default function CreateProjectForm({
               <label className="block text-sm font-medium text-gray-700">
                 Select Emoji
               </label>
-              <Popover>
+              <Popover open={openPopover} onOpenChange={setOpenPopover}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     className="font-normal size-[60px] !p-2 !shadow-none mt-2 items-center rounded-full "
+                    type="button"
                   >
                     <span className="text-4xl">{emoji}</span>
                   </Button>
                 </PopoverTrigger>
-                <PopoverContent align="start" className=" !p-0">
-                  <EmojiPickerComponent onSelectEmoji={handleEmojiSelection} />
+                <PopoverContent align="start" className="!p-0 z-50 pointer-events-auto w-full max-w-sm" style={{ pointerEvents: 'auto', zIndex: 9999 }}>
+                  <div className="pointer-events-auto w-full" style={{ pointerEvents: 'auto' }}>
+                    <EmojiPickerComponent onSelectEmoji={handleEmojiSelection} />
+                  </div>
                 </PopoverContent>
               </Popover>
             </div>

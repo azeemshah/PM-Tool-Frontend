@@ -43,7 +43,7 @@ const ForgotPassword = () => {
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate(values, {
+    mutate({ email: values.email || '' }, {
       onSuccess: () => {
         toast({ title: "Success", description: "If the email exists, a reset link was sent." });
         navigate("/");

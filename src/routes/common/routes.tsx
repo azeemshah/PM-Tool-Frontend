@@ -9,6 +9,8 @@ import Members from "@/page/workspace/Members";
 import ProjectDetails from "@/page/workspace/ProjectDetails";
 import Settings from "@/page/workspace/Settings";
 import Tasks from "@/page/workspace/Tasks";
+import BoardPage from "@/page/workspace/Board";
+import WorkflowPage from "@/page/workspace/Workflow";
 import { AUTH_ROUTES, BASE_ROUTE, PROTECTED_ROUTES } from "./routePaths";
 import InviteUser from "@/page/invite/InviteUser";
 
@@ -23,6 +25,9 @@ export const authenticationRoutePaths = [
 
 export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.WORKSPACE, element: <WorkspaceDashboard /> },
+  { path: PROTECTED_ROUTES.WORKFLOWS, element: <WorkflowPage /> },
+  { path: PROTECTED_ROUTES.BOARD, element: <BoardPage /> },
+  { path: PROTECTED_ROUTES.BOARD_DETAIL, element: <BoardPage /> },
   { path: PROTECTED_ROUTES.TASKS, element: <Tasks /> },
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },

@@ -10,11 +10,16 @@ const usePermissions = (
 
   useEffect(() => {
     if (user && workspace) {
-      const member = workspace.members.find(
-        (member) => member.userId === user._id
-      );
-      if (member) {
+      const members = (workspace as any).members || [];
+      const member = members.find((m: any) => {
+        // member.userId may be object or id string
+        const userId = m?.userId?._id || m?.userId;
+        return userId === user._id;
+      });
+      if (member && member.role) {
         setPermissions(member.role.permissions || []);
+      } else {
+        setPermissions([]);
       }
     }
   }, [user, workspace]);

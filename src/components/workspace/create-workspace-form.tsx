@@ -49,7 +49,7 @@ export default function CreateWorkspaceForm({
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate(values, {
+    mutate({ name: values.name || '', description: values.description || '' } as any, {
       onSuccess: (data) => {
         queryClient.resetQueries({
           queryKey: ["userWorkspaces"],

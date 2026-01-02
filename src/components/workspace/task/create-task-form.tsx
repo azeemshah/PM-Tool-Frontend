@@ -43,10 +43,11 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
 export default function CreateTaskForm(props: {
+  storyId?: string;
   projectId?: string;
   onClose: () => void;
 }) {
-  const { projectId, onClose } = props;
+  const { storyId, projectId, onClose } = props;
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
@@ -102,10 +103,7 @@ export default function CreateTaskForm(props: {
     title: z.string().trim().min(1, {
       message: "Title is required",
     }),
-    description: z.string().trim(),
-    projectId: z.string().trim().min(1, {
-      message: "Project is required",
-    }),
+    description: z.string().trim().optional(),
     status: z.enum(
       Object.values(TaskStatusEnum) as [keyof typeof TaskStatusEnum],
       {
@@ -121,9 +119,8 @@ export default function CreateTaskForm(props: {
     assignedTo: z.string().trim().min(1, {
       message: "AssignedTo is required",
     }),
-    dueDate: z.date({
-      required_error: "A date of birth is required.",
-    }),
+    dueDate: z.date().optional(),
+    projectId: !projectId ? z.string().min(1, { message: "Project is required" }) : z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -131,7 +128,8 @@ export default function CreateTaskForm(props: {
     defaultValues: {
       title: "",
       description: "",
-      projectId: projectId ? projectId : "",
+      dueDate: undefined,
+      projectId: projectId || "",
     },
   });
 
@@ -142,12 +140,15 @@ export default function CreateTaskForm(props: {
   const priorityOptions = transformOptions(taskPriorityList);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (isPending) return;
+    if (isPending || !storyId) return;
     const payload = {
-      workspaceId,
-      projectId: values.projectId,
+      storyId,
       data: {
-        ...values,
+        title: values.title,
+        description: values.description,
+        status: values.status,
+        priority: values.priority,
+        assignedTo: values.assignedTo,
         dueDate: values.dueDate.toISOString(),
       },
     };
@@ -155,11 +156,7 @@ export default function CreateTaskForm(props: {
     mutate(payload, {
       onSuccess: () => {
         queryClient.invalidateQueries({
-          queryKey: ["project-analytics", projectId],
-        });
-
-        queryClient.invalidateQueries({
-          queryKey: ["all-tasks", workspaceId],
+          queryKey: ["tasks", storyId],
         });
 
         toast({
@@ -238,6 +235,55 @@ export default function CreateTaskForm(props: {
                 )}
               />
             </div>
+
+            {/* {ProjectId} */}
+
+            {!projectId && (
+              <div>
+                <FormField
+                  control={form.control}
+                  name="projectId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Project</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select a project" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {isLoading && (
+                            <div className="my-2">
+                              <Loader className="w-4 h-4 place-self-center flex animate-spin" />
+                            </div>
+                          )}
+                          <div
+                            className="w-full max-h-[200px]
+                           overflow-y-auto scrollbar
+                          "
+                          >
+                            {projectOptions?.map((option) => (
+                              <SelectItem
+                                key={option.value}
+                                className="!capitalize cursor-pointer"
+                                value={option.value}
+                              >
+                                {option.label}
+                              </SelectItem>
+                            ))}
+                          </div>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
 
             {/* {ProjectId} */}
 

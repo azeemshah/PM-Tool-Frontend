@@ -2,7 +2,8 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Loader } from "lucide-react";
+import { CalendarIcon, Loader, Trash2, Download } from "lucide-react";
+import { useState } from "react";
 import {
   Form,
   FormControl,
@@ -30,14 +31,17 @@ import { Calendar } from "@/components/ui/calendar";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
-import { editTaskMutationFn } from "@/lib/api";
+import { editTaskMutationFn, deleteTaskAttachment } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { TaskType } from "@/types/api.type";
+import FileUpload from "@/components/ui/file-upload";
 
 export default function EditTaskForm({ task, onClose }: { task: TaskType; onClose: () => void }) {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
+  const [attachments, setAttachments] = useState<string[]>((task as any)?.attachments ?? []);
+  const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
 
   const { mutate, isPending } = useMutation({
     mutationFn: editTaskMutationFn,
@@ -115,6 +119,38 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
         });
       },
     });
+  };
+
+  const handleAttachmentUploaded = (url: string) => {
+    setAttachments((prev) => [...prev, url]);
+    toast({
+      title: "Success",
+      description: "Attachment uploaded successfully",
+      variant: "success",
+    });
+  };
+
+  const handleDeleteAttachment = async (url: string) => {
+    if (!confirm("Are you sure you want to delete this attachment?")) return;
+    
+    setDeletingAttachment(url);
+    try {
+      await deleteTaskAttachment({ taskId: task._id, url });
+      setAttachments((prev) => prev.filter((attachment) => attachment !== url));
+      toast({
+        title: "Success",
+        description: "Attachment deleted successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAttachment(null);
+    }
   };
 
   return (
@@ -213,6 +249,65 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Attachments Section */}
+            <div className="border-t pt-4 mt-4">
+              <FormLabel className="text-base font-semibold mb-3 block">Attachments</FormLabel>
+              
+              {/* Upload Section */}
+              <div className="mb-4">
+                <FileUpload 
+                  type="task" 
+                  id={task._id} 
+                  onUploaded={handleAttachmentUploaded}
+                />
+              </div>
+
+              {/* Attachments List */}
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 mb-2">
+                    {attachments.length} attachment{attachments.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {attachments.map((url, index) => {
+                      const fileName = url.split("/").pop() || `Attachment ${index + 1}`;
+                      return (
+                        <div
+                          key={url}
+                          className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+                        >
+                          <a
+                            href={url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
+                          >
+                            <Download className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate text-sm">{fileName}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteAttachment(url)}
+                            disabled={deletingAttachment === url}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Delete attachment"
+                          >
+                            {deletingAttachment === url ? (
+                              <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No attachments yet</p>
+              )}
+            </div>
 
             <Button type="submit" className="w-full" disabled={isPending}>
               {isPending && <Loader className="animate-spin" />}

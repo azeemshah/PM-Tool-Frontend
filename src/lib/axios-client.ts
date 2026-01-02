@@ -3,6 +3,10 @@ import axios from "axios";
 
 const baseURL = import.meta.env.VITE_API_BASE_URL;
 
+// Kanban boards storage in memory
+let sampleBoards: any[] = [];
+let boardIdCounter = 1;
+
 // Provide either a mock API (when no backend URL) or a real axios instance.
 let API: any;
 
@@ -150,6 +154,21 @@ if (!baseURL) {
         return { data: { message: "local", workspace: { ...sampleWorkspace, members: sampleMembers } } };
       }
 
+      // Kanban boards endpoints (GET)
+      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+        return { data: sampleBoards };
+      }
+
+      if (url.match(/\/kanban\/boards\/[a-zA-Z0-9]+$/)) {
+        const match = url.match(/\/kanban\/boards\/([a-zA-Z0-9]+)$/);
+        const boardId = match ? match[1] : null;
+        const board = sampleBoards.find((b) => b._id === boardId);
+        if (board) {
+          return { data: board };
+        }
+        throw new Error("Board not found");
+      }
+
       // Default fallback
       return { data: {} };
     },
@@ -174,6 +193,21 @@ if (!baseURL) {
       }
       if (url.includes("/member/workspace") && url.includes("/join")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
+      }
+
+      // Kanban: Create board (POST)
+      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+        const newBoard = {
+          _id: `board-${boardIdCounter++}`,
+          name: _data?.name || "New Board",
+          description: _data?.description || "",
+          columns: [],
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        };
+        sampleBoards.push(newBoard);
+        console.log("Board created in mock API:", newBoard);
+        return { data: newBoard };
       }
 
       // Default fallback for POST
@@ -234,3 +268,4 @@ if (!baseURL) {
 }
 
 export default API;
+

@@ -58,9 +58,9 @@ export default function EditWorkspaceForm() {
     if (isPending) return;
     const payload = {
       workspaceId: workspaceId,
-      data: { ...values },
+      data: { name: values.name || '', description: values.description || '' },
     };
-    mutate(payload, {
+    mutate(payload as any, {
       onSuccess: () => {
         queryClient.invalidateQueries({
           queryKey: ["workspace"],

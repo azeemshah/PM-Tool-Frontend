@@ -40,7 +40,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
 
   const handleConfirm = () => {
     mutate(
-      { workspaceId, taskId },
+      taskId,
       {
         onSuccess: (data) => {
           queryClient.invalidateQueries({ queryKey: ["all-tasks", workspaceId] });

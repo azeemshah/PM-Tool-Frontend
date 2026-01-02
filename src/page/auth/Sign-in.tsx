@@ -55,16 +55,18 @@ const SignIn = () => {
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
 
-    mutate(values, {
+    mutate({ email: values.email || '', password: values.password || '' }, {
       onSuccess: (data) => {
         const user = data.user;
         // set Authorization header for subsequent requests
-        if (data.accessToken) {
-          API.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
+        if (data.token) {
+          API.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
         }
         console.log(user);
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
-        const workspaceId = user?.currentWorkspace?._id || user?.currentWorkspace;
+        const workspaceId = typeof user?.currentWorkspace === 'string' 
+          ? user.currentWorkspace 
+          : user?.currentWorkspace?._id;
         navigate(decodedUrl || (workspaceId ? `/workspace/${workspaceId}` : `/workspace`));
       },
       onError: (error) => {
