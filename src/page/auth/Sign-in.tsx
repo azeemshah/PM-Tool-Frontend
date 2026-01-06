@@ -59,8 +59,10 @@ const SignIn = () => {
       onSuccess: (data) => {
         const user = data.user;
         // set Authorization header for subsequent requests
-        if (data.token) {
-          API.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        const bearer = data.accessToken || data.token || data?.access_token;
+        if (bearer) {
+          localStorage.setItem('accessToken', bearer);
+          API.defaults.headers.common['Authorization'] = `Bearer ${bearer}`;
         }
         console.log(user);
         const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;

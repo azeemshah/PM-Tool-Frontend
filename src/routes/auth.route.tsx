@@ -9,13 +9,28 @@ const AuthRoute = () => {
   const user = authData?.user;
 
   const _isAuthRoute = isAuthRoute(location.pathname);
+  const isInviteRoute = location.pathname.includes("/invite/workspace/") && location.pathname.includes("/join");
 
   if (isLoading && !_isAuthRoute) return <DashboardSkeleton />;
 
-  if (!user) return <Outlet />;
+  // For invite routes, allow both logged-in and logged-out users
+  if (isInviteRoute) {
+    return <Outlet />;
+  }
 
-  const workspaceId = user?.currentWorkspace?._id;
-  return <Navigate to={workspaceId ? `workspace/${workspaceId}` : `/workspace`} replace />;
+  // If user is logged in, redirect to workspace
+  if (user) {
+    const workspaceId = user?.currentWorkspace?._id;
+    return <Navigate to={workspaceId ? `workspace/${workspaceId}` : `/workspace`} replace />;
+  }
+
+  // If not logged in and trying to access protected routes, redirect to login
+  if (!user && !_isAuthRoute) {
+    return <Navigate to="/" replace />;
+  }
+
+  // Show login/auth pages
+  return <Outlet />;
 };
 
 export default AuthRoute;

@@ -106,8 +106,41 @@ export const getWorkspaceByIdQueryFn = async (
 export const getMembersInWorkspaceQueryFn = async (
   workspaceId: string
 ): Promise<AllMembersInWorkspaceResponseType> => {
-  const response = await API.get(`/workspace/members/${workspaceId}`);
-  return response.data;
+  try {
+    // Try new NestJS endpoint first
+    const response = await API.get(`/members/workspace/${workspaceId}`);
+    // NestJS returns { statusCode, message, data: { members: [...], roles: [...] } }
+    const data = response.data.data;
+    
+    const members = Array.isArray(data) ? data : (data?.members || []);
+    const roles = data?.roles || [];
+    
+    console.log('Members API response:', { response: response.data, members, roles });
+    
+    return {
+      message: response.data.message || "Members retrieved",
+      members: Array.isArray(members) ? members : [],
+      roles: Array.isArray(roles) ? roles : []
+    };
+  } catch (err: any) {
+    console.error('Members API error:', err);
+    // Fallback to old endpoint
+    if (err?.response?.status === 404) {
+      try {
+        const response = await API.get(`/workspace/members/${workspaceId}`);
+        const members = response.data.members || response.data.data || [];
+        return {
+          message: response.data.message || "Members retrieved",
+          members: Array.isArray(members) ? members : [],
+          roles: response.data.roles || []
+        };
+      } catch {
+        // Return empty members array if both fail
+        return { message: "No members found", members: [], roles: [] };
+      }
+    }
+    throw err;
+  }
 };
 
 export const getWorkspaceAnalyticsQueryFn = async (
@@ -351,9 +384,11 @@ export const changeWorkspaceMemberRoleMutationFn = async ({
   workspaceId,
   data,
 }: ChangeWorkspaceMemberRoleType) => {
+  // Use the members endpoint to update role
+  // data contains: { roleId, memberId }
   const response = await API.put(
-    `/workspace/change/member/role/${workspaceId}`,
-    data
+    `/members/${data.memberId}`,
+    { roleId: data.roleId }
   );
   return response.data;
 };
@@ -376,8 +411,23 @@ export const invitedUserJoinWorkspaceMutationFn = async (
   message: string;
   workspaceId: string;
 }> => {
-  const response = await API.post(`/member/workspace/${iniviteCode}/join`);
-  return response.data;
+  const response = await API.post(`/members/join/${iniviteCode}`);
+  // Handle both response structures: { data: { workspaceId, role } } or nested
+  const responseData = response.data;
+  
+  if (responseData.data?.workspaceId) {
+    // Response has nested data structure
+    return {
+      message: responseData.message || responseData.data.message || 'Successfully joined workspace',
+      workspaceId: responseData.data.workspaceId,
+    };
+  }
+  
+  // Handle flat response structure
+  return {
+    message: responseData.message || 'Successfully joined workspace',
+    workspaceId: responseData.workspaceId,
+  };
 };
 
 //********* */

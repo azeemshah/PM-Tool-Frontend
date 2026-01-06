@@ -14,6 +14,7 @@ import useAuth from "@/hooks/api/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { invitedUserJoinWorkspaceMutationFn } from "@/lib/api";
 import { toast } from "@/hooks/use-toast";
+import { useEffect } from "react";
 
 const InviteUser = () => {
   const navigate = useNavigate();
@@ -22,34 +23,73 @@ const InviteUser = () => {
   const param = useParams();
   const inviteCode = param.inviteCode as string;
 
-  const { data: authData, isPending } = useAuth();
+  const { data: authData, isPending: authLoading } = useAuth();
   const user = authData?.user;
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: invitedUserJoinWorkspaceMutationFn,
   });
 
+  // Auto-join when user is logged in
+  useEffect(() => {
+    if (user && !authLoading && inviteCode) {
+      handleAutoJoin();
+    }
+  }, [user, authLoading, inviteCode]);
+
   const returnUrl = encodeURIComponent(
     `${BASE_ROUTE.INVITE_URL.replace(":inviteCode", inviteCode)}`
   );
 
-  const handleSubmit = (e: { preventDefault: () => void }) => {
-    e.preventDefault();
+  const handleAutoJoin = () => {
+    console.log('🔍 handleAutoJoin called with inviteCode:', inviteCode);
     mutate(inviteCode, {
       onSuccess: (data) => {
-        queryClient.resetQueries({
-          queryKey: ["userWorkspaces"],
-        });
+        console.log('✅ Join successful, data:', data);
+        
+        if (!data?.workspaceId) {
+          console.error('❌ No workspaceId in response:', data);
+          toast({
+            title: "Error",
+            description: "Invalid response structure - workspaceId missing",
+            variant: "destructive",
+          });
+          return;
+        }
+
+        // Refresh relevant queries so UI reflects new membership
+        try {
+          // Invalidate auth user so `currentWorkspace` and workspaces list refresh
+          queryClient.invalidateQueries({ queryKey: ["authUser"] });
+          // Invalidate user's workspaces list
+          queryClient.invalidateQueries({ queryKey: ["userWorkspaces"] });
+          // Invalidate the workspace data (members list)
+          queryClient.invalidateQueries({ queryKey: ["workspace", data.workspaceId] });
+        } catch (e) {
+          console.error('⚠️ Error invalidating queries:', e);
+        }
+
+        toast({ title: "Success", description: "Successfully joined workspace!" });
+
+        console.log('🚀 Navigating to workspace:', `/workspace/${data.workspaceId}`);
+        // Navigate to the joined workspace
         navigate(`/workspace/${data.workspaceId}`);
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        console.error('❌ Join failed with error:', error);
+        console.error('📋 Error response:', error?.response);
         toast({
-          title: "Error",
-          description: error.message,
+          title: "Error Joining Workspace",
+          description: error?.response?.data?.message || error.message || "Failed to join workspace. Please try again.",
           variant: "destructive",
         });
       },
     });
+  };
+
+  const handleSubmit = (e: { preventDefault: () => void }) => {
+    e.preventDefault();
+    handleAutoJoin();
   };
 
   return (
@@ -74,7 +114,7 @@ const InviteUser = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isPending ? (
+              {authLoading || (user && isLoading) ? (
                 <Loader className="!w-11 !h-11 animate-spin place-self-center flex" />
               ) : (
                 <div>

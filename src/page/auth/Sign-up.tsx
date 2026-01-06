@@ -1,4 +1,4 @@
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
@@ -28,6 +28,8 @@ import { Loader } from "lucide-react";
 
 const SignUp = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const returnUrl = searchParams.get("returnUrl");
 
   const { mutate, isPending } = useMutation({
     mutationFn: registerMutationFn,
@@ -57,9 +59,12 @@ const SignUp = () => {
     mutate(values as any, {
       onSuccess: (data: any) => {
         if (data?.accessToken) {
+          localStorage.setItem('accessToken', data.accessToken);
           API.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
         }
-        navigate('/');
+        const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
+        // If returnUrl provided (e.g., invite link), redirect there, otherwise go to root
+        navigate(decodedUrl || '/');
       },
       onError: (error: any) => {
         console.log(error);

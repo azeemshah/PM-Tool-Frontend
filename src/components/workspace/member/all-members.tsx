@@ -26,6 +26,13 @@ import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
+  
+  console.log('Auth user object:', { 
+    user,
+    userId: user?._id,
+    userEmail: user?.email,
+    userName: user?.name
+  });
 
   const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
 
@@ -35,6 +42,49 @@ const AllMembers = () => {
   const { data, isPending } = useGetWorkspaceMembers(workspaceId);
   const members = data?.members || [];
   const roles = data?.roles || [];
+
+  // Default roles if API doesn't return them
+  const availableRoles = roles.length > 0 ? roles : [
+    { _id: 'admin', name: 'ADMIN' },
+    { _id: 'member', name: 'MEMBER' },
+  ];
+
+  console.log('AllMembers data:', { data, members, roles, workspaceId });
+
+  // Check if user is workspace owner by checking their member role
+  // Try matching by both ID and email since IDs might not match perfectly
+  const userMember = members.find((m: any) => {
+    const memberId = typeof m?.userId === 'string' ? m?.userId : m?.userId?._id;
+    const memberEmail = m?.userId?.email;
+    const currentUserId = user?._id;
+    const currentUserEmail = user?.email;
+    
+    const idMatch = memberId === currentUserId;
+    const emailMatch = memberEmail && currentUserEmail && memberEmail === currentUserEmail;
+    
+    console.log('Member match check:', { 
+      memberId,
+      memberEmail,
+      currentUserId, 
+      currentUserEmail,
+      idMatch,
+      emailMatch,
+      matched: idMatch || emailMatch
+    });
+    
+    return idMatch || emailMatch;
+  });
+  
+  const isWorkspaceOwner = userMember?.role === 'Owner' || (userMember?.role as any)?.name === 'OWNER';
+  
+  console.log('Owner detection:', { 
+    userMember, 
+    isWorkspaceOwner,
+    memberRole: userMember?.role,
+  });
+
+  // Owner can always change roles, otherwise check permission
+  const canChange = isWorkspaceOwner || canChangeMemberRole;
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: changeWorkspaceMemberRoleMutationFn,
@@ -76,12 +126,13 @@ const AllMembers = () => {
         <Loader className="w-8 h-8 animate-spin place-self-center flex" />
       ) : null}
 
-      {members?.map((member) => {
-        const name = member.userId?.name;
-        const initials = getAvatarFallbackText(name);
-        const avatarColor = getAvatarColor(name);
-        return (
-          <div className="flex items-center justify-between space-x-4">
+      {members && members.length > 0 ? (
+        members.map((member) => {
+          const name = member.userId?.name;
+          const initials = getAvatarFallbackText(name);
+          const avatarColor = getAvatarColor(name);
+          return (
+            <div key={member._id} className="flex items-center justify-between space-x-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-8 w-8">
                 <AvatarImage
@@ -105,20 +156,25 @@ const AllMembers = () => {
                   <Button
                     variant="outline"
                     size="sm"
-                    className="ml-auto min-w-24 capitalize disabled:opacity-95 disabled:pointer-events-none"
+                      className="ml-auto min-w-24 disabled:opacity-95 disabled:pointer-events-none"
                     disabled={
                       isLoading ||
-                      !canChangeMemberRole ||
+                      !canChange ||
                       member.userId._id === user?._id
                     }
                   >
-                    {member.role.name?.toLowerCase()}{" "}
-                    {canChangeMemberRole && member.userId._id !== user?._id && (
+                          {(() => {
+                            const roleName = typeof member.role === 'string' ? member.role : member.role?.name;
+                            return roleName
+                              ? roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
+                              : 'Member';
+                          })()}{' '}
+                    {canChange && member.userId._id !== user?._id && (
                       <ChevronDown className="text-muted-foreground" />
                     )}
                   </Button>
                 </PopoverTrigger>
-                {canChangeMemberRole && (
+                {canChange && availableRoles && availableRoles.length > 0 && (
                   <PopoverContent className="p-0" align="end">
                     <Command>
                       <CommandInput
@@ -133,7 +189,7 @@ const AllMembers = () => {
                           <>
                             <CommandEmpty>No roles found.</CommandEmpty>
                             <CommandGroup>
-                              {roles?.map(
+                              {availableRoles?.map(
                                 (role) =>
                                   role.name !== "OWNER" && (
                                     <CommandItem
@@ -143,7 +199,7 @@ const AllMembers = () => {
                                       onSelect={() => {
                                         handleSelect(
                                           role._id,
-                                          member.userId._id
+                                          member._id
                                         );
                                       }}
                                     >
@@ -171,7 +227,12 @@ const AllMembers = () => {
             </div>
           </div>
         );
-      })}
+      })
+    ) : !isPending && members.length === 0 ? (
+      <div className="text-center py-8 text-sm text-muted-foreground">
+        No members found in this workspace
+      </div>
+    ) : null}
     </div>
   );
 };

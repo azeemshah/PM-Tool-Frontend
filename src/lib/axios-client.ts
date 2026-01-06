@@ -4,7 +4,7 @@ import axios from "axios";
 const baseURL = import.meta.env.VITE_API_BASE_URL;
 
 // Kanban boards storage in memory
-let sampleBoards: any[] = [];
+const sampleBoards: any[] = [];
 let boardIdCounter = 1;
 
 // Provide either a mock API (when no backend URL) or a real axios instance.
@@ -194,6 +194,10 @@ if (!baseURL) {
       if (url.includes("/member/workspace") && url.includes("/join")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
+      // also support new endpoint path used by backend
+      if (url.includes("/members/join/")) {
+        return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
+      }
 
       // Kanban: Create board (POST)
       if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
@@ -229,6 +233,20 @@ if (!baseURL) {
 
   API = axios.create(options);
 
+  // Add request interceptor to include JWT token from localStorage
+  API.interceptors.request.use(
+    (config: any) => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        config.headers['Authorization'] = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error: any) => {
+      return Promise.reject(error);
+    }
+  );
+
   API.interceptors.response.use(
     (response: any) => {
       return response;
@@ -244,16 +262,27 @@ if (!baseURL) {
           const refreshResp = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
           const accessToken = refreshResp?.data?.accessToken;
           if (accessToken) {
+            localStorage.setItem('accessToken', accessToken);
             API.defaults.headers.common['Authorization'] = `Bearer ${accessToken}`;
             originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
             return API(originalRequest);
           }
         } catch (refreshErr) {
-          // ignore - redirect to login below
+          // Refresh failed - clear auth and redirect to login
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user');
+          delete API.defaults.headers.common['Authorization'];
+          window.location.href = "/";
         }
       }
 
-      if (data === "Unauthorized" && status === 401) {
+      // On 401 unauthorized, clear auth state and redirect
+      if (status === 401 || data === "Unauthorized") {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
+        delete API.defaults.headers.common['Authorization'];
         window.location.href = "/";
       }
 

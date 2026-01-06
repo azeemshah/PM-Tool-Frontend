@@ -2,7 +2,14 @@ import { ScrumboardCard } from '@/api/scrumboard/types';
 import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
 import { useGetScrumboardBoards } from '@/api/scrumboard/hooks/boards/useGetScrumboardBoards';
 import useWorkspaceId from '@/hooks/use-workspace-id';
+import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { priorities } from '@/components/workspace/task/table/data';
+import { formatStatusToEnum } from '@/lib/helper';
+import { TaskPriorityEnum } from '@/constant';
+import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 
 interface BoardCardProps {
   card: ScrumboardCard;
@@ -13,6 +20,8 @@ export function BoardCard({ card }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
   const { data: projectsData } = useGetProjectsInWorkspaceQuery({ workspaceId, pageSize: 100, pageNumber: 1, skip: !workspaceId });
   const projects = projectsData?.projects || [];
+  const { data: membersData } = useGetWorkspaceMembers(workspaceId);
+  const members = membersData?.members || [];
   const hasComments = (card.comments?.length || 0) > 0;
   const hasAttachments = (card.attachments?.length || 0) > 0;
   const hasChecklists = (card.checklists?.length || 0) > 0;
@@ -28,27 +37,36 @@ export function BoardCard({ card }: BoardCardProps) {
       {/* Top row: type (left) and project emoji (right) */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <span className="inline-flex items-center text-[11px] font-medium px-2 py-1 rounded text-white bg-emerald-500">
+          <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
             {card.type || 'Task'}
-          </span>
+          </Badge>
         </div>
         <div className="text-xs text-gray-400">
           {/* Show only emoji or image for project/board, fallback to initial in a circle */}
           {(() => {
             const boardObj = boards.find((b: any) => String(b._id) === String(card.board));
 
-            // Prefer project info present on the card
-            let projectObj = (card as any).project || null;
-            // Try project id fields
-            const projIdFromCard = (card as any)?.project?._id || (card as any)?.projectId || (card as any)?.projectId;
-            if (!projectObj && projIdFromCard) {
-              projectObj = projects.find((p: any) => String(p._id) === String(projIdFromCard)) || null;
+            // Determine a project id candidate from various card/board shapes
+            let projectIdCandidate: string | null = null;
+
+            // card.project may be string id or populated object
+            if ((card as any)?.project) {
+              if (typeof (card as any).project === 'string') projectIdCandidate = (card as any).project;
+              else if ((card as any).project._id) projectIdCandidate = (card as any).project._id;
             }
 
-            // If board has project metadata, use it
-            if (!projectObj && boardObj) {
-              projectObj = boardObj.project || boardObj.projectId ? projects.find((p: any) => String(p._id) === String(boardObj.project || boardObj.projectId || boardObj.projectId)) : null;
+            // explicit projectId field on card
+            if (!projectIdCandidate && (card as any)?.projectId) projectIdCandidate = (card as any).projectId;
+
+            // board may reference a project
+            if (!projectIdCandidate && boardObj) {
+              if (boardObj.project && typeof boardObj.project === 'string') projectIdCandidate = boardObj.project;
+              else if (boardObj.project?._id) projectIdCandidate = boardObj.project._id;
+              else if (boardObj.projectId) projectIdCandidate = boardObj.projectId;
             }
+
+            // find project from workspace projects list
+            const projectObj = projectIdCandidate ? projects.find((p: any) => String(p._id) === String(projectIdCandidate)) : ((card as any).project && typeof (card as any).project === 'object' ? (card as any).project : null) || (boardObj && (boardObj.project || null));
 
             const projectEmojiRaw = projectObj?.emoji || projectObj?.icon || projectObj?.emojiUrl || boardObj?.emoji || boardObj?.icon || '';
 
@@ -61,7 +79,7 @@ export function BoardCard({ card }: BoardCardProps) {
                 return (
                   <img
                     src={src}
-                    alt={boardObj?.name || 'project'}
+                    alt={projectObj?.name || boardObj?.name || 'project'}
                     className="w-6 h-6 rounded-full object-cover"
                   />
                 );
@@ -69,11 +87,20 @@ export function BoardCard({ card }: BoardCardProps) {
 
               // Treat as unicode emoji or short text
               if (typeof projectEmojiRaw === 'string' && projectEmojiRaw.trim().length <= 3) {
-                return <span className="text-lg">{projectEmojiRaw}</span>;
+                return (
+                  <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-sm">
+                    <span className="leading-none">{projectEmojiRaw}</span>
+                  </div>
+                );
               }
             }
 
-            const fallbackInitial = (boardObj?.name && boardObj.name.charAt(0)) || (card?.project?.name && card.project.name.charAt(0)) || (card?.title && card.title.charAt(0));
+            // if project exists but no emoji, avoid showing unrelated fallback initial
+            if (projectObj) {
+              return null;
+            }
+
+            const fallbackInitial = (boardObj?.name && boardObj.name.charAt(0)) || (card?.title && card.title.charAt(0));
             if (fallbackInitial) {
               return (
                 <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-700">
@@ -89,17 +116,17 @@ export function BoardCard({ card }: BoardCardProps) {
 
       {/* Labels */}
       {card.labels && card.labels.length > 0 && (
-        <div className="flex flex-wrap gap-1 mb-2">
+        <div className="flex flex-wrap gap-2 mb-2">
           {card.labels.slice(0, 3).map((labelId) => (
             <span
               key={labelId}
-              className="inline-flex text-xs px-2 py-1 rounded text-white bg-blue-500"
+              className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
             >
               {labelId}
             </span>
           ))}
           {card.labels.length > 3 && (
-            <span className="inline-flex text-xs px-2 py-1 rounded text-gray-600 bg-gray-100">
+            <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
               +{card.labels.length - 3}
             </span>
           )}
@@ -115,19 +142,35 @@ export function BoardCard({ card }: BoardCardProps) {
       <div className="flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-3">
           {/* Priority badge */}
-          {card.priority && (
-            <span
-              className={`inline-flex items-center text-[11px] font-semibold px-2 py-1 rounded ${
-                (card.priority || '').toLowerCase() === 'high'
-                  ? 'bg-red-100 text-red-700'
-                  : (card.priority || '').toLowerCase() === 'medium'
-                  ? 'bg-yellow-100 text-yellow-700'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
-            >
-              {card.priority?.toUpperCase()}
-            </span>
-          )}
+          {card.priority && (() => {
+            const cardPriorityRaw = String(card.priority || "").trim();
+            const p = priorities.find((pr: any) => {
+              if (!pr) return false;
+              const prVal = String(pr.value || "");
+              const prLabel = String(pr.label || "");
+              if (prVal === cardPriorityRaw) return true;
+              if (prLabel === cardPriorityRaw) return true;
+              if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+              if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+              return false;
+            });
+
+            if (!p) return (
+              <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{card.priority}</span>
+            );
+
+            const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
+            const Icon = p.icon;
+            return (
+              <Badge
+                variant={TaskPriorityEnum[statusKey]}
+                className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
+              >
+                {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
+                <span>{p.label}</span>
+              </Badge>
+            );
+          })()}
 
           {hasComments && (
             <div className="flex items-center gap-1">
@@ -151,17 +194,43 @@ export function BoardCard({ card }: BoardCardProps) {
           )}
         </div>
 
-        {/* Assignee Avatar + name */}
-        {card.assignee ? (
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-xs font-bold">
-              {card.assignee.name?.split(' ')?.map(n=>n[0])?.slice(0,2).join('')?.toUpperCase()}
+        {/* Assignee Avatar */}
+        {(() => {
+          // Resolve assignee when backend returns id only or wrapped object
+          const a = (card as any).assignee;
+          let resolved: any = null;
+          if (!a) return null;
+          if (typeof a === 'string') {
+            const m = members.find((mem: any) => String(mem.userId?._id) === String(a));
+            resolved = m?.userId || null;
+          } else if (a.userId) {
+            resolved = a.userId;
+          } else {
+            resolved = a;
+          }
+
+          if (!resolved) {
+            // render empty avatar circle to match styling
+            return (
+              <div className="flex items-center">
+                <Avatar className="h-7 w-7">
+                  <AvatarFallback className={getAvatarColor('')}>{''}</AvatarFallback>
+                </Avatar>
+              </div>
+            );
+          }
+
+          return (
+            <div className="flex items-center">
+              <Avatar className="h-7 w-7">
+                <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
+                <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
+                  {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
+                </AvatarFallback>
+              </Avatar>
             </div>
-            <div className="text-xs text-gray-700 truncate max-w-[90px]">
-              {card.assignee.name}
-            </div>
-          </div>
-        ) : null}
+          );
+        })()}
       </div>
     </div>
   );

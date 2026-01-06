@@ -57,3 +57,19 @@ export default tseslint.config({
 
 
 [Sign-up](http://localhost:5173/sign-up)
+
+
+
+
+
+24 Dec  Create Jira Dashboard in Forntend 
+25 Dec  create Table and Implement Filters 
+26 Dec  create Dailog Box in Frontend
+
+
+29 Dec  implement Dailog Box in Table and Create Task page
+30 Dec  create Task and Board Page,WorkSpace Fnuctionality
+31 Dec  create Scrum Board and Implement Kanban APIs
+02 Jan  implement Styling and Create Member Functionality
+
+

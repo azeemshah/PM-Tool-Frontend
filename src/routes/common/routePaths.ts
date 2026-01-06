@@ -1,5 +1,13 @@
 export const isAuthRoute = (pathname: string): boolean => {
-  return Object.values(AUTH_ROUTES).includes(pathname);
+  // Check if it's a standard auth route
+  if (Object.values(AUTH_ROUTES).includes(pathname)) {
+    return true;
+  }
+  // Check if it's an invite route
+  if (pathname.includes("/invite/workspace/") && pathname.includes("/join")) {
+    return true;
+  }
+  return false;
 };
 
 export const AUTH_ROUTES = {

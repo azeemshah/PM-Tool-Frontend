@@ -9,6 +9,18 @@ import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { toast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { priorities } from '@/components/workspace/task/table/data';
+import { formatStatusToEnum, getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { TaskPriorityEnum } from '@/constant';
 
 export function BoardCardDialog() {
   const {
@@ -27,6 +39,21 @@ export function BoardCardDialog() {
 
   const projects = projectsData?.projects || [];
   const members = membersData?.members || [];
+
+  // Resolve selectedCard.assignee to a user object when backend returns just an id
+  const resolvedAssignee = (() => {
+    if (!selectedCard) return null;
+    const a = (selectedCard as any).assignee;
+    if (!a) return null;
+    // if assignee is a string id, try to find matching member
+    if (typeof a === 'string') {
+      const m = members.find((mem: any) => String(mem.userId?._id) === String(a));
+      return m?.userId || null;
+    }
+    // if assignee is an object, it may already be populated (user object) or wrapped
+    if ((a as any).userId) return (a as any).userId;
+    return a;
+  })();
 
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(selectedCard?.title || '');
@@ -57,6 +84,8 @@ export function BoardCardDialog() {
       setDueDate((selectedCard as any).dueDate || (selectedCard as any).metadata?.dueDate || null);
     }
   }, [selectedCard]);
+
+  const currentProject = projects.find((p: any) => p._id === projectId);
 
   if (!isCardDialogOpen || !selectedCard || !selectedBoard) {
     return null;
@@ -196,24 +225,36 @@ export function BoardCardDialog() {
               Project
             </label>
             {isEditing ? (
-              <select
-                value={projectId}
-                onChange={(e) => setProjectId(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Select
+                value={projectId || ""}
+                onValueChange={(value) => setProjectId(value)}
               >
-                <option value="">Select Project</option>
-                {projects.map((project: any) => (
-                  <option key={project._id} value={project._id}>
-                    {project.emoji ? `${project.emoji} ${project.name}` : project.name}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a project" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div
+                    className="w-full max-h-[200px]
+                   overflow-y-auto scrollbar
+                  "
+                  >
+                    {projects.map((project: any) => (
+                      <SelectItem key={project._id} value={project._id}>
+                        {project.emoji ? `${project.emoji} ${project.name}` : project.name}
+                      </SelectItem>
+                    ))}
+                  </div>
+                </SelectContent>
+              </Select>
             ) : (
-              <p className="text-gray-600">
-                {projectId && projects.length > 0
-                  ? projects.find((p: any) => p._id === projectId)?.name || 'Unknown Project'
-                  : 'No project assigned'}
-              </p>
+              projectId && projects.length > 0 && currentProject ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xl leading-none">{currentProject.emoji || ''}</span>
+                  <span className="text-gray-600">{currentProject.name || 'Unknown Project'}</span>
+                </div>
+              ) : (
+                <p className="text-gray-600">No project assigned</p>
+              )
             )}
           </div>
 
@@ -257,22 +298,25 @@ export function BoardCardDialog() {
               Issue Type
             </label>
             {isEditing ? (
-              <select
-                value={type}
-                onChange={(e) => setType(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Select
+                value={type || ""}
+                onValueChange={(value) => setType(value)}
               >
-                <option value="">Select Type</option>
-                <option value="Epic">Epic</option>
-                <option value="User Story">User Story</option>
-                <option value="Task">Task</option>
-                <option value="SubTask">SubTask</option>
-                <option value="Bug">Bug</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Epic">Epic</SelectItem>
+                  <SelectItem value="User Story">User Story</SelectItem>
+                  <SelectItem value="Task">Task</SelectItem>
+                  <SelectItem value="SubTask">SubTask</SelectItem>
+                  <SelectItem value="Bug">Bug</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
-              <span className="inline-block px-3 py-1 rounded bg-blue-100 text-blue-700">
+              <Badge className="inline-block p-1 px-2 gap-1 font-medium shadow-sm capitalize">
                 {type || 'Not set'}
-              </span>
+              </Badge>
             )}
           </div>
 
@@ -282,27 +326,50 @@ export function BoardCardDialog() {
               Priority
             </label>
             {isEditing ? (
-              <select
-                value={priority}
-                onChange={(e) => setPriority(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Select
+                value={priority || ""}
+                onValueChange={(value) => setPriority(value)}
               >
-                <option value="">Select Priority</option>
-                <option value="Low">Low</option>
-                <option value="Medium">Medium</option>
-                <option value="High">High</option>
-              </select>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Low">Low</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="High">High</SelectItem>
+                </SelectContent>
+              </Select>
             ) : (
               <div>
-                {priority && (
-                  <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium ${
-                    priority === 'High' ? 'bg-red-500' :
-                    priority === 'Medium' ? 'bg-yellow-500' :
-                    'bg-green-500'
-                  }`}>
-                    {priority}
-                  </span>
-                )}
+                {priority && (() => {
+                  const cardPriorityRaw = String(priority || "").trim();
+                  const p = priorities.find((pr: any) => {
+                    if (!pr) return false;
+                    const prVal = String(pr.value || "");
+                    const prLabel = String(pr.label || "");
+                    if (prVal === cardPriorityRaw) return true;
+                    if (prLabel === cardPriorityRaw) return true;
+                    if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+                    if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+                    return false;
+                  });
+
+                  if (!p) return (
+                    <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{priority}</span>
+                  );
+
+                  const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
+                  const Icon = p.icon;
+                  return (
+                    <Badge
+                      variant={TaskPriorityEnum[statusKey]}
+                      className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
+                    >
+                      {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
+                      <span>{p.label}</span>
+                    </Badge>
+                  );
+                })()}
                 {!priority && <span className="text-gray-400">Not set</span>}
               </div>
             )}
@@ -348,24 +415,51 @@ export function BoardCardDialog() {
               Assignee
             </label>
             {isEditing ? (
-              <select
-                value={assignee}
-                onChange={(e) => setAssignee(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              <Select
+                value={assignee || ""}
+                onValueChange={(value) => setAssignee(value)}
               >
-                <option value="">Unassigned</option>
-                {members.map((member: any) => (
-                  <option key={member.userId._id} value={member.userId._id}>
-                    {member.userId?.name || 'Unknown'}
-                  </option>
-                ))}
-              </select>
-            ) : selectedCard.assignee ? (
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an assignee" />
+                </SelectTrigger>
+                <SelectContent>
+                  <div
+                    className="w-full max-h-[200px]
+                   overflow-y-auto scrollbar
+                  "
+                  >
+                    {members.map((member: any) => {
+                      const name = member.userId?.name || 'Unknown';
+                      const initials = getAvatarFallbackText(name);
+                      const avatarColor = getAvatarColor(name);
+                      return (
+                        <SelectItem
+                          key={member.userId._id}
+                          value={member.userId._id}
+                          className="cursor-pointer"
+                        >
+                          <div className="flex items-center space-x-2">
+                            <Avatar className="h-7 w-7">
+                              <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+                              <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                            </Avatar>
+                            <span>{name}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
+                  </div>
+                </SelectContent>
+              </Select>
+            ) : resolvedAssignee ? (
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center text-white text-sm font-bold">
-                  {selectedCard.assignee.name?.charAt(0).toUpperCase()}
-                </div>
-                <span className="text-gray-900">{selectedCard.assignee.name}</span>
+                <Avatar className="h-8 w-8">
+                  <AvatarImage src={resolvedAssignee?.profilePicture || ''} alt={resolvedAssignee?.name || 'User'} />
+                  <AvatarFallback className={getAvatarColor(resolvedAssignee?.name || '')}>
+                    {getAvatarFallbackText(resolvedAssignee?.name || '')}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-gray-900">{resolvedAssignee?.name || 'Assigned'}</span>
               </div>
             ) : (
               <span className="text-gray-400">Unassigned</span>

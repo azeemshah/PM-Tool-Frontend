@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { logoutMutationFn } from "@/lib/api";
+import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Loader } from "lucide-react";
@@ -26,11 +27,21 @@ const LogoutDialog = (props: {
   const { mutate, isPending } = useMutation({
     mutationFn: logoutMutationFn,
     onSuccess: () => {
-      queryClient.resetQueries({
-        queryKey: ["authUser"],
-      });
-      navigate("/");
-      setIsOpen(false);
+      // Clear all auth data
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      localStorage.removeItem("user");
+      sessionStorage.clear();
+      
+      // Clear React Query cache completely
+      queryClient.clear();
+      
+      // Clear axios headers
+      try {
+        delete API.defaults.headers.common['Authorization'];
+      } catch (e) {
+        // ignore
+      }
     },
     onError: (error) => {
       toast({
@@ -44,8 +55,14 @@ const LogoutDialog = (props: {
   // Handle logout action
   const handleLogout = useCallback(() => {
     if (isPending) return;
-    mutate();
-  }, [isPending, mutate]);
+    mutate(undefined, {
+      onSuccess: () => {
+        // Navigate to login page after all cleanup is done
+        navigate("/", { replace: true });
+        setIsOpen(false);
+      },
+    });
+  }, [isPending, mutate, navigate]);
 
   return (
     <>
