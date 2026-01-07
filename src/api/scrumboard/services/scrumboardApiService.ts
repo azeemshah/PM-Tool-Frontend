@@ -146,14 +146,14 @@ export const scrumboardApiService = {
 		data: CreateCardDTO
 	): Promise<ScrumboardCard> {
 		console.log('API: createScrumboardBoardCard called', { boardId, listId, data });
-		// Backend expects POST /kanban/items with boardId and status
+		// Backend expects POST /kanban/items with boardId and columnId
 		const endpoint = `${KANBAN_ENDPOINT}/items`;
 		const payload = {
 			title: data.title,
 			description: data.description || '',
 			type: 'Task', // Default type
 			boardId,
-			status: listId, // Column ID as status
+			columnId: listId, // Column ID to link card to column
 		};
 		console.log('API endpoint:', endpoint);
 		console.log('API payload:', payload);
@@ -262,10 +262,11 @@ export const scrumboardApiService = {
 		toListId: string,
 		newIndex: number
 	): Promise<void> {
-		await API.put(`${KANBAN_ENDPOINT}/boards/${boardId}/items/${cardId}/move`, {
-			fromListId,
-			toListId,
-			newIndex,
+		await API.post(`${KANBAN_ENDPOINT}/boards/${boardId}/move-work-item`, {
+			workItemId: cardId,
+			fromColumnId: fromListId,
+			toColumnId: toListId,
+			position: newIndex,
 		});
 	},
 };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScrumboardList, ScrumboardCard } from '@/api/scrumboard/types';
@@ -27,13 +27,19 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
   const normalizeId = (v: any) => {
     if (!v) return '';
     if (typeof v === 'string' || typeof v === 'number') return String(v);
-    if (v._id) return String(v._id);
-    if (v.id) return String(v.id);
-    if (v.$oid) return String(v.$oid);
+    if (typeof v === 'object') {
+      if (v.$oid) return String(v.$oid);
+      if (v.id) return String(v.id);
+      if (v._id && typeof v._id === 'object' && v._id.$oid) return String(v._id.$oid);
+      if (v._id && (typeof v._id === 'string' || typeof v._id === 'number')) return String(v._id);
+      if (v._bsontype === 'ObjectID' && typeof v.toHexString === 'function') return String(v.toHexString());
+    }
     return '';
   };
+  const listIdNorm = normalizeId(list._id) || normalizeId(list.id) || '';
+  const droppableIdSafe = listIdNorm || `list-${boardId}-${Math.abs(String(list.name || '').length)}`;
 
-  const handleCreateCard = () => {
+  const handleCreateCard = useCallback(() => {
     console.log('handleCreateCard called');
     console.log('cardTitle:', cardTitle);
     console.log('boardId:', boardId);
@@ -46,12 +52,12 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
 
     const payload = {
       boardId,
-      listId: list._id,
+      listId: listIdNorm || list._id,
       data: {
         title: cardTitle,
         description: '',
         board: boardId,
-        column: list._id,
+        column: listIdNorm || list._id,
       },
     };
 
@@ -67,17 +73,71 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
         console.error('Card creation failed:', error);
       },
     });
-  };
+  }, [cardTitle, boardId, list._id, listIdNorm, createCard]);
+
+  // Get cards for this list
+  const getCardsForList = useCallback(() => {
+    const listIdNorm = normalizeId(list._id);
+    try {
+      console.log('BoardList debug', {
+        droppableIdSafe,
+        listIdNorm,
+        cardsCount: (cards || []).length,
+        listWorkItems: list?.workItems?.length || 0,
+      });
+    } catch (e) {
+      // ignore
+    }
+
+    const cardsForList = (cards || []).filter((c: any) => {
+      // card status/column may be in different fields depending on backend
+      const statusId = normalizeId(c.status || c.column || c.columnId);
+      // Match when normalized ids equal, or status string contains the list id
+      return (
+        (listIdNorm && statusId === listIdNorm) ||
+        (listIdNorm && typeof statusId === 'string' && statusId.includes(listIdNorm))
+      );
+    });
+    
+    // CRITICAL FIX: Sort cards based on list's workItems array order
+    // This ensures the UI respects the order stored in the backend
+    if (list?.workItems && Array.isArray(list.workItems) && list.workItems.length > 0) {
+      const workItemOrderMap = new Map(
+        list.workItems.map((id: any, index: number) => [normalizeId(id), index])
+      );
+      
+      cardsForList.sort((a: any, b: any) => {
+        const cardAId = normalizeId(a._id) || normalizeId(a.id);
+        const cardBId = normalizeId(b._id) || normalizeId(b.id);
+        const orderA = workItemOrderMap.get(cardAId) ?? 999;
+        const orderB = workItemOrderMap.get(cardBId) ?? 999;
+        return orderA - orderB;
+      });
+      
+      console.log('Sorted cards by workItems order:', cardsForList.map((c: any) => normalizeId(c._id) || normalizeId(c.id)));
+    }
+    
+    // Deduplicate cards by id in case backend returns duplicates
+    const uniqueCardsById = Array.from(
+      new Map((cardsForList || []).map((c: any) => [normalizeId(c._id) || normalizeId(c.id) || Math.random(), c])).values(),
+    );
+    
+    return uniqueCardsById;
+  }, [cards, list, droppableIdSafe, normalizeId]);
+
+  const cardsForThisList = getCardsForList();
 
   return (
     <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col max-h-full">
       {/* Header */}
       <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
         <div className="flex-1">
-          <h3 className="font-semibold text-sm text-gray-900">{(list.name && String(list.name).trim()) || (list.title && String(list.title).trim()) || 'Untitled'}</h3>
-          <p className="text-xs text-gray-500 mt-1">
-            {(list.workItems?.length ?? list.cards?.length ?? 0)} items
-          </p>
+          {(() => {
+            const rawName = (list && (list.name || list.title || list.label || '')) as any;
+            const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
+            return <h3 className="font-semibold text-sm text-gray-900">{displayName}</h3>;
+          })()}
+          <p className="text-xs text-gray-500 mt-1">{cardsForThisList.length || 0} items</p>
         </div>
         <Button
           variant="ghost"
@@ -92,7 +152,7 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
       {/* Cards */}
       <div className="flex-1 overflow-y-auto">
         <Droppable
-          droppableId={list._id}
+          droppableId={droppableIdSafe}
           type="card"
           ignoreContainerClipping
         >
@@ -100,78 +160,32 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`p-3 space-y-2 ${
+              className={`p-3 space-y-2 min-h-[100px] transition-colors ${
                 snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-white'
               }`}
             >
-              {
-                // Prefer showing cards from the cards query (backend may not update column.workItems)
-                (() => {
-                  const listIdNorm = normalizeId(list._id);
-                  // Debug: show normalized list id and some card statuses
-                  try {
-                    console.log('BoardList: listIdNorm', listIdNorm);
-                    console.log('BoardList: cards statuses sample', (cards || []).slice(0, 10).map((c: any) => normalizeId(c.status)));
-                    console.log('BoardList: cards ids sample', (cards || []).slice(0, 10).map((c: any) => normalizeId(c._id)));
-                  } catch (e) {
-                    // ignore
-                  }
-
-                  const cardsForList = (cards || []).filter((c: any) => {
-                    const statusId = normalizeId(c.status);
-                    // Match when normalized ids equal, or status string contains the list id
-                    return (
-                      statusId === listIdNorm ||
-                      (typeof statusId === 'string' && statusId.includes(listIdNorm)) ||
-                      normalizeId(c.board) === listIdNorm ||
-                      normalizeId(c.boardId) === listIdNorm
-                    );
-                  });
-                  if (cardsForList.length > 0) {
-                    return cardsForList.map((card: any, index: number) => (
-                      <Draggable key={card._id} draggableId={String(card._id)} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onClick={() => onCardClick(card as ScrumboardCard)}
-                            className={snapshot.isDragging ? 'opacity-50' : ''}
-                          >
-                            <BoardCard card={{ ...card, board: boardId, column: list._id } as ScrumboardCard} />
-                          </div>
-                        )}
-                      </Draggable>
-                    ));
-                  }
-
-                  // Fallback to legacy list.workItems array
-                  if (list.workItems && list.workItems.length > 0) {
-                    return list.workItems.map((cardId: any, index: number) => (
-                      <Draggable key={cardId} draggableId={String(cardId)} index={index}>
-                        {(provided, snapshot) => (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            onClick={() => {
-                              const card = { _id: cardId } as ScrumboardCard;
-                              onCardClick(card);
-                            }}
-                            className={snapshot.isDragging ? 'opacity-50' : ''}
-                          >
-                            <BoardCard card={{ _id: cardId, board: boardId, column: list._id, title: 'Loading...' } as ScrumboardCard} />
-                          </div>
-                        )}
-                      </Draggable>
-                    ));
-                  }
-
+              {cardsForThisList.length > 0 ? (
+                cardsForThisList.map((card: any, index: number) => {
+                  const cardIdSafe = normalizeId(card._id) || normalizeId(card.id) || `card-${index}-${droppableIdSafe}`;
                   return (
-                    <div className="text-gray-400 text-xs text-center py-4">No cards yet</div>
+                    <Draggable key={cardIdSafe} draggableId={String(cardIdSafe)} index={index}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          onClick={() => onCardClick(card as ScrumboardCard)}
+                          className={`transition-all ${snapshot.isDragging ? 'opacity-50 shadow-lg' : 'opacity-100'}`}
+                        >
+                          <BoardCard card={{ ...card, board: boardId, column: listIdNorm || list._id } as ScrumboardCard} />
+                        </div>
+                      )}
+                    </Draggable>
                   );
-                })()
-              }
+                })
+              ) : (
+                <div className="text-gray-400 text-xs text-center py-4">No cards yet</div>
+              )}
               {provided.placeholder}
             </div>
           )}

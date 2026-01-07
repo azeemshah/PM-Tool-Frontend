@@ -36,12 +36,31 @@ export function useScrumboardReorder(boardId: string | null) {
 				cardIds
 			);
 		},
-		onSuccess: () => {
+		onSuccess: async () => {
 			if (boardId) {
-				queryClient.invalidateQueries({
-					queryKey: ['scrumboard', 'cards', boardId],
-				});
+				// Wait for react-beautiful-dnd animation to complete before refetching
+				// This prevents visual glitches where data updates during drag animation
+				await new Promise(resolve => setTimeout(resolve, 300));
+				
+				// CRITICAL: Refetch cards, lists, AND board to ensure full sync
+				// Lists contain workItems array which determines card order
+				// Board contains column info which affects rendering
+				await Promise.all([
+					queryClient.refetchQueries({
+						queryKey: ['scrumboard', 'cards', boardId],
+					}),
+					queryClient.refetchQueries({
+						queryKey: ['scrumboard', 'lists', boardId],
+					}),
+					queryClient.refetchQueries({
+						queryKey: ['scrumboard', 'board', boardId],
+					}),
+				]);
+				console.log('✅ All queries refetched after reorder');
 			}
+		},
+		onError: (error) => {
+			console.error('❌ Reorder mutation error:', error);
 		},
 	});
 
