@@ -1,0 +1,280 @@
+/**
+ * Issue API Service
+ * Handles all Issue API calls (Epic, Story, Task, Bug, Subtask)
+ */
+
+import API from '@/lib/axios-client';
+import type {
+	Issue,
+	Epic,
+	Story,
+	Task,
+	Bug,
+	Subtask,
+	CreateEpicDTO,
+	CreateStoryDTO,
+	CreateTaskDTO,
+	CreateBugDTO,
+	CreateSubtaskDTO,
+	UpdateIssueDTO,
+	GetEpicsResponse,
+	GetChildrenResponse,
+	GetSubtasksResponse,
+	GetIssuesResponse,
+} from '../types';
+
+const ISSUES_ENDPOINT = '/issues';
+
+export const issueApiService = {
+	// ==================== EPICS ====================
+
+	/**
+	 * Create Epic
+	 * POST /issues/epic
+	 */
+	async createEpic(data: CreateEpicDTO): Promise<Epic> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/epic`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get all Epics in a project
+	 * GET /issues/epic/:projectId
+	 */
+	async getEpicsByProject(projectId: string): Promise<Epic[]> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${projectId}`);
+		const data = response.data.data || response.data;
+		return Array.isArray(data) ? data : [];
+	},
+
+	/**
+	 * Get single Epic with all children
+	 * GET /issues/epic/:epicId
+	 */
+	async getEpic(epicId: string): Promise<Epic> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${epicId}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Update Epic
+	 * PATCH /issues/:epicId
+	 */
+	async updateEpic(epicId: string, data: UpdateIssueDTO): Promise<Epic> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${epicId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete Epic (cascades to children)
+	 * DELETE /issues/:epicId
+	 */
+	async deleteEpic(epicId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${epicId}`);
+	},
+
+	// ==================== STORIES ====================
+
+	/**
+	 * Create Story under Epic
+	 * POST /issues/epic/:epicId/story
+	 */
+	async createStory(epicId: string, data: CreateStoryDTO): Promise<Story> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/epic/${epicId}/story`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Update Story
+	 * PATCH /issues/:storyId
+	 */
+	async updateStory(storyId: string, data: UpdateIssueDTO): Promise<Story> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${storyId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete Story (cascades to subtasks)
+	 * DELETE /issues/:storyId
+	 */
+	async deleteStory(storyId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${storyId}`);
+	},
+
+	// ==================== TASKS ====================
+
+	/**
+	 * Create Task under Epic (NOT under Story)
+	 * POST /issues/epic/:epicId/task
+	 */
+	async createTask(epicId: string, data: CreateTaskDTO): Promise<Task> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/epic/${epicId}/task`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Update Task
+	 * PATCH /issues/:taskId
+	 */
+	async updateTask(taskId: string, data: UpdateIssueDTO): Promise<Task> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${taskId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete Task (cascades to subtasks)
+	 * DELETE /issues/:taskId
+	 */
+	async deleteTask(taskId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${taskId}`);
+	},
+
+	// ==================== BUGS ====================
+
+	/**
+	 * Create Bug under Epic
+	 * POST /issues/epic/:epicId/bug
+	 */
+	async createBug(epicId: string, data: CreateBugDTO): Promise<Bug> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/epic/${epicId}/bug`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Update Bug
+	 * PATCH /issues/:bugId
+	 */
+	async updateBug(bugId: string, data: UpdateIssueDTO): Promise<Bug> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${bugId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete Bug (cascades to subtasks)
+	 * DELETE /issues/:bugId
+	 */
+	async deleteBug(bugId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${bugId}`);
+	},
+
+	// ==================== SUBTASKS ====================
+
+	/**
+	 * Create Subtask under Story/Task/Bug
+	 * POST /issues/:parentId/subtask
+	 */
+	async createSubtask(parentIssueId: string, data: CreateSubtaskDTO): Promise<Subtask> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/${parentIssueId}/subtask`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get all Subtasks under parent
+	 * GET /issues/:parentId/subtasks
+	 */
+	async getSubtasks(parentIssueId: string): Promise<Subtask[]> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/${parentIssueId}/subtasks`);
+		const data = response.data.data || response.data;
+		return Array.isArray(data) ? data : [];
+	},
+
+	/**
+	 * Update Subtask
+	 * PATCH /issues/:subtaskId
+	 */
+	async updateSubtask(subtaskId: string, data: UpdateIssueDTO): Promise<Subtask> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${subtaskId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete Subtask
+	 * DELETE /issues/:subtaskId
+	 */
+	async deleteSubtask(subtaskId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${subtaskId}`);
+	},
+
+	// ==================== QUERIES ====================
+
+	/**
+	 * Get Story/Task/Bug children under Epic
+	 * GET /issues/epic/:epicId/children
+	 */
+	async getEpicChildren(epicId: string): Promise<(Story | Task | Bug)[]> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${epicId}/children`);
+		const data = response.data.data || response.data;
+		return Array.isArray(data) ? data : [];
+	},
+
+	/**
+	 * Get all issues in a project
+	 * GET /issues/project/:projectId
+	 */
+	async getIssuesByProject(projectId: string, page = 1): Promise<GetIssuesResponse> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/project/${projectId}?page=${page}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get single issue by ID
+	 * GET /issues/:id
+	 */
+	async getIssue(issueId: string): Promise<Issue> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/${issueId}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get issues by type
+	 * GET /issues/project/:projectId?type=story
+	 */
+	async getIssuesByType(projectId: string, type: string): Promise<Issue[]> {
+		const response = await API.get(`${ISSUES_ENDPOINT}/project/${projectId}?type=${type}`);
+		const data = response.data.data || response.data;
+		return Array.isArray(data) ? data : [];
+	},
+
+	// ==================== COMMON OPERATIONS ====================
+
+	/**
+	 * Update any issue (works for all types)
+	 * PATCH /issues/:id
+	 */
+	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
+		const response = await API.patch(`${ISSUES_ENDPOINT}/${issueId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete any issue (works for all types)
+	 * DELETE /issues/:id
+	 */
+	async deleteIssue(issueId: string): Promise<void> {
+		await API.delete(`${ISSUES_ENDPOINT}/${issueId}`);
+	},
+
+	/**
+	 * Assign issue to user
+	 * PATCH /issues/:id
+	 */
+	async assignIssue(issueId: string, userId: string): Promise<Issue> {
+		return this.updateIssue(issueId, { assignee: userId });
+	},
+
+	/**
+	 * Change issue status
+	 * PATCH /issues/:id
+	 */
+	async changeIssueStatus(issueId: string, status: string): Promise<Issue> {
+		return this.updateIssue(issueId, { status: status as any });
+	},
+
+	/**
+	 * Change issue priority
+	 * PATCH /issues/:id
+	 */
+	async changeIssuePriority(issueId: string, priority: string): Promise<Issue> {
+		return this.updateIssue(issueId, { priority: priority as any });
+	},
+};

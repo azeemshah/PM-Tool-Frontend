@@ -38,7 +38,8 @@ export function BoardCardDialog() {
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
 
   const projects = projectsData?.projects || [];
-  const members = membersData?.members || [];
+  // Fixed: membersData is now an array directly (from the hook fix)
+  const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
 
   // Resolve selectedCard.assignee to a user object when backend returns just an id
   const resolvedAssignee = (() => {
@@ -429,26 +430,30 @@ export function BoardCardDialog() {
                    overflow-y-auto scrollbar
                   "
                   >
-                    {members.map((member: any) => {
-                      const name = member.userId?.name || 'Unknown';
-                      const initials = getAvatarFallbackText(name);
-                      const avatarColor = getAvatarColor(name);
-                      return (
-                        <SelectItem
-                          key={member.userId._id}
-                          value={member.userId._id}
-                          className="cursor-pointer"
-                        >
-                          <div className="flex items-center space-x-2">
-                            <Avatar className="h-7 w-7">
-                              <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
-                              <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
-                            </Avatar>
-                            <span>{name}</span>
-                          </div>
-                        </SelectItem>
-                      );
-                    })}
+                    {members && members.length > 0 ? (
+                      members.map((member: any) => {
+                        const name = member.userId?.name || 'Unknown';
+                        const initials = getAvatarFallbackText(name);
+                        const avatarColor = getAvatarColor(name);
+                        return (
+                          <SelectItem
+                            key={member.userId._id}
+                            value={member.userId._id}
+                            className="cursor-pointer"
+                          >
+                            <div className="flex items-center space-x-2">
+                              <Avatar className="h-7 w-7">
+                                <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+                                <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                              </Avatar>
+                              <span>{name}</span>
+                            </div>
+                          </SelectItem>
+                        );
+                      })
+                    ) : (
+                      <div className="p-2 text-sm text-gray-500">No members available</div>
+                    )}
                   </div>
                 </SelectContent>
               </Select>

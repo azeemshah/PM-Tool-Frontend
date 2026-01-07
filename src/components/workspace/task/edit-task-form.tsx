@@ -48,7 +48,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   });
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
-  const members = memberData?.members || [];
+  const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
   // Members Dropdown Options
   const membersOptions = members.map((member) => ({

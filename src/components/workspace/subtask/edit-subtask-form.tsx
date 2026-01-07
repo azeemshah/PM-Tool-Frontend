@@ -62,7 +62,7 @@ export default function EditSubtaskForm(props: {
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
 
-  const members = memberData?.members || [];
+  const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
   // Workspace Members
   const membersOptions = members?.map((member) => {

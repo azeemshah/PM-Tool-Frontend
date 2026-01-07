@@ -234,7 +234,7 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
 
   const projects = data?.projects || [];
-  const members = memberData?.members || [];
+  const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
   //Workspace Projects
   const projectOptions = projects?.map((project) => {
