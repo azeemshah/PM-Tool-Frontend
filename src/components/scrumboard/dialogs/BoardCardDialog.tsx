@@ -307,10 +307,11 @@ export function BoardCardDialog() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="Epic">Epic</SelectItem>
-                  <SelectItem value="User Story">User Story</SelectItem>
+                  <SelectItem value="Story">Story</SelectItem>
                   <SelectItem value="Task">Task</SelectItem>
-                  <SelectItem value="SubTask">SubTask</SelectItem>
+                  <SelectItem value="Subtask">Subtask</SelectItem>
                   <SelectItem value="Bug">Bug</SelectItem>
+                  <SelectItem value="Improvement">Improvement</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
