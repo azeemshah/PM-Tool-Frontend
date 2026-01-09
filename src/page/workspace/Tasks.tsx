@@ -9,7 +9,6 @@ import { Plus } from "lucide-react";
 export default function Tasks() {
   const workspaceId = useWorkspaceId();
   const dialogState = useIssueCreateDialog();
-  const projectId = null;
 
   return (
     <div className="w-full h-full flex-col space-y-8 pt-3">
@@ -22,7 +21,7 @@ export default function Tasks() {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => dialogState.open(projectId || 'default', workspaceId)}
+            onClick={() => dialogState.open(null, workspaceId)}
             size="sm"
             className="gap-2"
           >
@@ -34,8 +33,8 @@ export default function Tasks() {
       </div>
       <IssueCreateDialog
         isOpen={dialogState.isOpen}
-        onOpenChange={(open) => open ? dialogState.open(projectId || 'default', workspaceId) : dialogState.close()}
-        projectId={dialogState.projectId || projectId || 'default'}
+        onOpenChange={(open) => open ? dialogState.open(null, workspaceId) : dialogState.close()}
+        projectId={dialogState.projectId || null}
         workspaceId={dialogState.workspaceId || workspaceId}
       />
       {/* {Task Table} */}

@@ -15,9 +15,9 @@ export function useCreateEpic() {
 	return useMutation({
 		mutationFn: (data: CreateEpicDTO) => issueApiService.createEpic(data),
 		onSuccess: (epic: Epic) => {
-			// Invalidate epic queries
-			queryClient.invalidateQueries({ queryKey: ['epics'] });
-			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			// Invalidate all epic queries (with any projectId) by using exact: false
+			queryClient.invalidateQueries({ queryKey: ['epics'], exact: false });
+			queryClient.invalidateQueries({ queryKey: ['issues'], exact: false });
 			toast({
 				title: 'Success',
 				description: `Epic "${epic.title}" created successfully`,

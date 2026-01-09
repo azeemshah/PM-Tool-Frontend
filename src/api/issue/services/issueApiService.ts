@@ -42,9 +42,15 @@ export const issueApiService = {
 	 * GET /issues/epic/:projectId
 	 */
 	async getEpicsByProject(projectId: string): Promise<Epic[]> {
-		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${projectId}`);
+		const url = `${ISSUES_ENDPOINT}/epic/${projectId}`;
+		console.log('📤 getEpicsByProject - fetching from URL:', url);
+		const response = await API.get(url);
+		console.log('📥 getEpicsByProject - response:', response.data);
 		const data = response.data.data || response.data;
-		return Array.isArray(data) ? data : [];
+		console.log('📥 getEpicsByProject - extracted data:', data);
+		const result = Array.isArray(data) ? data : [];
+		console.log('📥 getEpicsByProject - returning:', result);
+		return result;
 	},
 
 	/**
