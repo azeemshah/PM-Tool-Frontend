@@ -9,6 +9,8 @@ import { DataTableFacetedFilter } from "./table/table-faceted-filter";
 import { priorities, statuses } from "./table/data";
 import useTaskTableFilter from "@/hooks/use-task-table-filter";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { issueApiService } from '@/api/issue/services/issueApiService';
+import API from '@/lib/axios-client';
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getAllTasksQueryFn, bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
 import { TaskType } from "@/types/api.type";
@@ -44,6 +46,8 @@ interface DataTableFilterToolbarProps {
   setFilters: SetFilters;
 }
 
+// No local mock fallback here — prefer showing live data from backend
+
 const TaskTable = () => {
   const param = useParams();
   const projectId = param.projectId as string;
@@ -58,7 +62,7 @@ const TaskTable = () => {
   const workspaceId = useWorkspaceId();
   const columns = getColumns(projectId);
 
-  const { data, isLoading } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: [
       "all-tasks",
       workspaceId,
@@ -67,17 +71,189 @@ const TaskTable = () => {
       filters,
       projectId,
     ],
-    queryFn: () =>
-      getAllTasksQueryFn({
-        workspaceId,
-        keyword: filters.keyword,
-        priority: filters.priority,
-        status: filters.status,
-        projectId: projectId || filters.projectId,
-        assignedTo: filters.assigneeId,
-        pageNumber,
-        pageSize,
-      }),
+    queryFn: async () => {
+      // If user selected an issue type filter, fetch from Issue API and map to TaskType[] shape
+      if (filters.issueType) {
+        // If viewing a project, use project-specific endpoint
+        if (projectId || filters.projectId) {
+          const pid = projectId || filters.projectId || "";
+          const issues = await issueApiService.getIssuesByType(pid, filters.issueType);
+          const mapped = (issues || []).map((iss: any) => ({
+            _id: iss._id,
+            title: iss.title,
+            description: iss.description,
+            project: { _id: iss.projectId || pid, emoji: "", name: "" },
+            // include issue type so table can show it
+            type: iss.type,
+            priority: iss.priority,
+            status: iss.status,
+            assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : null,
+            createdBy: iss.reporter?._id || undefined,
+            dueDate: iss.dueDate || "",
+            taskCode: iss.key || "",
+            createdAt: iss.createdAt,
+            updatedAt: iss.updatedAt,
+          }));
+          return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
+        }
+
+        // If no specific project (All Tasks), try workspace-level issues endpoint
+        const params: any = { type: filters.issueType };
+        if (workspaceId) params.workspaceId = workspaceId;
+        if (pageNumber) params.pageNumber = pageNumber;
+        if (pageSize) params.pageSize = pageSize;
+        const resp = await API.get(`/issues`, { params });
+        const issues = resp.data?.data || resp.data || [];
+        const mapped = (issues || []).map((iss: any) => ({
+          _id: iss._id,
+          title: iss.title,
+          description: iss.description,
+          project: { _id: iss.projectId || "", emoji: "", name: "" },
+          // include issue type so table can show it
+          type: iss.type,
+          priority: iss.priority,
+          status: iss.status,
+          assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : (iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null),
+          reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,
+          createdBy: iss.reporter?._id || undefined,
+          dueDate: iss.dueDate || "",
+          taskCode: iss.key || "",
+          createdAt: iss.createdAt,
+          updatedAt: iss.updatedAt,
+        }));
+        return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
+      }
+
+      // default: try fetching issues from the new Issue API and map to TaskType[]
+      // If viewing a specific project, use that project's issues endpoint.
+      try {
+        // If project context is available, fetch issues for that project
+        if (projectId) {
+          const resp = await API.get(`/issues/project/${projectId}`);
+          const issues = resp.data?.data || resp.data || [];
+          const mapped = (issues || []).map((iss: any) => ({
+            _id: iss._id,
+            title: iss.title,
+            description: iss.description,
+            project: { _id: iss.projectId || projectId, emoji: "", name: "" },
+            type: iss.type,
+            priority: iss.priority,
+            status: iss.status,
+            assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : null,            reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,            createdBy: iss.reporter?._id || undefined,
+            dueDate: iss.dueDate || "",
+            taskCode: iss.key || "",
+            createdAt: iss.createdAt,
+            updatedAt: iss.updatedAt,
+          }));
+          return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
+        }
+
+        // No specific project: fetch all projects in workspace then fetch issues per project
+        console.log('[task-table] Fetching issues for workspace:', workspaceId);
+        
+        if (!workspaceId) {
+          console.log('[task-table] No workspaceId available, falling back to getAllTasksQueryFn');
+          return getAllTasksQueryFn({
+            workspaceId,
+            keyword: filters.keyword,
+            priority: filters.priority,
+            status: filters.status,
+            projectId: projectId || filters.projectId,
+            assignedTo: filters.assigneeId,
+            pageNumber,
+            pageSize,
+          });
+        }
+
+        console.log('[task-table] Fetching projects for workspace:', workspaceId);
+        const projectsResp = await API.get(`/projects`, { params: { workspaceId } });
+        const projects = projectsResp.data?.data || projectsResp.data?.projects || projectsResp.data || [];
+        console.log('[task-table] Found projects:', projects.length);
+
+        if (!projects || projects.length === 0) {
+          console.log('[task-table] No projects found in workspace');
+          return { tasks: [], pagination: { totalCount: 0, pageNumber, pageSize } } as any;
+        }
+
+        const issuesPromises = projects.map((p: any) =>
+          API.get(`/issues/project/${p._id}`)
+            .then((r) => {
+              const items = (r.data?.data || r.data || []) as any[];
+              console.log(`[task-table] Project ${p.name} (${p._id}): ${items.length} issues`);
+              return items.map((iss) => ({
+                _id: iss._id,
+                title: iss.title,
+                description: iss.description,
+                project: { _id: iss.projectId || p._id, emoji: p.emoji || "", name: p.name || "" },
+                type: iss.type,
+                priority: iss.priority,
+                status: iss.status,
+                assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : (iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null),
+                reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,
+                createdBy: iss.reporter?._id || undefined,
+                dueDate: iss.dueDate || "",
+                taskCode: iss.key || "",
+                createdAt: iss.createdAt,
+                updatedAt: iss.updatedAt,
+              }));
+            })
+            .catch((err) => {
+              console.error(`[task-table] Error fetching issues for project ${p._id}:`, err);
+              return [];
+            }),
+        );
+
+        const allIssuesArrays = await Promise.all(issuesPromises);
+        const allMapped = allIssuesArrays.flat();
+        console.log('[task-table] Total issues fetched:', allMapped.length);
+
+        // Apply client-side filtering
+        let filtered = allMapped;
+        if (filters.keyword) {
+          filtered = filtered.filter(
+            (t) =>
+              (t.title || "").toLowerCase().includes(filters.keyword.toLowerCase()) ||
+              (t.taskCode || "").toLowerCase().includes(filters.keyword.toLowerCase())
+          );
+        }
+        if (filters.assigneeId) {
+          filtered = filtered.filter((t) => t.assignedTo && t.assignedTo._id === filters.assigneeId);
+        }
+        if (filters.priority) {
+          filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());
+        }
+        if (filters.status) {
+          filtered = filtered.filter((t) => (t.status || "").toLowerCase() === filters.status.toLowerCase());
+        }
+
+        console.log('[task-table] After filtering:', filtered.length);
+
+        // Apply pagination
+        const total = filtered.length;
+        const pn = pageNumber || 1;
+        const ps = pageSize || 10;
+        const start = (pn - 1) * ps;
+        const paged = filtered.slice(start, start + ps);
+
+        console.log('[task-table] Returning paginated results:', paged.length, 'of', total);
+        return { tasks: paged, pagination: { totalCount: total, pageSize: ps, pageNumber: pn, totalPages: Math.ceil(total / ps), skip: start, limit: ps } } as any;
+      } catch (err: any) {
+        // Rethrow authentication errors so UI can show a helpful message
+        if (err?.response?.status === 401) throw err;
+        console.error('[task-table] Error fetching issues:', err);
+        // fallback to tasks endpoint if anything else goes wrong
+        return getAllTasksQueryFn({
+          workspaceId,
+          keyword: filters.keyword,
+          priority: filters.priority,
+          status: filters.status,
+          projectId: projectId || filters.projectId,
+          assignedTo: filters.assigneeId,
+          pageNumber,
+          pageSize,
+        });
+      }
+    },
     staleTime: 0,
   });
 
@@ -140,8 +316,9 @@ const TaskTable = () => {
     },
   });
 
+  // Use backend data directly; if none, show empty list
   const tasks: TaskType[] = data?.tasks || [];
-  const totalCount = data?.pagination.totalCount || 0;
+  const totalCount = data?.pagination?.totalCount ?? (tasks ? tasks.length : 0);
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -172,6 +349,19 @@ const TaskTable = () => {
           isLoading={bulkDeleteMutation.isPending || bulkUpdateMutation.isPending}
         />
       )}
+      {isError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 mb-4 text-sm text-red-700">
+          {(error as any)?.response?.status === 401 ? (
+            "Authentication required — please sign in to view tasks."
+          ) : (
+            "Failed to load tasks. Ensure the backend is running."
+          )}
+          {error && (error as any).message ? (
+            <div className="text-xs text-muted-foreground mt-1">{String((error as any).message)}</div>
+          ) : null}
+        </div>
+      )}
+
       <DataTable
         isLoading={isLoading}
         data={tasks}
@@ -276,6 +466,14 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
     });
   };
 
+  const issueTypeOptions = [
+    { label: "Epic", value: "epic" },
+    { label: "Story", value: "story" },
+    { label: "Task", value: "task" },
+    { label: "Bug", value: "bug" },
+    { label: "Subtask", value: "subtask" },
+  ];
+
   return (
     <div className="flex flex-col lg:flex-row w-full items-start space-y-2 mb-2 lg:mb-0 lg:space-x-2  lg:space-y-0">
       <Input
@@ -306,6 +504,16 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
         disabled={isLoading}
         selectedValues={filters.priority?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("priority", values)}
+      />
+
+      {/* Issue Type filter */}
+      <DataTableFacetedFilter
+        title="Issue"
+        multiSelect={false}
+        options={issueTypeOptions}
+        disabled={isLoading}
+        selectedValues={filters.issueType?.split(",") || []}
+        onFilterChange={(values) => handleFilterChange("issueType", values)}
       />
 
       {/* Assigned To filter */}
@@ -341,6 +549,7 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
               keyword: null,
               status: null,
               priority: null,
+              issueType: null,
               projectId: null,
               assigneeId: null,
             })

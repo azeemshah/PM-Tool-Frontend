@@ -521,6 +521,31 @@ export const createTaskMutationFn = async ({
   return response.data;
 };
 
+/**
+ * Create Task WITHOUT Epic/Story
+ * Used in All Tasks page and Project Dashboard
+ */
+export const createTaskWithoutEpicMutationFn = async ({
+  projectId,
+  data,
+}: {
+  projectId: string;
+  data: {
+    title: string;
+    description?: string;
+    priority?: string;
+    status?: string;
+    assignedTo?: string;
+    dueDate?: string;
+  };
+}) => {
+  const response = await API.post(`/issues/task`, {
+    ...data,
+    projectId,
+  });
+  return response.data;
+};
+
 export const getTasksQueryFn = async (storyId: string) => {
   const response = await API.get(`/projects/stories/${storyId}/tasks`);
   return response.data;
@@ -582,22 +607,168 @@ export const getAllTasksQueryFn = async ({
   pageNumber,
   pageSize,
 }: AllTaskPayloadType): Promise<AllTaskResponseType> => {
-  // Call backend global tasks endpoint
-  const baseUrl = `/projects/tasks`;
-  const queryParams = new URLSearchParams();
-  if (workspaceId) queryParams.append('workspaceId', workspaceId);
-  if (keyword) queryParams.append('keyword', keyword);
-  if (projectId) queryParams.append('projectId', projectId);
-  if (assignedTo) queryParams.append('assignedTo', assignedTo);
-  if (priority) queryParams.append('priority', priority as any);
-  if (status) queryParams.append('status', status as any);
-  if (dueDate) queryParams.append('dueDate', dueDate as any);
-  if (pageNumber) queryParams.append('pageNumber', pageNumber?.toString());
-  if (pageSize) queryParams.append('pageSize', pageSize?.toString());
+  // Fetch issues from workspace with server-side pagination and filtering
+  try {
+    const ps = pageSize || 10;
+    const pn = pageNumber || 1;
 
-  const url = queryParams.toString() ? `${baseUrl}?${queryParams}` : baseUrl;
-  const response = await API.get(url);
-  return response.data;
+    let allMapped: any[] = [];
+    let totalCount = 0;
+
+    // If projectId is specified, fetch only from that project
+    if (projectId) {
+      try {
+        const response = await API.get(`/issues/project/${projectId}`, {
+          params: {
+            pageNumber: pn,
+            pageSize: ps,
+            type: status === 'epic' ? 'epic' : undefined, // Optional type filter
+          },
+        });
+        const issuesData = response.data?.data || response.data || [];
+        const pagination = response.data?.pagination || { totalCount: issuesData.length };
+        totalCount = pagination.totalCount;
+
+        // Get project info for mapping
+        const projectResp = await API.get(`/projects/${projectId}`);
+        const project = projectResp.data?.project || projectResp.data || {};
+
+        allMapped = issuesData.map((iss: any) => ({
+          _id: iss._id,
+          title: iss.title,
+          description: iss.description,
+          project: { _id: iss.projectId || projectId, emoji: project.emoji || '', name: project.name || '' },
+          type: iss.type,
+          priority: iss.priority,
+          status: iss.status,
+          assignedTo: iss.assignee
+            ? {
+                _id: iss.assignee._id,
+                name: iss.assignee.name,
+                profilePicture: iss.assignee.profilePicture || null,
+              }
+            : null,
+          createdBy: iss.reporter?._id || undefined,
+          dueDate: iss.dueDate || '',
+          taskCode: iss.key || '',
+          createdAt: iss.createdAt,
+          updatedAt: iss.updatedAt,
+        }));
+      } catch (err) {
+        console.error('Error fetching issues for project:', projectId, err);
+        return {
+          tasks: [],
+          pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
+        };
+      }
+    } else {
+      // Fetch issues for the workspace with server-side pagination
+      try {
+        const projectsResp = await API.get(`/projects`, {
+          params: workspaceId ? { workspaceId } : {},
+        });
+        const projects = projectsResp.data?.projects || projectsResp.data?.data || projectsResp.data || [];
+        const projectMap = new Map((projects || []).map((p: any) => [String(p._id), p]));
+
+        // Fetch issues for workspace with server-side pagination
+        const issuesResp = await API.get(`/issues`, {
+          params: {
+            workspaceId,
+            pageNumber: pn,
+            pageSize: ps,
+          },
+        });
+
+        const issuesData = issuesResp.data?.data || issuesResp.data || [];
+        const pagination = issuesResp.data?.pagination || { totalCount: issuesData.length };
+        totalCount = pagination.totalCount;
+
+        allMapped = issuesData.map((iss: any) => {
+          const p = projectMap.get(String(iss.projectId)) || {};
+          return {
+            _id: iss._id,
+            title: iss.title,
+            description: iss.description,
+            project: {
+              _id: iss.projectId || p._id,
+              emoji: p.emoji || '',
+              name: p.name || '',
+            },
+            type: iss.type,
+            priority: iss.priority,
+            status: iss.status,
+            assignedTo: iss.assignee
+              ? {
+                  _id: iss.assignee._id,
+                  name: iss.assignee.name,
+                  profilePicture: iss.assignee.profilePicture || null,
+                }
+              : null,
+            createdBy: iss.reporter?._id || undefined,
+            dueDate: iss.dueDate || '',
+            taskCode: iss.key || '',
+            createdAt: iss.createdAt,
+            updatedAt: iss.updatedAt,
+          };
+        });
+      } catch (err) {
+        console.error('Error fetching issues for workspace:', err);
+        return {
+          tasks: [],
+          pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
+        };
+      }
+    }
+
+    // Apply client-side filtering on paginated data
+    let filtered = allMapped;
+    if (keyword) {
+      filtered = filtered.filter(
+        (t) =>
+          (t.title || '')
+            .toLowerCase()
+            .includes(String(keyword).toLowerCase()) ||
+          (t.taskCode || '')
+            .toLowerCase()
+            .includes(String(keyword).toLowerCase())
+      );
+    }
+    if (assignedTo) {
+      filtered = filtered.filter((t) => t.assignedTo && t.assignedTo._id === assignedTo);
+    }
+    if (priority) {
+      filtered = filtered.filter(
+        (t) =>
+          (t.priority || '')
+            .toLowerCase() === String(priority).toLowerCase()
+      );
+    }
+    if (status) {
+      filtered = filtered.filter(
+        (t) =>
+          (t.status || '')
+            .toLowerCase() === String(status).toLowerCase()
+      );
+    }
+
+    // Return paginated data with total count from server
+    return {
+      tasks: filtered,
+      pagination: {
+        totalCount,
+        pageNumber: pn,
+        pageSize: ps,
+      },
+    } as any;
+  } catch (err: any) {
+    console.error('getAllTasksQueryFn error:', err);
+    const ps = pageSize || 10;
+    const pn = pageNumber || 1;
+    return {
+      tasks: [],
+      pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
+    };
+  }
 };
 
 export const bulkUpdateTasksMutationFn = async ({ ids, data }: { ids: string[]; data: { title?: string; description?: string; priority?: string; status?: string; assignedTo?: string; dueDate?: string } }) => {
@@ -763,5 +934,94 @@ export const updateSubtaskMutationFn = async ({
 
 export const deleteSubtaskMutationFn = async (subtaskId: string) => {
   const response = await API.delete(`/projects/subtasks/${subtaskId}`);
+  return response.data;
+};
+
+//* ISSUES (New Unified API) */
+
+/**
+ * Create a Story under an Epic
+ * POST /issues/epic/:epicId/story
+ */
+export const createStoryUnderEpicMutationFn = async ({
+  epicId,
+  projectId,
+  data,
+}: {
+  epicId: string;
+  projectId: string;
+  data: {
+    title: string;
+    description?: string;
+    priority?: string;
+    dueDate?: string;
+    assignee?: string;
+  };
+}) => {
+  const payload = {
+    ...data,
+    projectId,
+  };
+
+  const response = await API.post(`/issues/epic/${epicId}/story`, payload);
+  return response.data;
+};
+
+/**
+ * Create a Task under an Epic
+ * POST /issues/epic/:epicId/task
+ */
+export const createTaskUnderEpicMutationFn = async ({
+  epicId,
+  projectId,
+  data,
+}: {
+  epicId: string;
+  projectId: string;
+  data: {
+    title: string;
+    description?: string;
+    priority?: string;
+    dueDate?: string;
+    assignee?: string;
+  };
+}) => {
+  const payload = {
+    ...data,
+    projectId,
+  };
+
+  const response = await API.post(`/issues/epic/${epicId}/task`, payload);
+  return response.data;
+};
+
+/**
+ * Update an Issue
+ * PATCH /issues/:id
+ */
+export const updateIssueMutationFn = async ({
+  issueId,
+  data,
+}: {
+  issueId: string;
+  data: {
+    title?: string;
+    description?: string;
+    priority?: string;
+    status?: string;
+    assignee?: string;
+    dueDate?: string;
+  };
+}) => {
+  const response = await API.patch(`/issues/${issueId}`, data);
+  return response.data;
+};
+
+/**
+ * Delete an Issue
+ * DELETE /issues/:id
+ */
+export const deleteIssueMutationFn = async (issueId: string) => {
+  const response = await API.delete(`/issues/${issueId}`);
   return response.data;
 };

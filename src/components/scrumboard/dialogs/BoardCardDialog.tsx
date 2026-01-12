@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Edit2, Trash2 } from 'lucide-react';
+import { X, Edit2, Trash2, Plus } from 'lucide-react';
 import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
 import { useUpdateScrumboardBoardCard } from '@/api/scrumboard/hooks/cards/useUpdateScrumboardBoardCard';
 import { useDeleteScrumboardBoardCard } from '@/api/scrumboard/hooks/cards/useDeleteScrumboardBoardCard';
@@ -29,6 +29,8 @@ export function BoardCardDialog() {
     isCardDialogOpen,
     setIsCardDialogOpen,
     setSelectedCard,
+    setIsIssueCreateDialogOpen,
+    setIssueCreateProjectId,
   } = useScrumboardAppContext();
 
   const workspaceId = useWorkspaceId();
@@ -162,6 +164,17 @@ export function BoardCardDialog() {
     }
   };
 
+  const handleCreateIssue = () => {
+    // Get the project ID from selected card or from the board context
+    const cardProjectId = 
+      (typeof (selectedCard as any).project === 'string' 
+        ? (selectedCard as any).project 
+        : (selectedCard as any).project?._id) || null;
+    
+    setIssueCreateProjectId(cardProjectId);
+    setIsIssueCreateDialogOpen(true);
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -171,6 +184,14 @@ export function BoardCardDialog() {
           <div className="flex items-center gap-2">
             {!isEditing && (
               <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleCreateIssue}
+                  title="Create a new Issue"
+                >
+                  <Plus size={16} />
+                </Button>
                 <Button
                   variant="outline"
                   size="sm"

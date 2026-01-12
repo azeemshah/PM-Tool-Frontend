@@ -20,12 +20,8 @@ export default function Tasks() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => dialogState.open(null, workspaceId)}
-            size="sm"
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
+          <Button onClick={() => dialogState.open(null, workspaceId)}>
+            <Plus />
             New Issue
           </Button>
           <CreateTaskDialog />

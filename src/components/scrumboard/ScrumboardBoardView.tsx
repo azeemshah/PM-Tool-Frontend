@@ -9,9 +9,12 @@ import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
 import { BoardHeader } from './BoardHeader';
 import { BoardList } from './BoardList';
 import { BoardCardDialog } from './dialogs/BoardCardDialog';
+import { IssueCreateDialog } from '@/components/issue';
+import useWorkspaceId from '@/hooks/use-workspace-id';
 
 export function ScrumboardBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
+  const workspaceId = useWorkspaceId();
   const { data: board, isLoading, error } = useGetScrumboardBoard(boardId || '');
   const { data: lists } = useGetScrumboardBoardLists(boardId || null);
   // Debug: log fetched board columns and lists to diagnose missing list names
@@ -21,7 +24,14 @@ export function ScrumboardBoardView() {
   } catch (e) {
     // ignore
   }
-  const { setSelectedBoard, setSelectedCard, setIsCardDialogOpen } = useScrumboardAppContext();
+  const { 
+    setSelectedBoard, 
+    setSelectedCard, 
+    setIsCardDialogOpen,
+    isIssueCreateDialogOpen,
+    setIsIssueCreateDialogOpen,
+    issueCreateProjectId,
+  } = useScrumboardAppContext();
   const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useScrumboardReorder(boardId || null);
   const { data: cards } = useGetScrumboardBoardCards(boardId || '');
   
@@ -358,6 +368,16 @@ export function ScrumboardBoardView() {
       </DragDropContext>
 
       <BoardCardDialog />
+      <IssueCreateDialog
+        isOpen={isIssueCreateDialogOpen}
+        onOpenChange={(open) => setIsIssueCreateDialogOpen(open)}
+        projectId={issueCreateProjectId || ''}
+        workspaceId={workspaceId}
+        onSuccess={() => {
+          // Optionally close the card dialog after successful issue creation
+          setIsCardDialogOpen(false);
+        }}
+      />
     </div>
   );
 }

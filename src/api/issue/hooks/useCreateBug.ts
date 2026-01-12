@@ -16,9 +16,13 @@ export function useCreateBug() {
 		mutationFn: ({ epicId, data }: { epicId: string; data: CreateBugDTO }) =>
 			issueApiService.createBug(epicId, data),
 		onSuccess: (bug: Bug) => {
+			// Invalidate all related queries to refresh data across the app
 			queryClient.invalidateQueries({ queryKey: ['bugs'] });
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: `Bug "${bug.title}" created successfully`,

@@ -30,6 +30,7 @@ import {
 	useCreateEpic,
 	useCreateStory,
 	useCreateTask,
+	useCreateTaskWithoutEpic,
 	useCreateBug,
 	useCreateSubtask,
 	useGetEpics,
@@ -91,13 +92,6 @@ export function IssueCreateDialog({
 	const epics = Array.isArray(epicsQuery.data) ? epicsQuery.data : (epicsQuery.data ?? []);
 	const epicChildren = Array.isArray(epicChildrenQuery.data) ? epicChildrenQuery.data : (epicChildrenQuery.data ?? []);
 
-	// Debug epic children
-	console.log('🔍 IssueCreateDialog EpicChildren Debug:', {
-		epicId,
-		epicChildrenLoading: epicChildrenQuery.isLoading,
-		epicChildrenData: epicChildren,
-	});
-
 	// Debug logging
 	console.log('🔍 IssueCreateDialog Debug:', {
 		selectedProjectId,
@@ -142,13 +136,14 @@ export function IssueCreateDialog({
 	const { mutate: createEpic, isPending: epicPending } = useCreateEpic();
 	const { mutate: createStory, isPending: storyPending } = useCreateStory();
 	const { mutate: createTask, isPending: taskPending } = useCreateTask();
+	const { mutate: createTaskWithoutEpic, isPending: taskWithoutEpicPending } = useCreateTaskWithoutEpic();
 	const { mutate: createBug, isPending: bugPending } = useCreateBug();
 	const { mutate: createSubtask, isPending: subtaskPending } = useCreateSubtask();
 
 	const { toast } = useToast();
 
 	const isLoading =
-		epicPending || storyPending || taskPending || bugPending || subtaskPending;
+		epicPending || storyPending || taskPending || taskWithoutEpicPending || bugPending || subtaskPending;
 
 	// Reset form when dialog closes
 	useEffect(() => {
@@ -237,37 +232,56 @@ export function IssueCreateDialog({
 				}
 			);
 		} else if (['story', 'task', 'bug'].includes(issueType)) {
-			// Story/Task/Bug: must have epicId
-			if (!epicId) {
+			// Task: Epic is optional (can be created without Epic and added later)
+			// Story/Bug: Epic is REQUIRED
+
+			// Validate Epic requirement for Story and Bug
+			if (['story', 'bug'].includes(issueType as string) && !epicId) {
 				toast({
 					title: 'Error',
-					description: `${issueType} must be assigned to an Epic`,
+					description: `${issueType.charAt(0).toUpperCase() + issueType.slice(1)} requires an Epic. Please select an Epic.`,
 					variant: 'destructive',
 				});
 				return;
 			}
 
-			const createFn = issueType === 'story' ? createStory : issueType === 'task' ? createTask : createBug;
-			createFn(
-				{
-					epicId,
-					data: {
-						projectId: selectedProjectId,
-						title: title.trim(),
-						description: description.trim() || undefined,
-						reporter: reporterId,
-						priority,
-						dueDate: dueDate?.toISOString(),
-						status: status || undefined,
+			const data = {
+				projectId: selectedProjectId,
+				title: title.trim(),
+				description: description.trim() || undefined,
+				reporter: reporterId,
+				priority,
+				dueDate: dueDate?.toISOString(),
+				status: status || undefined,
+				epicId: epicId || undefined,
+			};
+
+			// For Task: can be with or without Epic
+			// For Story/Bug: must have Epic
+			if (epicId) {
+				// Epic is selected - use endpoints with Epic
+				const createFn = issueType === 'story' ? createStory : issueType === 'task' ? createTask : createBug;
+				createFn(
+					{
+						epicId,
+						data: data,
 					},
-				},
-				{
+					{
+						onSuccess: () => {
+							onOpenChange(false);
+							onSuccess?.();
+						},
+					}
+				);
+			} else if (issueType === 'task') {
+				// Task without Epic (ONLY Task allows this)
+				createTaskWithoutEpic(data, {
 					onSuccess: () => {
 						onOpenChange(false);
 						onSuccess?.();
 					},
-				}
-			);
+				});
+			}
 		} else if (issueType === 'subtask') {
 			// Subtask: must have parentIssueId
 			if (!parentIssueId) {
@@ -363,10 +377,11 @@ export function IssueCreateDialog({
 							issueType={issueType}
 							parentId={epicId}
 							onChange={setEpicId}
-						projectId={selectedProjectId}
-						disabled={isLoading}
-					/>
-				)}
+							projectId={selectedProjectId}
+							disabled={isLoading}
+							optional={true}
+						/>
+					)}
 
 				{issueType === 'subtask' && (
 					<>
@@ -398,7 +413,6 @@ export function IssueCreateDialog({
 								projectId={selectedProjectId}
 								disabled={isLoading}
 								epicChildren={epicChildren}
-								childrenLoading={epicChildrenQuery.isLoading}
 							/>
 						)}
 					</>

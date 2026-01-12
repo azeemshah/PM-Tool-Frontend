@@ -21,8 +21,8 @@ interface ParentSelectorProps {
 	onChange: (parentId: string) => void;
 	projectId: string | null;
 	disabled?: boolean;
+	optional?: boolean; // For Story/Task/Bug, Epic is optional
 	epicChildren?: (Story | Task | Bug)[]; // For subtask parent selection
-	childrenLoading?: boolean;
 }
 
 type ParentIssue = Epic | Story | Task | Bug;
@@ -33,8 +33,8 @@ export function ParentSelector({
 	onChange,
 	projectId,
 	disabled = false,
+	optional = false,
 	epicChildren = [],
-	childrenLoading = false,
 }: ParentSelectorProps) {
 	const { data: epics = [], isLoading: epicsLoading } = useGetEpics(projectId);
 
@@ -50,8 +50,6 @@ export function ParentSelector({
 		epicsLoading,
 		epicsData: epics,
 		epicCount: epics?.length ?? 0,
-		epicChildrenCount: epicChildren?.length ?? 0,
-		childrenLoading,
 	});
 
 	// For Subtask: show Story/Task/Bug; for Story/Task/Bug: show Epics
@@ -68,12 +66,16 @@ export function ParentSelector({
 
 	return (
 		<div className="space-y-2">
-			<label className="text-sm font-medium">{parentLabel}</label>
+			<label className="text-sm font-medium">
+				{parentLabel}
+				{!optional && issueType !== 'subtask' && ' *'}
+				{optional && issueType !== 'subtask' && <span className="text-xs font-extralight ml-2">Optional</span>}
+			</label>
 			
-			{(issueType === 'subtask' ? childrenLoading : epicsLoading) ? (
-					<Skeleton className="w-full h-10" />
-				) : (
-				<Select value={parentId} onValueChange={onChange} disabled={disabled || parentOptions.length === 0}>
+			{epicsLoading ? (
+				<Skeleton className="w-full h-10" />
+			) : (
+			<Select value={parentId} onValueChange={onChange} disabled={disabled || (parentOptions.length === 0 && !optional)}>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder={`Select ${parentLabel.toLowerCase()}...`} />
 					</SelectTrigger>
@@ -96,13 +98,15 @@ export function ParentSelector({
 				</Select>
 			)}
 
-			{parentOptions.length === 0 && !(issueType === 'subtask' ? childrenLoading : epicsLoading) && (
-					<div className="text-xs text-amber-600">
-						{issueType === 'subtask'
-							? 'No parent issues found under the selected Epic. Choose a different Epic or create a Story/Task/Bug.'
-							: 'No Epics available. Create an Epic first.'}
-					</div>
-				)}
+			{parentOptions.length === 0 && !epicsLoading && (
+				<div className="text-xs text-amber-600">
+					{issueType === 'subtask'
+						? 'Select an Epic first to see available parent issues'
+						: optional
+						? 'No Epics available. You can create this without Epic and add it later.'
+						: 'No Epics available. Create an Epic first.'}
+				</div>
+			)}
 		</div>
 	);
 }

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+ 
 import { useParams } from "react-router-dom";
 import CreateTaskDialog from "../task/create-task-dialog";
 import EditProjectDialog from "./edit-project-dialog";
@@ -59,12 +59,8 @@ const ProjectHeader = () => {
           </PermissionsGuard>
         </div>
         <div className="flex gap-2">
-          <Button
-            onClick={() => dialogState.open(projectId, workspaceId)}
-            size="sm"
-            className="gap-2"
-          >
-            <Plus className="h-4 w-4" />
+          <Button onClick={() => dialogState.open(projectId, workspaceId)}>
+            <Plus />
             New Issue
           </Button>
           <CreateTaskDialog projectId={projectId} />

@@ -12,6 +12,8 @@ export function ScrumboardAppContextProvider({
   const [selectedBoard, setSelectedBoard] = useState<ScrumboardBoard | null>(null);
   const [selectedCard, setSelectedCard] = useState<ScrumboardCard | null>(null);
   const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
+  const [isIssueCreateDialogOpen, setIsIssueCreateDialogOpen] = useState(false);
+  const [issueCreateProjectId, setIssueCreateProjectId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [viewMode, setViewMode] = useState<'board' | 'list' | 'calendar'>('board');
@@ -23,6 +25,10 @@ export function ScrumboardAppContextProvider({
     setSelectedCard,
     isCardDialogOpen,
     setIsCardDialogOpen,
+    isIssueCreateDialogOpen,
+    setIsIssueCreateDialogOpen,
+    issueCreateProjectId,
+    setIssueCreateProjectId,
     searchQuery,
     setSearchQuery,
     isSidebarOpen,

@@ -15,6 +15,8 @@ const useTaskTableFilter = () => {
       Object.values(TaskPriorityEnum)
     ),
     keyword: parseAsString,
+    // allow filtering by issue type (epic, story, task, bug, subtask)
+    issueType: parseAsString,
     projectId: parseAsString,
     assigneeId: parseAsString,
   });

@@ -262,6 +262,11 @@ export type TaskType = {
     name: string;
     profilePicture: string | null;
   } | null;
+  reporter?: {
+    _id: string;
+    name: string;
+    profilePicture: string | null;
+  } | null;
   createdBy?: string;
   dueDate: string;
   taskCode: string;

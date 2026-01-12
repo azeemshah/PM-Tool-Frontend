@@ -2,7 +2,6 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getAllTasksQueryFn } from "@/lib/api";
 import {
   getAvatarColor,
   getAvatarFallbackText,
@@ -11,17 +10,95 @@ import {
 import { TaskType } from "@/types/api.type";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader } from "lucide-react";
+import { Loader, RefreshCw } from "lucide-react";
+import API from "@/lib/axios-client";
+import { Button } from "@/components/ui/button";
 
 const RecentTasks = () => {
   const workspaceId = useWorkspaceId();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ["all-tasks", workspaceId],
-    queryFn: () =>
-      getAllTasksQueryFn({
-        workspaceId,
-      }),
+  const { data, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["recent-tasks", workspaceId],
+    queryFn: async () => {
+      console.log('[recent-tasks] Query started, workspaceId:', workspaceId);
+      if (!workspaceId) {
+        console.log('[recent-tasks] No workspaceId, returning empty');
+        return { tasks: [] } as any;
+      }
+      try {
+        console.log('[recent-tasks] Fetching projects for workspace:', workspaceId);
+        const projectsResp = await API.get(`/projects`, { params: { workspaceId } });
+        const projects = projectsResp.data?.data || projectsResp.data?.projects || projectsResp.data || [];
+        console.log('[recent-tasks] Projects response:', { count: projects?.length, data: projects });
+        
+        if (!projects || projects.length === 0) {
+          console.log('[recent-tasks] No projects found');
+          return { tasks: [] } as any;
+        }
+
+        console.log('[recent-tasks] Fetching issues from', projects.length, 'projects');
+        const issuesPromises = projects.map((p: any) =>
+          API.get(`/issues/project/${p._id}`)
+            .then((r) => {
+              const items = (r.data?.data || r.data || []) as any[];
+              console.log(`[recent-tasks] Project ${p.name} (${p._id}): ${items.length} issues`);
+              return items.map((iss) => {
+                // Handle assignedTo with fallback to reporter
+                let assignedTo = null;
+                if (iss.assignee && iss.assignee._id) {
+                  assignedTo = {
+                    _id: iss.assignee._id,
+                    name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(),
+                    profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null,
+                  };
+                } else if (iss.reporter && iss.reporter._id) {
+                  assignedTo = {
+                    _id: iss.reporter._id,
+                    name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(),
+                    profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null,
+                  };
+                }
+
+                return {
+                  _id: iss._id,
+                  taskCode: iss.key || iss._id,
+                  title: iss.title,
+                  description: iss.description,
+                  project: { _id: iss.projectId || p._id, emoji: p.emoji || "", name: p.name || "" },
+                  priority: iss.priority,
+                  status: iss.status,
+                  assignedTo: assignedTo,
+                  dueDate: iss.dueDate || "",
+                  createdAt: iss.createdAt,
+                  updatedAt: iss.updatedAt,
+                };
+              });
+            })
+            .catch((err) => {
+              console.error(`[recent-tasks] Error fetching issues for project ${p._id}:`, err);
+              return [];
+            }),
+        );
+
+        const allArrays = await Promise.all(issuesPromises);
+        const allMapped = allArrays.flat();
+        console.log('[recent-tasks] Total issues combined:', allMapped.length);
+        
+        // Sort by createdAt descending and get top 5 recent
+        const recent = allMapped.sort((a: any, b: any) => {
+          const dateA = new Date(a.createdAt || 0).getTime();
+          const dateB = new Date(b.createdAt || 0).getTime();
+          return dateB - dateA;
+        }).slice(0, 5);
+        
+        console.log('[recent-tasks] Recent tasks (after sort/slice):', recent.length);
+        return { tasks: recent } as any;
+      } catch (err: any) {
+        console.error('[recent-tasks] Error in queryFn:', err);
+        if (err?.response?.status === 401) throw err;
+        return { tasks: [] } as any;
+      }
+    },
     staleTime: 0,
     enabled: !!workspaceId,
   });
@@ -30,84 +107,103 @@ const RecentTasks = () => {
 
   return (
     <div className="flex flex-col space-y-6">
-      {isLoading ? (
-        <Loader
-          className="w-8 h-8 
-        animate-spin
-        place-self-center flex
-        "
-        />
-      ) : null}
-
-      {tasks?.length === 0 && (
-        <div
-          className="font-semibold
-         text-sm text-muted-foreground
-          text-center py-5"
+      <div className="flex items-center justify-between">
+        {isLoading && (
+          <Loader className="w-5 h-5 animate-spin text-muted-foreground" />
+        )}
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            console.log('[recent-tasks] Manual refetch triggered');
+            refetch();
+          }}
+          disabled={isLoading}
         >
+          <RefreshCw className="w-4 h-4" />
+        </Button>
+      </div>
+
+      {isError && (
+        <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {(error as any)?.response?.status === 401 ? (
+            "Authentication required — please sign in to view recent tasks."
+          ) : (
+            "Failed to load recent tasks. Ensure the backend is running."
+          )}
+          {error && (error as any).message ? (
+            <div className="mt-1 text-xs text-red-600">{String((error as any).message)}</div>
+          ) : null}
+        </div>
+      )}
+
+      {!isLoading && !isError && tasks?.length === 0 && (
+        <div className="font-semibold text-sm text-muted-foreground text-center py-5">
           No Task created yet
         </div>
       )}
 
-      <ul role="list" className="divide-y divide-gray-200">
-        {tasks.map((task) => {
-          const name = task?.assignedTo?.name || "";
-          const initials = getAvatarFallbackText(name);
-          const avatarColor = getAvatarColor(name);
-          return (
-            <li
-              key={task._id}
-              className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
-            >
-              {/* Task Info */}
-              <div className="flex flex-col space-y-1 flex-grow">
-                <span className="text-sm capitalize text-gray-600 font-medium">
-                  {task.taskCode}
-                </span>
-                <p className="text-md font-semibold text-gray-800 truncate">
-                  {task.title}
-                </p>
-                <span className="text-sm text-gray-500">
-                  Due: {task.dueDate ? format(task.dueDate, "PPP") : null}
-                </span>
-              </div>
+      {tasks && tasks.length > 0 && (
+        <ul role="list" className="divide-y divide-gray-200">
+          {tasks.map((task) => {
+            const name = task?.assignedTo?.name || "";
+            const initials = getAvatarFallbackText(name);
+            const avatarColor = getAvatarColor(name);
+            return (
+              <li
+                key={task._id}
+                className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+              >
+                {/* Task Info */}
+                <div className="flex flex-col space-y-1 flex-grow">
+                  <span className="text-sm capitalize text-gray-600 font-medium">
+                    {task.taskCode}
+                  </span>
+                  <p className="text-md font-semibold text-gray-800 truncate">
+                    {task.title}
+                  </p>
+                  <span className="text-sm text-gray-500">
+                    Due: {task.dueDate ? format(new Date(task.dueDate), "PPP") : "No due date"}
+                  </span>
+                </div>
 
-              {/* Task Status */}
-              <div className="text-sm font-medium ">
-                <Badge
-                  variant={TaskStatusEnum[task.status]}
-                  className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
-                >
-                  <span>{transformStatusEnum(task.status)}</span>
-                </Badge>
-              </div>
+                {/* Task Status */}
+                <div className="text-sm font-medium ">
+                  <Badge
+                    variant={TaskStatusEnum[task.status]}
+                    className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+                  >
+                    <span>{transformStatusEnum(task.status)}</span>
+                  </Badge>
+                </div>
 
-              {/* Task Priority */}
-              <div className="text-sm ml-2">
-                <Badge
-                  variant={TaskPriorityEnum[task.priority]}
-                  className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
-                >
-                  <span>{transformStatusEnum(task.priority)}</span>
-                </Badge>
-              </div>
+                {/* Task Priority */}
+                <div className="text-sm ml-2">
+                  <Badge
+                    variant={TaskPriorityEnum[task.priority]}
+                    className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+                  >
+                    <span>{transformStatusEnum(task.priority)}</span>
+                  </Badge>
+                </div>
 
-              {/* Assignee */}
-              <div className="flex items-center space-x-2 ml-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage
-                    src={task.assignedTo?.profilePicture || ""}
-                    alt={task.assignedTo?.name}
-                  />
-                  <AvatarFallback className={avatarColor}>
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            </li>
-          );
-        })}
-      </ul>
+                {/* Assignee */}
+                <div className="flex items-center space-x-2 ml-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage
+                      src={task.assignedTo?.profilePicture || ""}
+                      alt={task.assignedTo?.name}
+                    />
+                    <AvatarFallback className={avatarColor}>
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
     </div>
   );
 };
