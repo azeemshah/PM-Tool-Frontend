@@ -17,12 +17,6 @@ export interface ScrumboardAppContextType {
   // Issue Create Dialog state
   isIssueCreateDialogOpen: boolean;
   setIsIssueCreateDialogOpen: (open: boolean) => void;
-  issueCreateProjectId: string | null;
-  setIssueCreateProjectId: (projectId: string | null) => void;
-
-  // Project selection state
-  selectedProjectId: string | null;
-  setSelectedProjectId: (projectId: string | null) => void;
 
   // Filter and search
   searchQuery: string;

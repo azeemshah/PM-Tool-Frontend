@@ -185,9 +185,9 @@ export const reorderColumnsMutationFn = async ({ boardId, data }: { boardId: str
 };
 
 // ================ Boards (CRUD) ==================
-export const createBoardMutationFn = async ({ workspaceId, projectId, data }: { workspaceId?: string; projectId?: string; data: any }) => {
+export const createBoardMutationFn = async ({ workspaceId, data }: { workspaceId?: string; data: any }) => {
   try {
-    const payload = { workspaceId, projectId, ...data };
+    const payload = { workspaceId, ...data };
     const response = await API.post(`/boards`, payload);
     return response.data;
   } catch (err: any) {

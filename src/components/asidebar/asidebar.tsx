@@ -27,7 +27,6 @@ import Logo from "@/components/logo";
 import LogoutDialog from "./logout-dialog";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { NavMain } from "./nav-main";
-import { NavProjects } from "./nav-projects";
 import { Separator } from "../ui/separator";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useAuthContext } from "@/context/auth-provider";
@@ -62,8 +61,6 @@ const Asidebar = () => {
               <WorkspaceSwitcher />
               <Separator />
               <NavMain />
-              <Separator />
-              <NavProjects />
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>

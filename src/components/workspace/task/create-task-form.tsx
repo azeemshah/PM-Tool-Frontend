@@ -25,7 +25,6 @@ import {
   getAvatarFallbackText,
 } from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createTaskMutationFn, createTaskWithoutEpicMutationFn } from "@/lib/api";
@@ -34,10 +33,9 @@ import { toast } from "@/hooks/use-toast";
 
 export default function CreateTaskForm(props: {
   storyId?: string;
-  projectId?: string;
   onClose: () => void;
 }) {
-  const { storyId, projectId, onClose } = props;
+  const { storyId, onClose } = props;
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
@@ -54,28 +52,9 @@ export default function CreateTaskForm(props: {
 
   const isPending = isStoryTaskPending || isIndependentTaskPending;
 
-  const { data, isLoading } = useGetProjectsInWorkspaceQuery({
-    workspaceId,
-    skip: !!projectId,
-  });
-
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
 
-  const projects = data?.projects || [];
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
-
-  //Workspace Projects
-  const projectOptions = projects?.map((project) => {
-    return {
-      label: (
-        <div className="flex items-center gap-1">
-          <span>{project.emoji}</span>
-          <span>{project.name}</span>
-        </div>
-      ),
-      value: project._id,
-    };
-  });
 
   // Workspace Memebers
   const membersOptions = members?.map((member) => {
@@ -115,7 +94,6 @@ export default function CreateTaskForm(props: {
       message: "Reporter is required",
     }),
     dueDate: z.date().optional(),
-    projectId: !projectId ? z.string().min(1, { message: "Project is required" }) : z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -124,7 +102,6 @@ export default function CreateTaskForm(props: {
       title: "",
       description: "",
       dueDate: undefined,
-      projectId: projectId || "",
       reporter: members.length > 0 ? members[0].userId._id : "",
     },
   });
@@ -174,12 +151,10 @@ export default function CreateTaskForm(props: {
         },
       });
     }
-    // Case 2: Creating task without a story (All Tasks page / Project Dashboard)
-    else if (projectId || values.projectId) {
-      const selectedProjectId = projectId || values.projectId;
-      
+    // Case 2: Creating task without a story (All Tasks page)
+    else {
       const payload = {
-        projectId: selectedProjectId,
+        workspaceId,
         data: taskData,
       };
 
@@ -192,7 +167,7 @@ export default function CreateTaskForm(props: {
             queryKey: ["allTasks"],
           });
           queryClient.invalidateQueries({
-            queryKey: ["issues", "project", selectedProjectId],
+            queryKey: ["issues", "workspace", workspaceId],
           });
 
           toast({
@@ -273,54 +248,6 @@ export default function CreateTaskForm(props: {
               />
             </div>
 
-            {/* {ProjectId} */}
-
-            {!projectId && (
-              <div>
-                <FormField
-                  control={form.control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a project" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoading && (
-                            <div className="my-2">
-                              <Loader className="w-4 h-4 place-self-center flex animate-spin" />
-                            </div>
-                          )}
-                          <div
-                            className="w-full max-h-[200px]
-                           overflow-y-auto scrollbar
-                          "
-                          >
-                            {projectOptions?.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                className="!capitalize cursor-pointer"
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </div>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
 
             {/* {Members AssigneeTo} */}
 

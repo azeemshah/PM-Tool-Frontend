@@ -39,7 +39,6 @@ import {
 } from '@/api/issue/hooks';
 import { useToast } from '@/hooks/use-toast';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
-import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import { cn } from '@/lib/utils';
@@ -64,7 +63,6 @@ export function IssueCreateDialog({
 	const queryClient = useQueryClient();
 	
 	// Form state
-	const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || '');
 	const [issueType, setIssueType] = useState<IssueType | ''>('');
 	const [title, setTitle] = useState('');
 	const [description, setDescription] = useState('');
@@ -79,44 +77,24 @@ export function IssueCreateDialog({
 
 	// Queries and mutations
 	const membersQuery = useGetWorkspaceMembers(workspaceId);
-	const projectsQuery = useGetProjectsInWorkspaceQuery({
-		workspaceId: workspaceId || '',
-		pageSize: 100,
-		pageNumber: 1,
-		skip: false,
-	});
-	const epicsQuery = useGetEpics(selectedProjectId && selectedProjectId !== 'default' ? selectedProjectId : null);
+	const epicsQuery = useGetEpics(projectId && projectId !== 'default' ? projectId : null);
 	const epicChildrenQuery = useGetEpicChildren(epicId || null);
 
 	// Normalize responses: some hooks return an array directly, others return an object with a `members`/`roles` shape
 	const members = Array.isArray(membersQuery.data) ? membersQuery.data : (membersQuery.data?.members ?? []);
-	const projectsData = Array.isArray(projectsQuery.data) ? projectsQuery.data : (projectsQuery.data?.projects ?? (projectsQuery.data?.data ?? []));
-	const projects = Array.isArray(projectsData) ? projectsData : [];
 	const epics = Array.isArray(epicsQuery.data) ? epicsQuery.data : (epicsQuery.data ?? []);
 	const epicChildren = Array.isArray(epicChildrenQuery.data) ? epicChildrenQuery.data : (epicChildrenQuery.data ?? []);
 
 	// Debug logging
 	console.log('🔍 IssueCreateDialog Debug:', {
-		selectedProjectId,
 		projectId,
-		epicsQueryKey: ['epics', selectedProjectId && selectedProjectId !== 'default' ? selectedProjectId : null],
+		epicsQueryKey: ['epics', projectId && projectId !== 'default' ? projectId : null],
 		epicsQueryLoading: epicsQuery.isLoading,
 		epicsQueryError: epicsQuery.error,
 		epicsData: epicsQuery.data,
 		epics: epics,
 		epicCount: epics.length,
 	});
-
-	// Format options for project and reporter display
-	const projectOptions = projects.map((project) => ({
-		label: (
-			<div className="flex items-center gap-2">
-				<span>{project.emoji || '📁'}</span>
-				<span>{project.name || project.projectName}</span>
-			</div>
-		),
-		value: project._id,
-	}));
 
 	const reporterOptions = members.map((member) => {
 		const name = member.userId?.name || 'Unknown';
@@ -151,24 +129,20 @@ export function IssueCreateDialog({
 	// Refetch issues after creation
 	const refetchIssues = () => {
 		console.log('🔄 Refetching issues after creation:', {
-			selectedProjectId,
+			workspaceId,
 			projectId,
 		});
-		if (selectedProjectId) {
-			queryClient.invalidateQueries({ queryKey: ['issues', 'project', selectedProjectId] });
-			console.log('✅ Invalidated query for project:', selectedProjectId);
-		} else if (projectId) {
-			queryClient.invalidateQueries({ queryKey: ['issues', 'project', projectId] });
-			console.log('✅ Invalidated query for default project:', projectId);
+		if (projectId) {
+			queryClient.invalidateQueries({ queryKey: ['issues', 'workspace', projectId] });
+			console.log('✅ Invalidated query for workspace:', projectId);
 		} else {
-			console.warn('⚠️ No project ID available for refetch');
+			console.warn('⚠️ No workspace ID available for refetch');
 		}
 	};
 
 	// Reset form when dialog closes
 	useEffect(() => {
 		if (!isOpen) {
-			setSelectedProjectId(projectId || '');
 			setIssueType('');
 			setTitle('');
 			setDescription('');
@@ -178,13 +152,8 @@ export function IssueCreateDialog({
 			setReporterId('');
 			setDueDate(undefined);
 			setStatus('');
-		} else {
-			// When dialog opens, set the projectId
-			if (projectId && projectId !== 'default') {
-				setSelectedProjectId(projectId);
-			}
 		}
-	}, [isOpen, projectId]);
+	}, [isOpen]);
 
 	// Set default reporter
 	useEffect(() => {
@@ -204,10 +173,10 @@ export function IssueCreateDialog({
 			return;
 		}
 
-		if (!selectedProjectId) {
+		if (!projectId) {
 			toast({
 				title: 'Error',
-				description: 'Project is required',
+				description: 'Workspace issue: No project context',
 				variant: 'destructive',
 			});
 			return;
@@ -236,7 +205,7 @@ export function IssueCreateDialog({
 			// Epic: no parent needed
 			createEpic(
 				{
-					projectId: selectedProjectId,
+					projectId: projectId,
 					title: title.trim(),
 					description: description.trim() || undefined,
 					reporter: reporterId,
@@ -267,7 +236,7 @@ export function IssueCreateDialog({
 			}
 
 			const data = {
-				projectId: selectedProjectId,
+				projectId: projectId,
 				title: title.trim(),
 				description: description.trim() || undefined,
 				reporter: reporterId,
@@ -320,7 +289,7 @@ export function IssueCreateDialog({
 				{
 					parentIssueId,
 					data: {
-						projectId: selectedProjectId,
+						projectId: projectId,
 						title: title.trim(),
 						description: description.trim() || undefined,
 						reporter: reporterId,
@@ -351,35 +320,6 @@ export function IssueCreateDialog({
 				</DialogHeader>
 
 				<div className="space-y-4">
-				{/* Project Selection */}
-				<div className="space-y-2">
-					<label className="text-sm font-medium">Project *</label>
-					<Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-						<SelectTrigger>
-							<SelectValue placeholder={projectsQuery.isPending ? 'Loading projects...' : 'Select a project...'} />
-						</SelectTrigger>
-				<SelectContent>
-					<div className="w-full max-h-[250px] overflow-y-auto">
-						{projectsQuery.isPending ? (
-							<div className="p-2 text-center text-sm text-muted-foreground">
-								Loading projects...
-							</div>
-						) : projectOptions.length > 0 ? (
-							projectOptions.map((option) => (
-								<SelectItem key={option.value} value={option.value}>
-									{option.label}
-								</SelectItem>
-							))
-						) : (
-							<div className="p-2 text-center text-sm text-muted-foreground">
-								No projects found
-							</div>
-						)}
-					</div>
-				</SelectContent>
-					</Select>
-				</div>
-
 				{/* Issue Type Selection */}
 				<IssueTypeSelector
 					value={issueType}
@@ -399,12 +339,11 @@ export function IssueCreateDialog({
 							issueType={issueType}
 							parentId={epicId}
 							onChange={setEpicId}
-							projectId={selectedProjectId}
+							projectId={projectId}
 							disabled={isLoading}
 							optional={true}
 						/>
 					)}
-
 				{issueType === 'subtask' && (
 					<>
 						{/* First select Epic to show its children */}
@@ -432,7 +371,7 @@ export function IssueCreateDialog({
 								issueType="subtask"
 								parentId={parentIssueId}
 								onChange={setParentIssueId}
-								projectId={selectedProjectId}
+								projectId={projectId}
 								disabled={isLoading}
 								epicChildren={epicChildren}
 							/>
