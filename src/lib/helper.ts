@@ -41,8 +41,8 @@ export const getAvatarColor = (initials: string): string => {
   return colors[hash % colors.length];
 };
 
-export const getAvatarFallbackText = (name: string) => {
-  if (!name) return "NA";
+export const getAvatarFallbackText = (name: string | undefined | null) => {
+  if (!name || typeof name !== 'string') return "NA";
   const initials = name
     .split(" ")
     .map((n) => n.charAt(0).toUpperCase())

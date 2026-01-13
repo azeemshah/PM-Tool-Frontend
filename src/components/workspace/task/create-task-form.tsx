@@ -1,8 +1,7 @@
 import { z } from "zod";
-import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Loader } from "lucide-react";
+import { Loader } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -18,27 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
-import { cn } from "@/lib/utils";
-import { Calendar } from "@/components/ui/calendar";
 import {
   getAvatarColor,
   getAvatarFallbackText,
-  transformOptions,
 } from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createTaskMutationFn } from "@/lib/api";
+import { createTaskMutationFn, createTaskWithoutEpicMutationFn } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -52,9 +42,17 @@ export default function CreateTaskForm(props: {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
 
-  const { mutate, isPending } = useMutation({
+  // Mutation for creating task under a story
+  const { mutate: mutateStoryTask, isPending: isStoryTaskPending } = useMutation({
     mutationFn: createTaskMutationFn,
   });
+
+  // Mutation for creating task without story
+  const { mutate: mutateIndependentTask, isPending: isIndependentTaskPending } = useMutation({
+    mutationFn: createTaskWithoutEpicMutationFn,
+  });
+
+  const isPending = isStoryTaskPending || isIndependentTaskPending;
 
   const { data, isLoading } = useGetProjectsInWorkspaceQuery({
     workspaceId,
@@ -104,20 +102,17 @@ export default function CreateTaskForm(props: {
       message: "Title is required",
     }),
     description: z.string().trim().optional(),
-    status: z.enum(
-      Object.values(TaskStatusEnum) as [keyof typeof TaskStatusEnum],
-      {
-        required_error: "Status is required",
-      }
-    ),
-    priority: z.enum(
-      Object.values(TaskPriorityEnum) as [keyof typeof TaskPriorityEnum],
-      {
-        required_error: "Priority is required",
-      }
-    ),
+    status: z.string().min(1, {
+      message: "Status is required",
+    }),
+    priority: z.string().min(1, {
+      message: "Priority is required",
+    }),
     assignedTo: z.string().trim().min(1, {
       message: "AssignedTo is required",
+    }),
+    reporter: z.string().trim().min(1, {
+      message: "Reporter is required",
     }),
     dueDate: z.date().optional(),
     projectId: !projectId ? z.string().min(1, { message: "Project is required" }) : z.string().optional(),
@@ -130,50 +125,92 @@ export default function CreateTaskForm(props: {
       description: "",
       dueDate: undefined,
       projectId: projectId || "",
+      reporter: members.length > 0 ? members[0].userId._id : "",
     },
   });
 
-  const taskStatusList = Object.values(TaskStatusEnum);
-  const taskPriorityList = Object.values(TaskPriorityEnum); // ["LOW", "MEDIUM", "HIGH", "URGENT"]
-
-  const statusOptions = transformOptions(taskStatusList);
-  const priorityOptions = transformOptions(taskPriorityList);
+  const STATUSES = ["backlog", "todo", "in_progress", "in_review", "done"];
+  const PRIORITIES = ["lowest", "low", "medium", "high", "highest"];
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    if (isPending || !storyId) return;
-    const payload = {
-      storyId,
-      data: {
-        title: values.title,
-        description: values.description,
-        status: values.status,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate.toISOString(),
-      },
+    if (isPending) return;
+
+    const taskData = {
+      title: values.title,
+      description: values.description,
+      status: values.status,
+      priority: values.priority,
+      assignedTo: values.assignedTo,
+      reporter: values.reporter,
+      dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
     };
 
-    mutate(payload, {
-      onSuccess: () => {
-        queryClient.invalidateQueries({
-          queryKey: ["tasks", storyId],
-        });
+    // Case 1: Creating task under a story
+    if (storyId) {
+      const payload = {
+        storyId,
+        data: taskData,
+      };
 
-        toast({
-          title: "Success",
-          description: "Task created successfully",
-          variant: "success",
-        });
-        onClose();
-      },
-      onError: (error) => {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive",
-        });
-      },
-    });
+      mutateStoryTask(payload, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ["tasks", storyId],
+          });
+
+          toast({
+            title: "Success",
+            description: "Task created successfully",
+            variant: "success",
+          });
+          onClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      });
+    }
+    // Case 2: Creating task without a story (All Tasks page / Project Dashboard)
+    else if (projectId || values.projectId) {
+      const selectedProjectId = projectId || values.projectId;
+      
+      const payload = {
+        projectId: selectedProjectId,
+        data: taskData,
+      };
+
+      mutateIndependentTask(payload, {
+        onSuccess: () => {
+          queryClient.invalidateQueries({
+            queryKey: ["tasks", "all"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["allTasks"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["issues", "project", selectedProjectId],
+          });
+
+          toast({
+            title: "Success",
+            description: "Task created successfully",
+            variant: "success",
+          });
+          onClose();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error",
+            description: error.message,
+            variant: "destructive",
+          });
+        },
+      });
+    }
   };
 
   return (
@@ -285,55 +322,6 @@ export default function CreateTaskForm(props: {
               </div>
             )}
 
-            {/* {ProjectId} */}
-
-            {!projectId && (
-              <div>
-                <FormField
-                  control={form.control}
-                  name="projectId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Project</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a project" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoading && (
-                            <div className="my-2">
-                              <Loader className="w-4 h-4 place-self-center flex animate-spin" />
-                            </div>
-                          )}
-                          <div
-                            className="w-full max-h-[200px]
-                           overflow-y-auto scrollbar
-                          "
-                          >
-                            {projectOptions?.map((option) => (
-                              <SelectItem
-                                key={option.value}
-                                className="!capitalize cursor-pointer"
-                                value={option.value}
-                              >
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </div>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            )}
-
             {/* {Members AssigneeTo} */}
 
             <div>
@@ -376,58 +364,30 @@ export default function CreateTaskForm(props: {
               />
             </div>
 
-            {/* {Due Date} */}
-            <div className="!mt-2">
+            {/* Due Date */}
+            <div>
               <FormField
                 control={form.control}
                 name="dueDate"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Due Date</FormLabel>
-                    <Popover>
-                      <PopoverTrigger asChild>
-                        <FormControl>
-                          <Button
-                            variant={"outline"}
-                            className={cn(
-                              "w-full flex-1 pl-3 text-left font-normal",
-                              !field.value && "text-muted-foreground"
-                            )}
-                          >
-                            {field.value ? (
-                              format(field.value, "PPP")
-                            ) : (
-                              <span>Pick a date</span>
-                            )}
-                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                          </Button>
-                        </FormControl>
-                      </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
-                        <Calendar
-                          mode="single"
-                          selected={field.value}
-                          onSelect={field.onChange}
-                          disabled={
-                            (date) =>
-                              date <
-                                new Date(new Date().setHours(0, 0, 0, 0)) || // Disable past dates
-                              date > new Date("2100-12-31") //Prevent selection beyond a far future date
-                          }
-                          initialFocus
-                          defaultMonth={new Date()}
-                          fromMonth={new Date()}
-                        />
-                      </PopoverContent>
-                    </Popover>
+                    <FormControl>
+                      <input
+                        type="date"
+                        value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
+                        disabled={isPending}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
             </div>
 
-            {/* {Status} */}
-
+            {/* Status */}
             <div>
               <FormField
                 control={form.control}
@@ -435,26 +395,16 @@ export default function CreateTaskForm(props: {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue
-                            className="!text-muted-foreground !capitalize"
-                            placeholder="Select a status"
-                          />
+                          <SelectValue placeholder="Select a status" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {statusOptions?.map((status) => (
-                          <SelectItem
-                            className="!capitalize"
-                            key={status.value}
-                            value={status.value}
-                          >
-                            {status.label}
+                        {STATUSES.map((s) => (
+                          <SelectItem key={s} value={s}>
+                            {s.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -465,7 +415,7 @@ export default function CreateTaskForm(props: {
               />
             </div>
 
-            {/* {Priority} */}
+            {/* Priority */}
             <div>
               <FormField
                 control={form.control}
@@ -473,25 +423,48 @@ export default function CreateTaskForm(props: {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Priority</FormLabel>
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select a priority" />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {priorityOptions?.map((priority) => (
-                          <SelectItem
-                            className="!capitalize"
-                            key={priority.value}
-                            value={priority.value}
-                          >
-                            {priority.label}
+                        {PRIORITIES.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p.charAt(0).toUpperCase() + p.slice(1)}
                           </SelectItem>
                         ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Reporter */}
+            <div>
+              <FormField
+                control={form.control}
+                name="reporter"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Reporter</FormLabel>
+                    <Select value={field.value} onValueChange={field.onChange}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select a reporter" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <div className="w-full max-h-[200px] overflow-y-auto scrollbar">
+                          {membersOptions?.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </div>
                       </SelectContent>
                     </Select>
                     <FormMessage />

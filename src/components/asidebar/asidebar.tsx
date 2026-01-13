@@ -85,8 +85,8 @@ const Asidebar = () => {
                       <Avatar className="h-8 w-8 rounded-full">
                         <AvatarImage src={user?.profilePicture || ""} />
                         <AvatarFallback className="rounded-full border border-gray-500">
-                          {user?.name?.split(" ")?.[0]?.charAt(0)}
-                          {user?.name?.split(" ")?.[1]?.charAt(0)}
+                          {user?.name && user.name.split(" ")?.[0]?.charAt(0)}
+                          {user?.name && user.name.split(" ")?.[1]?.charAt(0)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="grid flex-1 text-left text-sm leading-tight">

@@ -18,7 +18,7 @@ export function useIssueCreateDialog() {
 		workspaceId: null,
 	});
 
-	const open = (projectId: string, workspaceId: string) => {
+	const open = (projectId: string | null, workspaceId: string) => {
 		setState({
 			isOpen: true,
 			projectId,

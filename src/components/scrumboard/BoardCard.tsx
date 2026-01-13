@@ -1,4 +1,5 @@
 import { ScrumboardCard } from '@/api/scrumboard/types';
+import { Issue } from '@/api/issue/types';
 import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
 import { useGetScrumboardBoards } from '@/api/scrumboard/hooks/boards/useGetScrumboardBoards';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -12,7 +13,7 @@ import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 
 interface BoardCardProps {
-  card: ScrumboardCard;
+  card: ScrumboardCard | Issue;
 }
 
 export function BoardCard({ card }: BoardCardProps) {
@@ -22,13 +23,28 @@ export function BoardCard({ card }: BoardCardProps) {
   const projects = projectsData?.projects || [];
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
-  const hasComments = (card.comments?.length || 0) > 0;
-  const hasAttachments = (card.attachments?.length || 0) > 0;
-  const hasChecklists = (card.checklists?.length || 0) > 0;
-  const completedChecklistItems = card.checklists?.reduce((count, checklist) => 
+
+  // Determine if this is an Issue or ScrumboardCard
+  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as Record<string, unknown>).type));
+  const issue = isIssue ? (card as Issue) : null;
+
+  // Get card properties (handle both Issue and ScrumboardCard)
+  const cardType = issue?.type || (card as ScrumboardCard).type || 'task';
+  const cardTitle = issue?.title || (card as ScrumboardCard).title || '';
+  const cardPriority = issue?.priority || (card as ScrumboardCard).priority || '';
+  const cardStatus = issue?.status || (card as ScrumboardCard).status || '';
+  const cardAssignee = issue?.assignee || (card as any)?.assignee;
+  const cardComments = issue?.comments || (card as ScrumboardCard).comments || [];
+  const cardAttachments = issue?.attachments || (card as ScrumboardCard).attachments || [];
+  const cardChecklists = (card as ScrumboardCard).checklists || [];
+
+  const hasComments = (cardComments?.length || 0) > 0;
+  const hasAttachments = (cardAttachments?.length || 0) > 0;
+  const hasChecklists = (cardChecklists?.length || 0) > 0;
+  const completedChecklistItems = cardChecklists?.reduce((count, checklist) => 
     count + (checklist.checkItems?.filter(item => item.checked).length || 0), 0
   ) || 0;
-  const totalChecklistItems = card.checklists?.reduce((count, checklist) => 
+  const totalChecklistItems = cardChecklists?.reduce((count, checklist) => 
     count + (checklist.checkItems?.length || 0), 0
   ) || 0;
 
@@ -38,13 +54,13 @@ export function BoardCard({ card }: BoardCardProps) {
       <div className="flex items-center justify-between mb-2">
         <div>
           <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
-            {card.type || 'Task'}
+            {cardType}
           </Badge>
         </div>
         <div className="text-xs text-gray-400">
           {/* Show only emoji or image for project/board, fallback to initial in a circle */}
           {(() => {
-            const boardObj = boards.find((b: any) => String(b._id) === String(card.board));
+            const boardObj = boards.find((b: any) => String(b._id) === String((card as any).board));
 
             // Determine a project id candidate from various card/board shapes
             let projectIdCandidate: string | null = null;
@@ -55,7 +71,7 @@ export function BoardCard({ card }: BoardCardProps) {
               else if ((card as any).project._id) projectIdCandidate = (card as any).project._id;
             }
 
-            // explicit projectId field on card
+            // explicit projectId field on card/issue
             if (!projectIdCandidate && (card as any)?.projectId) projectIdCandidate = (card as any).projectId;
 
             // board may reference a project
@@ -100,7 +116,7 @@ export function BoardCard({ card }: BoardCardProps) {
               return null;
             }
 
-            const fallbackInitial = (boardObj?.name && boardObj.name.charAt(0)) || (card?.title && card.title.charAt(0));
+            const fallbackInitial = (boardObj?.name && boardObj.name.charAt(0)) || (cardTitle && cardTitle.charAt(0));
             if (fallbackInitial) {
               return (
                 <div className="w-6 h-6 rounded-full bg-gray-100 flex items-center justify-center text-xs text-gray-700">
@@ -115,9 +131,9 @@ export function BoardCard({ card }: BoardCardProps) {
       </div>
 
       {/* Labels */}
-      {card.labels && card.labels.length > 0 && (
+      {(card as ScrumboardCard).labels && (card as ScrumboardCard).labels.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-2">
-          {card.labels.slice(0, 3).map((labelId) => (
+          {(card as ScrumboardCard).labels.slice(0, 3).map((labelId) => (
             <span
               key={labelId}
               className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
@@ -125,9 +141,9 @@ export function BoardCard({ card }: BoardCardProps) {
               {labelId}
             </span>
           ))}
-          {card.labels.length > 3 && (
+          {(card as ScrumboardCard).labels.length > 3 && (
             <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
-              +{card.labels.length - 3}
+              +{(card as ScrumboardCard).labels.length - 3}
             </span>
           )}
         </div>
@@ -135,15 +151,15 @@ export function BoardCard({ card }: BoardCardProps) {
 
       {/* Title */}
       <h4 className="text-sm font-medium text-gray-900 line-clamp-3 mb-3">
-        {card.title}
+        {cardTitle}
       </h4>
 
       {/* Footer with icons, priority and assignee */}
       <div className="flex items-center justify-between text-xs text-gray-500">
         <div className="flex items-center gap-3">
           {/* Priority badge */}
-          {card.priority && (() => {
-            const cardPriorityRaw = String(card.priority || "").trim();
+          {cardPriority && (() => {
+            const cardPriorityRaw = String(cardPriority || "").trim();
             const p = priorities.find((pr: any) => {
               if (!pr) return false;
               const prVal = String(pr.value || "");
@@ -156,7 +172,7 @@ export function BoardCard({ card }: BoardCardProps) {
             });
 
             if (!p) return (
-              <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{card.priority}</span>
+              <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{cardPriority}</span>
             );
 
             const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
@@ -175,13 +191,13 @@ export function BoardCard({ card }: BoardCardProps) {
           {hasComments && (
             <div className="flex items-center gap-1">
               <MessageSquare size={14} />
-              <span>{card.comments?.length || 0}</span>
+              <span>{cardComments?.length || 0}</span>
             </div>
           )}
           {hasAttachments && (
             <div className="flex items-center gap-1">
               <Paperclip size={14} />
-              <span>{card.attachments?.length || 0}</span>
+              <span>{cardAttachments?.length || 0}</span>
             </div>
           )}
           {hasChecklists && (
@@ -196,7 +212,21 @@ export function BoardCard({ card }: BoardCardProps) {
 
         {/* Assignee Avatar */}
         {(() => {
-          // Resolve assignee when backend returns id only or wrapped object
+          // For Issue type
+          if (issue?.assignee) {
+            return (
+              <div className="flex items-center">
+                <Avatar className="h-7 w-7">
+                  <AvatarImage src={issue.assignee?.email || ''} alt={issue.assignee?.name} />
+                  <AvatarFallback className={getAvatarColor(issue.assignee?.name || '')}>
+                    {getAvatarFallbackText(issue.assignee?.name || '')}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+            );
+          }
+
+          // Resolve assignee when backend returns id only or wrapped object (for ScrumboardCard)
           const a = (card as any).assignee;
           let resolved: any = null;
           if (!a) return null;

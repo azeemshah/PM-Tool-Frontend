@@ -1,79 +1,61 @@
-import { useState, useCallback } from 'react';
+import { useCallback } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Trash2 } from 'lucide-react';
 import { ScrumboardList, ScrumboardCard } from '@/api/scrumboard/types';
-import { useCreateScrumboardBoardCard } from '@/api/scrumboard/hooks/cards/useCreateScrumboardBoardCard';
+import { Issue } from '@/api/issue/types';
 import { useGetScrumboardBoardCards } from '@/api/scrumboard/hooks/cards/useGetScrumboardBoardCards';
 import { useDeleteScrumboardBoardList } from '@/api/scrumboard/hooks/lists/useDeleteScrumboardBoardList';
+import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { BoardCard } from './BoardCard';
+import useWorkspaceId from '@/hooks/use-workspace-id';
+import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 
 interface BoardListProps {
   list: ScrumboardList;
   boardId: string;
-  onCardClick: (card: ScrumboardCard) => void;
+  onCardClick: (card: ScrumboardCard | Issue) => void;
+  issues?: Issue[];
 }
 
-export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
-  const [isCreatingCard, setIsCreatingCard] = useState(false);
-  const [cardTitle, setCardTitle] = useState('');
-  const { mutate: createCard, isPending: isCreatingCardLoading } =
-    useCreateScrumboardBoardCard();
+export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardListProps) {
+  const workspaceId = useWorkspaceId();
+  const { setIsIssueCreateDialogOpen, setIssueCreateProjectId, selectedProjectId } = useScrumboardAppContext();
+  const { data: projectsData } = useGetProjectsInWorkspaceQuery({ workspaceId, pageSize: 100, pageNumber: 1, skip: !workspaceId });
+  
   const { mutate: deleteList } = useDeleteScrumboardBoardList();
 
   const { data: cards } = useGetScrumboardBoardCards(boardId);
 
-  const normalizeId = (v: any) => {
+  const handleCreateCard = useCallback(() => {
+    // Use the currently selected project, or fall back to the first project
+    const projects = projectsData?.projects || [];
+    const projectId = selectedProjectId || (projects.length > 0 ? projects[0]._id : '');
+    setIssueCreateProjectId(projectId);
+    setIsIssueCreateDialogOpen(true);
+  }, [projectsData, selectedProjectId, setIsIssueCreateDialogOpen, setIssueCreateProjectId]);
+
+  const normalizeId = useCallback((v: unknown): string => {
     if (!v) return '';
     if (typeof v === 'string' || typeof v === 'number') return String(v);
-    if (typeof v === 'object') {
-      if (v.$oid) return String(v.$oid);
-      if (v.id) return String(v.id);
-      if (v._id && typeof v._id === 'object' && v._id.$oid) return String(v._id.$oid);
-      if (v._id && (typeof v._id === 'string' || typeof v._id === 'number')) return String(v._id);
-      if (v._bsontype === 'ObjectID' && typeof v.toHexString === 'function') return String(v.toHexString());
+    if (typeof v === 'object' && v !== null) {
+      const obj = v as Record<string, unknown>;
+      if (obj.$oid) return String(obj.$oid);
+      if (obj.id) return String(obj.id);
+      if (obj._id && typeof obj._id === 'object' && obj._id !== null) {
+        const idObj = obj._id as Record<string, unknown>;
+        if (idObj.$oid) return String(idObj.$oid);
+      }
+      if (obj._id && (typeof obj._id === 'string' || typeof obj._id === 'number')) return String(obj._id);
+      if (obj._bsontype === 'ObjectID' && typeof (obj as { toHexString?: () => string }).toHexString === 'function') {
+        return String((obj as { toHexString: () => string }).toHexString());
+      }
     }
     return '';
-  };
+  }, []);
+
   const listIdNorm = normalizeId(list._id) || normalizeId(list.id) || '';
   const droppableIdSafe = listIdNorm || `list-${boardId}-${Math.abs(String(list.name || '').length)}`;
-
-  const handleCreateCard = useCallback(() => {
-    console.log('handleCreateCard called');
-    console.log('cardTitle:', cardTitle);
-    console.log('boardId:', boardId);
-    console.log('listId:', list._id);
-    
-    if (!cardTitle.trim()) {
-      console.warn('Card title is empty');
-      return;
-    }
-
-    const payload = {
-      boardId,
-      listId: listIdNorm || list._id,
-      data: {
-        title: cardTitle,
-        description: '',
-        board: boardId,
-        column: listIdNorm || list._id,
-      },
-    };
-
-    console.log('Creating card with payload:', payload);
-
-    createCard(payload, {
-      onSuccess: (response) => {
-        console.log('Card created successfully:', response);
-        setCardTitle('');
-        setIsCreatingCard(false);
-      },
-      onError: (error) => {
-        console.error('Card creation failed:', error);
-      },
-    });
-  }, [cardTitle, boardId, list._id, listIdNorm, createCard]);
 
   // Get cards for this list
   const getCardsForList = useCallback(() => {
@@ -83,13 +65,14 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
         droppableIdSafe,
         listIdNorm,
         cardsCount: (cards || []).length,
+        issuesCount: (issues || []).length,
         listWorkItems: list?.workItems?.length || 0,
       });
-    } catch (e) {
+    } catch {
       // ignore
     }
 
-    const cardsForList = (cards || []).filter((c: any) => {
+    const cardsForList = (cards || []).filter((c: Record<string, unknown>) => {
       // card status/column may be in different fields depending on backend
       const statusId = normalizeId(c.status || c.column || c.columnId);
       // Match when normalized ids equal, or status string contains the list id
@@ -99,31 +82,108 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
       );
     });
     
+    // Map list names to issue statuses
+    // BACKEND RETURNS: 'backlog', 'todo', 'in_progress' (with underscores!)
+    const listNameToIssueStatus: Record<string, string> = {
+      // Handle frontend list names to backend issue statuses
+      'todo': 'todo', // Backend uses 'todo' not 'to-do'!
+      'to-do': 'todo',
+      'to do': 'todo',
+      'backlog': 'backlog',
+      'in progress': 'in_progress', // Backend uses underscore!
+      'inprogress': 'in_progress',
+      'in-progress': 'in_progress',
+      'in_progress': 'in_progress', // Also accept underscore version
+      'in review': 'in_review',
+      'inreview': 'in_review',
+      'in-review': 'in_review',
+      'in_review': 'in_review',
+      'done': 'done',
+      'blocked': 'blocked',
+    };
+    
+    // Normalize list name: lowercase, remove extra spaces, replace spaces with nothing
+    const normalizeListName = (name: string) => {
+      return name.toLowerCase().trim().replace(/\s+/g, '');
+    };
+    
+    const listName = String(list.name || '').toLowerCase().trim();
+    const listNameNormalized = normalizeListName(list.name || '');
+    
+    // Try to find matching status
+    let matchingIssueStatus = listNameToIssueStatus[listName];
+    if (!matchingIssueStatus) {
+      // Try normalized version (without spaces)
+      matchingIssueStatus = listNameToIssueStatus[listNameNormalized];
+    }
+    
+    console.log(`🎯 Matching list "${list.name}" to issue status:`, {
+      listName,
+      listNameNormalized,
+      matchingIssueStatus,
+      availableStatusKeys: Object.keys(listNameToIssueStatus),
+      issuesCount: issues?.length || 0,
+      issueTypes: issues?.map((i: any) => i.type) || [],
+      issueStatuses: issues?.map((i: any) => i.status) || [],
+    });
+    
+    // Add issues that match the list's status
+    if (matchingIssueStatus && issues && issues.length > 0) {
+      const matchingIssues = issues.filter((issue: Issue) => {
+        const issueStatus = String(issue.status || 'to-do').toLowerCase();
+        const matches = issueStatus === matchingIssueStatus;
+        
+        if (!matches) {
+          console.log(`❌ Status mismatch: issue="${issue.title}" status="${issue.status}" (normalized="${issueStatus}") vs expected="${matchingIssueStatus}"`);
+        } else {
+          console.log(`✅ Issue matched: "${issue.title}" (type: ${issue.type}, status: ${issue.status})`);
+        }
+        
+        return matches;
+      });
+      
+      // Combine cards and issues
+      cardsForList.push(...matchingIssues);
+      
+      console.log(`📊 Added ${matchingIssues.length} issues matching status "${matchingIssueStatus}" to list "${listName}"`);
+      
+      // Log all issues for debugging
+      if (matchingIssues.length === 0 && issues.length > 0) {
+        console.log(`📋 All issues available:`, issues.map((i: any) => ({
+          title: i.title,
+          status: i.status,
+          normalized: String(i.status).toLowerCase(),
+        })));
+      }
+    } else {
+      console.log(`⚠️ No matching status found for list "${list.name}" or no issues available`);
+    }
+    
     // CRITICAL FIX: Sort cards based on list's workItems array order
     // This ensures the UI respects the order stored in the backend
     if (list?.workItems && Array.isArray(list.workItems) && list.workItems.length > 0) {
       const workItemOrderMap = new Map(
-        list.workItems.map((id: any, index: number) => [normalizeId(id), index])
+        list.workItems.map((id: unknown, index: number) => [normalizeId(id), index])
       );
       
-      cardsForList.sort((a: any, b: any) => {
-        const cardAId = normalizeId(a._id) || normalizeId(a.id);
-        const cardBId = normalizeId(b._id) || normalizeId(b.id);
+      cardsForList.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const cardAId = normalizeId((a as any)._id) || normalizeId((a as any).id);
+        const cardBId = normalizeId((b as any)._id) || normalizeId((b as any).id);
         const orderA = workItemOrderMap.get(cardAId) ?? 999;
         const orderB = workItemOrderMap.get(cardBId) ?? 999;
         return orderA - orderB;
       });
       
-      console.log('Sorted cards by workItems order:', cardsForList.map((c: any) => normalizeId(c._id) || normalizeId(c.id)));
+      console.log('Sorted cards by workItems order:', cardsForList.map((c: Record<string, unknown>) => normalizeId((c as any)._id) || normalizeId((c as any).id)));
     }
     
     // Deduplicate cards by id in case backend returns duplicates
     const uniqueCardsById = Array.from(
-      new Map((cardsForList || []).map((c: any) => [normalizeId(c._id) || normalizeId(c.id) || Math.random(), c])).values(),
+      new Map((cardsForList || []).map((c: Record<string, unknown>) => [normalizeId((c as any)._id) || normalizeId((c as any).id) || Math.random(), c])).values(),
     );
     
     return uniqueCardsById;
-  }, [cards, list, droppableIdSafe, normalizeId]);
+  }, [cards, issues, list, normalizeId, droppableIdSafe]);
 
   const cardsForThisList = getCardsForList();
 
@@ -133,7 +193,7 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
       <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
         <div className="flex-1">
           {(() => {
-            const rawName = (list && (list.name || list.title || list.label || '')) as any;
+            const rawName = (list && (list.name || list.title || (list as Record<string, unknown>).label || ''));
             const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
             return <h3 className="font-semibold text-sm text-gray-900">{displayName}</h3>;
           })()}
@@ -165,7 +225,7 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
               }`}
             >
               {cardsForThisList.length > 0 ? (
-                cardsForThisList.map((card: any, index: number) => {
+                cardsForThisList.map((card: Record<string, unknown>, index: number) => {
                   const cardIdSafe = normalizeId(card._id) || normalizeId(card.id) || `card-${index}-${droppableIdSafe}`;
                   return (
                     <Draggable key={cardIdSafe} draggableId={String(cardIdSafe)} index={index}>
@@ -194,58 +254,16 @@ export function BoardList({ list, boardId, onCardClick }: BoardListProps) {
 
       {/* Add Card Button */}
       <div className="border-t p-3">
-        {isCreatingCard ? (
-          <div className="space-y-2">
-            <Input
-              placeholder="Card title..."
-              value={cardTitle}
-              onChange={(e) => setCardTitle(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter') {
-                  e.preventDefault();
-                  handleCreateCard();
-                }
-              }}
-              autoFocus
-            />
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                onClick={(e) => {
-                  console.log('Add button clicked', e);
-                  handleCreateCard();
-                }}
-                disabled={isCreatingCardLoading || !cardTitle.trim()}
-                size="sm"
-                className="flex-1"
-              >
-                Add
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => {
-                  setIsCreatingCard(false);
-                  setCardTitle('');
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </div>
-        ) : (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={() => setIsCreatingCard(true)}
-            className="w-full justify-start text-gray-600 hover:bg-gray-50"
-          >
-            <Plus size={14} />
-            <span className="ml-2">Add card</span>
-          </Button>
-        )}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={handleCreateCard}
+          className="w-full justify-start text-gray-600 hover:bg-gray-50"
+        >
+          <Plus size={14} />
+          <span className="ml-2">Add Issue</span>
+        </Button>
       </div>
     </div>
   );

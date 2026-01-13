@@ -16,9 +16,13 @@ export function useCreateTask() {
 		mutationFn: ({ epicId, data }: { epicId: string; data: CreateTaskDTO }) =>
 			issueApiService.createTask(epicId, data),
 		onSuccess: (task: Task) => {
+			// Invalidate all related queries to refresh data across the app
 			queryClient.invalidateQueries({ queryKey: ['tasks'] });
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: `Task "${task.title}" created successfully`,

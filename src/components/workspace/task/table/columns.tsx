@@ -61,6 +61,22 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         );
       },
     },
+    // Issue Type column (Epic / Story / Task / Bug / Subtask)
+    {
+      accessorFn: (row) => (row as any).type || (row as any).issueType || null,
+      id: "issueType",
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title="Issue" />
+      ),
+      cell: ({ row }) => {
+        const t = (row.original as any).type || (row.original as any).issueType || null;
+        if (!t) return null;
+        // show capitalized label
+        return (
+          <span className="capitalize text-sm font-medium">{String(t)}</span>
+        );
+      },
+    },
     ...(projectId
       ? [] // If projectId exists, exclude the "Project" column
       : [
@@ -93,26 +109,29 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Assigned To" />
       ),
       cell: ({ row }) => {
-        const assignee = row.original.assignedTo || null;
+        // Try to get assignee first, fallback to reporter
+        const assignee = row.original.assignedTo || row.original.reporter || null;
         const name = assignee?.name || "";
+
+        if (!name) {
+          return <span className="text-sm text-muted-foreground">Unassigned</span>;
+        }
 
         const initials = getAvatarFallbackText(name);
         const avatarColor = getAvatarColor(name);
 
         return (
-          name && (
-            <div className="flex items-center gap-1">
-              <Avatar className="h-6 w-6">
-                <AvatarImage src={assignee?.profilePicture || ""} alt={name} />
-                <AvatarFallback className={avatarColor}>
-                  {initials}
-                </AvatarFallback>
-              </Avatar>
-              <span className="block text-ellipsis w-[100px] truncate">
-                {assignee?.name}
-              </span>
-            </div>
-          )
+          <div className="flex items-center gap-1">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={assignee?.profilePicture || ""} alt={name} />
+              <AvatarFallback className={avatarColor}>
+                {initials}
+              </AvatarFallback>
+            </Avatar>
+            <span className="block text-ellipsis w-[100px] truncate">
+              {assignee?.name}
+            </span>
+          </div>
         );
       },
     },
@@ -122,11 +141,24 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Due Date" />
       ),
       cell: ({ row }) => {
-        return (
-          <span className="lg:max-w-[100px] text-sm">
-            {row.original.dueDate ? format(row.original.dueDate, "PPP") : null}
-          </span>
-        );
+        const dueDate = row.original.dueDate;
+        
+        if (!dueDate) {
+          return <span className="text-sm text-muted-foreground">No due date</span>;
+        }
+
+        try {
+          // Handle both string and Date object formats
+          const dateObj = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
+          const formattedDate = format(dateObj, "PPP");
+          return (
+            <span className="lg:max-w-[100px] text-sm">
+              {formattedDate}
+            </span>
+          );
+        } catch {
+          return <span className="text-sm text-muted-foreground">Invalid date</span>;
+        }
       },
     },
     {
@@ -135,12 +167,14 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Status" />
       ),
       cell: ({ row }) => {
+        const rawStatus = row.getValue("status");
+        const normalizedStatus = typeof rawStatus === "string" ? rawStatus.toUpperCase() : rawStatus;
         const status = statuses.find(
-          (status) => status.value === row.getValue("status")
+          (status) => status.value === normalizedStatus
         );
 
         if (!status) {
-          return null;
+          return <span className="text-sm text-muted-foreground">Unknown status</span>;
         }
 
         const statusKey = formatStatusToEnum(
@@ -149,7 +183,7 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         const Icon = status.icon;
 
         if (!Icon) {
-          return null;
+          return <span className="text-sm text-muted-foreground">Unknown status</span>;
         }
 
         return (
@@ -171,12 +205,14 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         <DataTableColumnHeader column={column} title="Priority" />
       ),
       cell: ({ row }) => {
+        const rawPriority = row.getValue("priority");
+        const normalizedPriority = typeof rawPriority === "string" ? rawPriority.toUpperCase() : rawPriority;
         const priority = priorities.find(
-          (priority) => priority.value === row.getValue("priority")
+          (priority) => priority.value === normalizedPriority
         );
 
         if (!priority) {
-          return null;
+          return <span className="text-sm text-muted-foreground">No priority</span>;
         }
 
         const statusKey = formatStatusToEnum(
@@ -185,7 +221,7 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         const Icon = priority.icon;
 
         if (!Icon) {
-          return null;
+          return <span className="text-sm text-muted-foreground">No priority</span>;
         }
 
         return (

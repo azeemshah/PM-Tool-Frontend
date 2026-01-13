@@ -17,9 +17,6 @@ import type {
 	CreateBugDTO,
 	CreateSubtaskDTO,
 	UpdateIssueDTO,
-	GetEpicsResponse,
-	GetChildrenResponse,
-	GetSubtasksResponse,
 	GetIssuesResponse,
 } from '../types';
 
@@ -42,9 +39,15 @@ export const issueApiService = {
 	 * GET /issues/epic/:projectId
 	 */
 	async getEpicsByProject(projectId: string): Promise<Epic[]> {
-		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${projectId}`);
+		const url = `${ISSUES_ENDPOINT}/epic/${projectId}`;
+		console.log('📤 getEpicsByProject - fetching from URL:', url);
+		const response = await API.get(url);
+		console.log('📥 getEpicsByProject - response:', response.data);
 		const data = response.data.data || response.data;
-		return Array.isArray(data) ? data : [];
+		console.log('📥 getEpicsByProject - extracted data:', data);
+		const result = Array.isArray(data) ? data : [];
+		console.log('📥 getEpicsByProject - returning:', result);
+		return result;
 	},
 
 	/**
@@ -101,6 +104,17 @@ export const issueApiService = {
 		await API.delete(`${ISSUES_ENDPOINT}/${storyId}`);
 	},
 
+	/**
+	 * Create Story WITHOUT Epic (Epic is optional, can be added later)
+	 * POST /issues/story
+	 * This allows creating a Story without immediately assigning an Epic
+	 * The Epic can be added or changed later via PATCH /issues/:id
+	 */
+	async createStoryWithoutEpic(data: CreateStoryDTO): Promise<Story> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/story`, data);
+		return response.data.data || response.data;
+	},
+
 	// ==================== TASKS ====================
 
 	/**
@@ -109,6 +123,17 @@ export const issueApiService = {
 	 */
 	async createTask(epicId: string, data: CreateTaskDTO): Promise<Task> {
 		const response = await API.post(`${ISSUES_ENDPOINT}/epic/${epicId}/task`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Create Task WITHOUT Epic (Epic is optional, can be added later)
+	 * POST /issues/task
+	 * This allows creating a Task without immediately assigning an Epic
+	 * The Epic can be added or changed later via PATCH /issues/:id
+	 */
+	async createTaskWithoutEpic(data: CreateTaskDTO): Promise<Task> {
+		const response = await API.post(`${ISSUES_ENDPOINT}/task`, data);
 		return response.data.data || response.data;
 	},
 
@@ -267,7 +292,7 @@ export const issueApiService = {
 	 * PATCH /issues/:id
 	 */
 	async changeIssueStatus(issueId: string, status: string): Promise<Issue> {
-		return this.updateIssue(issueId, { status: status as any });
+		return this.updateIssue(issueId, { status } as UpdateIssueDTO);
 	},
 
 	/**
@@ -275,6 +300,6 @@ export const issueApiService = {
 	 * PATCH /issues/:id
 	 */
 	async changeIssuePriority(issueId: string, priority: string): Promise<Issue> {
-		return this.updateIssue(issueId, { priority: priority as any });
+		return this.updateIssue(issueId, { priority } as UpdateIssueDTO);
 	},
 };
