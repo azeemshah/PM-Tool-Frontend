@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
 import {
 	Dialog,
 	DialogContent,
@@ -60,6 +61,8 @@ export function IssueCreateDialog({
 	workspaceId,
 	onSuccess,
 }: IssueCreateDialogProps) {
+	const queryClient = useQueryClient();
+	
 	// Form state
 	const [selectedProjectId, setSelectedProjectId] = useState<string>(projectId || '');
 	const [issueType, setIssueType] = useState<IssueType | ''>('');
@@ -145,6 +148,23 @@ export function IssueCreateDialog({
 	const isLoading =
 		epicPending || storyPending || taskPending || taskWithoutEpicPending || bugPending || subtaskPending;
 
+	// Refetch issues after creation
+	const refetchIssues = () => {
+		console.log('🔄 Refetching issues after creation:', {
+			selectedProjectId,
+			projectId,
+		});
+		if (selectedProjectId) {
+			queryClient.invalidateQueries({ queryKey: ['issues', 'project', selectedProjectId] });
+			console.log('✅ Invalidated query for project:', selectedProjectId);
+		} else if (projectId) {
+			queryClient.invalidateQueries({ queryKey: ['issues', 'project', projectId] });
+			console.log('✅ Invalidated query for default project:', projectId);
+		} else {
+			console.warn('⚠️ No project ID available for refetch');
+		}
+	};
+
 	// Reset form when dialog closes
 	useEffect(() => {
 		if (!isOpen) {
@@ -226,6 +246,7 @@ export function IssueCreateDialog({
 				},
 				{
 					onSuccess: () => {
+						refetchIssues();
 						onOpenChange(false);
 						onSuccess?.();
 					},
@@ -268,6 +289,7 @@ export function IssueCreateDialog({
 					},
 					{
 						onSuccess: () => {
+							refetchIssues();
 							onOpenChange(false);
 							onSuccess?.();
 						},
@@ -277,6 +299,7 @@ export function IssueCreateDialog({
 				// Task without Epic (ONLY Task allows this)
 				createTaskWithoutEpic(data, {
 					onSuccess: () => {
+						refetchIssues();
 						onOpenChange(false);
 						onSuccess?.();
 					},
@@ -308,6 +331,7 @@ export function IssueCreateDialog({
 				},
 				{
 					onSuccess: () => {
+						refetchIssues();
 						onOpenChange(false);
 						onSuccess?.();
 					},
@@ -328,35 +352,33 @@ export function IssueCreateDialog({
 
 				<div className="space-y-4">
 				{/* Project Selection */}
-				{!projectId || projectId === 'default' ? (
-					<div className="space-y-2">
-						<label className="text-sm font-medium">Project *</label>
-						<Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
-							<SelectTrigger>
-								<SelectValue placeholder={projectsQuery.isPending ? 'Loading projects...' : 'Select a project...'} />
-							</SelectTrigger>
-					<SelectContent>
-						<div className="w-full max-h-[250px] overflow-y-auto">
-							{projectsQuery.isPending ? (
-								<div className="p-2 text-center text-sm text-muted-foreground">
-									Loading projects...
-								</div>
-							) : projectOptions.length > 0 ? (
-								projectOptions.map((option) => (
-									<SelectItem key={option.value} value={option.value}>
-										{option.label}
-									</SelectItem>
-								))
-							) : (
-								<div className="p-2 text-center text-sm text-muted-foreground">
-									No projects found
-								</div>
-							)}
-						</div>
-					</SelectContent>
-						</Select>
+				<div className="space-y-2">
+					<label className="text-sm font-medium">Project *</label>
+					<Select value={selectedProjectId} onValueChange={setSelectedProjectId}>
+						<SelectTrigger>
+							<SelectValue placeholder={projectsQuery.isPending ? 'Loading projects...' : 'Select a project...'} />
+						</SelectTrigger>
+				<SelectContent>
+					<div className="w-full max-h-[250px] overflow-y-auto">
+						{projectsQuery.isPending ? (
+							<div className="p-2 text-center text-sm text-muted-foreground">
+								Loading projects...
+							</div>
+						) : projectOptions.length > 0 ? (
+							projectOptions.map((option) => (
+								<SelectItem key={option.value} value={option.value}>
+									{option.label}
+								</SelectItem>
+							))
+						) : (
+							<div className="p-2 text-center text-sm text-muted-foreground">
+								No projects found
+							</div>
+						)}
 					</div>
-				) : null}
+				</SelectContent>
+					</Select>
+				</div>
 
 				{/* Issue Type Selection */}
 				<IssueTypeSelector

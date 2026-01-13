@@ -8,6 +8,7 @@ export { useCreateSubtask } from './useCreateSubtask';
 export { useGetEpics } from './useGetEpics';
 export { useGetEpicChildren } from './useGetEpicChildren';
 export { useGetSubtasks } from './useGetSubtasks';
+export { useGetIssuesByProject } from './useGetIssuesByProject';
 export { useUpdateIssue } from './useUpdateIssue';
 export { useUpdateIssueEpic } from './useUpdateIssueEpic';
 export { useDeleteIssue } from './useDeleteIssue';

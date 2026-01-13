@@ -86,7 +86,7 @@ export const editWorkspaceMutationFn = async ({
   workspaceId,
   data,
 }: EditWorkspaceType) => {
-  const response = await API.put(`/workspace/update/${workspaceId}`, data);
+  const response = await API.patch(`/workspace/${workspaceId}`, data);
   return response.data;
 };
 
@@ -399,7 +399,7 @@ export const deleteWorkspaceMutationFn = async (
   message: string;
   currentWorkspace: string;
 }> => {
-  const response = await API.delete(`/workspace/delete/${workspaceId}`);
+  const response = await API.delete(`/workspace/${workspaceId}`);
   return response.data;
 };
 

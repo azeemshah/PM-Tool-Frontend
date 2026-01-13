@@ -20,6 +20,10 @@ export interface ScrumboardAppContextType {
   issueCreateProjectId: string | null;
   setIssueCreateProjectId: (projectId: string | null) => void;
 
+  // Project selection state
+  selectedProjectId: string | null;
+  setSelectedProjectId: (projectId: string | null) => void;
+
   // Filter and search
   searchQuery: string;
   setSearchQuery: (query: string) => void;

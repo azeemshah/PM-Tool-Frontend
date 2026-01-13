@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
-import { X, Edit2, Trash2, Plus } from 'lucide-react';
+import { X, Edit2, Trash2 } from 'lucide-react';
 import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
-import { useUpdateScrumboardBoardCard } from '@/api/scrumboard/hooks/cards/useUpdateScrumboardBoardCard';
-import { useDeleteScrumboardBoardCard } from '@/api/scrumboard/hooks/cards/useDeleteScrumboardBoardCard';
+import { useUpdateIssue, useDeleteIssue } from '@/api/issue/hooks';
+import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
+import { ScrumboardCard } from '@/api/scrumboard/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
-import { toast } from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 import {
   Select,
   SelectContent,
@@ -18,19 +19,16 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { priorities } from '@/components/workspace/task/table/data';
-import { formatStatusToEnum, getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
-import { TaskPriorityEnum } from '@/constant';
+import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 
 export function BoardCardDialog() {
   const {
     selectedCard,
-    selectedBoard,
     isCardDialogOpen,
     setIsCardDialogOpen,
     setSelectedCard,
-    setIsIssueCreateDialogOpen,
-    setIssueCreateProjectId,
+    selectedProjectId,
+    setSelectedProjectId,
   } = useScrumboardAppContext();
 
   const workspaceId = useWorkspaceId();
@@ -38,64 +36,46 @@ export function BoardCardDialog() {
     workspaceId,
   });
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
+  const { toast } = useToast();
 
-  const projects = projectsData?.projects || [];
-  // Fixed: membersData is now an array directly (from the hook fix)
   const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
+  const projects = Array.isArray(projectsData) ? projectsData : (projectsData?.projects ?? (projectsData?.data ?? []));
 
-  // Resolve selectedCard.assignee to a user object when backend returns just an id
-  const resolvedAssignee = (() => {
-    if (!selectedCard) return null;
-    const a = (selectedCard as any).assignee;
-    if (!a) return null;
-    // if assignee is a string id, try to find matching member
-    if (typeof a === 'string') {
-      const m = members.find((mem: any) => String(mem.userId?._id) === String(a));
-      return m?.userId || null;
-    }
-    // if assignee is an object, it may already be populated (user object) or wrapped
-    if ((a as any).userId) return (a as any).userId;
-    return a;
-  })();
+  // Check if selectedCard is actually an Issue (has 'type' field that's an issue type)
+  const isIssue = selectedCard && ('type' in selectedCard) && 
+    ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((selectedCard as Record<string, unknown>).type));
+
+  const issue = isIssue ? (selectedCard as Issue) : null;
 
   const [isEditing, setIsEditing] = useState(false);
-  const [title, setTitle] = useState(selectedCard?.title || '');
-  const [description, setDescription] = useState(selectedCard?.description || '');
-  const [type, setType] = useState(selectedCard?.type || '');
-  const [priority, setPriority] = useState(selectedCard?.priority || '');
-  const [assignee, setAssignee] = useState(selectedCard?.assignee?._id || '');
-  const [projectId, setProjectId] = useState(
-    (selectedCard && (typeof (selectedCard as any).project === 'string' ? (selectedCard as any).project : (selectedCard as any).project?._id)) || ''
-  );
-  const [dueDate, setDueDate] = useState<string | null>(
-    (selectedCard && ((selectedCard as any).dueDate || (selectedCard as any).metadata?.dueDate)) || null
-  );
+  const [title, setTitle] = useState(issue?.title || (selectedCard as ScrumboardCard)?.title || '');
+  const [description, setDescription] = useState(issue?.description || (selectedCard as ScrumboardCard)?.description || '');
+  const [priority, setPriority] = useState<IssuePriority>(issue?.priority || (selectedCard as ScrumboardCard)?.priority || 'medium');
+  const [status, setStatus] = useState<IssueStatus>(issue?.status || 'to-do');
+  const [assigneeId, setAssigneeId] = useState(issue?.assignee?._id || '');
+  const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
+  const [projectId, setProjectId] = useState(issue?.projectId || '');
 
-  const { mutate: updateCard, isPending: isUpdating } = useUpdateScrumboardBoardCard();
-  const { mutate: deleteCard, isPending: isDeleting } = useDeleteScrumboardBoardCard();
+  const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
+  const { mutate: deleteIssueApi, isPending: isDeleting } = useDeleteIssue();
 
   useEffect(() => {
-    if (selectedCard) {
-      setTitle(selectedCard.title);
-      setDescription(selectedCard.description || '');
-      setType(selectedCard.type || '');
-      setPriority(selectedCard.priority || '');
-      setAssignee(selectedCard.assignee?._id || (selectedCard.assignee as any) || '');
-      setProjectId(
-        (selectedCard && (typeof (selectedCard as any).project === 'string' ? (selectedCard as any).project : (selectedCard as any).project?._id)) || ''
-      );
-      setDueDate((selectedCard as any).dueDate || (selectedCard as any).metadata?.dueDate || null);
+    if (issue) {
+      setTitle(issue.title);
+      setDescription(issue.description || '');
+      setPriority(issue.priority || 'medium');
+      setStatus(issue.status || 'to-do');
+      setAssigneeId(issue.assignee?._id || '');
+      setDueDate(issue.dueDate || null);
+      setProjectId(issue.projectId || '');
     }
-  }, [selectedCard]);
+  }, [issue]);
 
-  const currentProject = projects.find((p: any) => p._id === projectId);
-
-  if (!isCardDialogOpen || !selectedCard || !selectedBoard) {
+  if (!isCardDialogOpen || !issue) {
     return null;
   }
 
   const handleSave = () => {
-    if (!selectedBoard || !selectedCard) return;
     if (!title.trim()) {
       toast({
         title: 'Error',
@@ -105,39 +85,51 @@ export function BoardCardDialog() {
       return;
     }
 
-    const updateData = {
-      title,
-      description,
-    };
-    
-    if (type) (updateData as any).type = type;
-    if (priority) (updateData as any).priority = priority;
-    if (assignee) (updateData as any).assigneeId = assignee;
-    if (projectId) (updateData as any).projectId = projectId;
-    // include dueDate (ISO string)
-    if (dueDate) (updateData as any).dueDate = dueDate;
-
-    updateCard(
+    updateIssue(
       {
-        boardId: selectedBoard._id,
-        cardId: selectedCard._id,
-        data: updateData,
+        issueId: issue._id,
+        data: {
+          title,
+          description,
+          priority,
+          status,
+          projectId,
+          assignee: assigneeId || undefined,
+          dueDate,
+        },
       },
       {
-        onSuccess: (data: any) => {
-          // update context selectedCard so UI shows latest fields (project may be string or populated)
-          setSelectedCard(data);
+        onSuccess: (updatedIssue: Issue) => {
+          // Update selected project if the project changed
+          if (projectId !== selectedProjectId) {
+            setSelectedProjectId(projectId);
+          }
+          // Update context with the new issue data
+          setSelectedCard(updatedIssue);
+          
+          // Also update local state with the returned data to immediately reflect changes
+          setTitle(updatedIssue.title);
+          setDescription(updatedIssue.description || '');
+          setPriority(updatedIssue.priority || 'medium');
+          setStatus(updatedIssue.status || 'to-do');
+          setAssigneeId(updatedIssue.assignee?._id || '');
+          setDueDate(updatedIssue.dueDate || null);
+          setProjectId(updatedIssue.projectId || '');
+          
           setIsEditing(false);
           toast({
             title: 'Success',
-            description: 'Card updated successfully',
+            description: 'Issue updated successfully',
           });
         },
-        onError: (error: any) => {
+        onError: (error: unknown) => {
           console.error('Update error:', error);
+          const errorMessage = error && typeof error === 'object' && 'response' in error 
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+            : 'Failed to update issue';
           toast({
             title: 'Error',
-            description: error?.response?.data?.message || 'Failed to update card',
+            description: errorMessage || 'Failed to update issue',
             variant: 'destructive',
           });
         },
@@ -146,33 +138,31 @@ export function BoardCardDialog() {
   };
 
   const handleDelete = () => {
-    if (!selectedBoard || !selectedCard) return;
+    if (!confirm('Are you sure you want to delete this issue?')) return;
 
-    if (confirm('Are you sure you want to delete this card?')) {
-      deleteCard(
-        {
-          boardId: selectedBoard._id,
-          cardId: selectedCard._id,
+    deleteIssueApi(
+      { issueId: issue._id },
+      {
+        onSuccess: () => {
+          setIsCardDialogOpen(false);
+          setSelectedCard(null);
+          toast({
+            title: 'Success',
+            description: 'Issue deleted successfully',
+          });
         },
-        {
-          onSuccess: () => {
-            setIsCardDialogOpen(false);
-            setSelectedCard(null);
-          },
-        }
-      );
-    }
-  };
-
-  const handleCreateIssue = () => {
-    // Get the project ID from selected card or from the board context
-    const cardProjectId = 
-      (typeof (selectedCard as any).project === 'string' 
-        ? (selectedCard as any).project 
-        : (selectedCard as any).project?._id) || null;
-    
-    setIssueCreateProjectId(cardProjectId);
-    setIsIssueCreateDialogOpen(true);
+        onError: (error: unknown) => {
+          const errorMessage = error && typeof error === 'object' && 'response' in error 
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+            : 'Failed to delete issue';
+          toast({
+            title: 'Error',
+            description: errorMessage || 'Failed to delete issue',
+            variant: 'destructive',
+          });
+        },
+      }
+    );
   };
 
   return (
@@ -180,18 +170,13 @@ export function BoardCardDialog() {
       <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
-          <h2 className="text-xl font-bold">Card Details</h2>
+          <div>
+            <h2 className="text-xl font-bold">Issue Details</h2>
+            <p className="text-sm text-gray-500 mt-1">{issue.key || `${issue.type} #${issue._id.slice(-6)}`}</p>
+          </div>
           <div className="flex items-center gap-2">
             {!isEditing && (
               <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleCreateIssue}
-                  title="Create a new Issue"
-                >
-                  <Plus size={16} />
-                </Button>
                 <Button
                   variant="outline"
                   size="sm"
@@ -241,56 +226,70 @@ export function BoardCardDialog() {
             )}
           </div>
 
-          {/* Project */}
+          {/* Issue Type and Key */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Project
+              </label>
+              {isEditing ? (
+                <Select value={projectId} onValueChange={setProjectId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {projects && projects.length > 0 ? (
+                      projects.map((project: any) => (
+                        <SelectItem key={project._id} value={project._id}>
+                          <div className="flex items-center gap-2">
+                            <span>{project.emoji || '📁'}</span>
+                            <span>{project.name || project.projectName}</span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-gray-500">No projects available</div>
+                    )}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <p className="text-gray-600">
+                  {projects?.find((p: any) => p._id === projectId)?.name || projects?.find((p: any) => p._id === projectId)?.projectName || 'Unknown'}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Type
+              </label>
+              <Badge className="inline-block p-1 px-2 gap-1 font-medium shadow-sm capitalize">
+                {issue.type}
+              </Badge>
+            </div>
+          </div>
+
+          {/* Status */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Project
+              Status
             </label>
             {isEditing ? (
-              <Select
-                value={projectId || ""}
-                onValueChange={(value) => setProjectId(value)}
-              >
+              <Select value={status} onValueChange={(value) => setStatus(value as IssueStatus)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a project" />
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <div
-                    className="w-full max-h-[200px]
-                   overflow-y-auto scrollbar
-                  "
-                  >
-                    {projects.map((project: any) => (
-                      <SelectItem key={project._id} value={project._id}>
-                        {project.emoji ? `${project.emoji} ${project.name}` : project.name}
-                      </SelectItem>
-                    ))}
-                  </div>
+                  <SelectItem value="backlog">Backlog</SelectItem>
+                  <SelectItem value="todo">Todo</SelectItem>
+                  <SelectItem value="in_progress">In Progress</SelectItem>
+                  <SelectItem value="in_review">In Review</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
                 </SelectContent>
               </Select>
             ) : (
-              projectId && projects.length > 0 && currentProject ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xl leading-none">{currentProject.emoji || ''}</span>
-                  <span className="text-gray-600">{currentProject.name || 'Unknown Project'}</span>
-                </div>
-              ) : (
-                <p className="text-gray-600">No project assigned</p>
-              )
-            )}
-          </div>
-
-          {/* Issue Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Issue Date
-            </label>
-            {isEditing ? (
-              <p className="text-gray-600">
-                {selectedCard.createdAt ? new Date(selectedCard.createdAt).toLocaleString() : '—'}
-              </p>
-            ) : (
-              <p className="text-gray-600">{selectedCard.createdAt ? new Date(selectedCard.createdAt).toLocaleString() : 'No date'}</p>
+              <Badge variant="outline" className="capitalize">
+                {status?.replace('-', ' ').replace('_', ' ')}
+              </Badge>
             )}
           </div>
 
@@ -314,123 +313,49 @@ export function BoardCardDialog() {
             )}
           </div>
 
-          {/* Issue Type */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Issue Type
-            </label>
-            {isEditing ? (
-              <Select
-                value={type || ""}
-                onValueChange={(value) => setType(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Epic">Epic</SelectItem>
-                  <SelectItem value="Story">Story</SelectItem>
-                  <SelectItem value="Task">Task</SelectItem>
-                  <SelectItem value="Subtask">Subtask</SelectItem>
-                  <SelectItem value="Bug">Bug</SelectItem>
-                  <SelectItem value="Improvement">Improvement</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <Badge className="inline-block p-1 px-2 gap-1 font-medium shadow-sm capitalize">
-                {type || 'Not set'}
-              </Badge>
-            )}
-          </div>
-
-          {/* Priority */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Priority
-            </label>
-            {isEditing ? (
-              <Select
-                value={priority || ""}
-                onValueChange={(value) => setPriority(value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select priority" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Low">Low</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="High">High</SelectItem>
-                </SelectContent>
-              </Select>
-            ) : (
-              <div>
-                {priority && (() => {
-                  const cardPriorityRaw = String(priority || "").trim();
-                  const p = priorities.find((pr: any) => {
-                    if (!pr) return false;
-                    const prVal = String(pr.value || "");
-                    const prLabel = String(pr.label || "");
-                    if (prVal === cardPriorityRaw) return true;
-                    if (prLabel === cardPriorityRaw) return true;
-                    if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-                    if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-                    return false;
-                  });
-
-                  if (!p) return (
-                    <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{priority}</span>
-                  );
-
-                  const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
-                  const Icon = p.icon;
-                  return (
-                    <Badge
-                      variant={TaskPriorityEnum[statusKey]}
-                      className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
-                    >
-                      {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
-                      <span>{p.label}</span>
-                    </Badge>
-                  );
-                })()}
-                {!priority && <span className="text-gray-400">Not set</span>}
-              </div>
-            )}
-          </div>
-
-          {/* Due Date */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Due Date</label>
-            {isEditing ? (
-              <input
-                type="date"
-                value={dueDate ? new Date(dueDate).toISOString().split('T')[0] : ''}
-                onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value).toISOString() : null)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-            ) : (
-              <p className="text-gray-600">{dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}</p>
-            )}
-          </div>
-
-          {/* Labels */}
-          {selectedCard.labels && selectedCard.labels.length > 0 && (
+          {/* Priority and Due Date */}
+          <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Labels
+                Priority
               </label>
-              <div className="flex flex-wrap gap-2">
-                {selectedCard.labels.map((labelId) => (
-                  <span
-                    key={labelId}
-                    className="px-3 py-1 rounded text-sm text-white bg-blue-500"
-                  >
-                    {labelId}
-                  </span>
-                ))}
-              </div>
+              {isEditing ? (
+                <Select value={priority} onValueChange={(value) => setPriority(value as IssuePriority)}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="lowest">Lowest</SelectItem>
+                    <SelectItem value="low">Low</SelectItem>
+                    <SelectItem value="medium">Medium</SelectItem>
+                    <SelectItem value="high">High</SelectItem>
+                    <SelectItem value="highest">Highest</SelectItem>
+                  </SelectContent>
+                </Select>
+              ) : (
+                <Badge variant="outline" className="capitalize">
+                  {priority}
+                </Badge>
+              )}
             </div>
-          )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Due Date
+              </label>
+              {isEditing ? (
+                <input
+                  type="date"
+                  value={dueDate ? new Date(dueDate).toISOString().split('T')[0] : ''}
+                  onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value).toISOString() : null)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              ) : (
+                <p className="text-gray-600">
+                  {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
+                </p>
+              )}
+            </div>
+          </div>
 
           {/* Assignee */}
           <div>
@@ -438,33 +363,30 @@ export function BoardCardDialog() {
               Assignee
             </label>
             {isEditing ? (
-              <Select
-                value={assignee || ""}
-                onValueChange={(value) => setAssignee(value)}
-              >
+              <Select value={assigneeId || 'unassigned'} onValueChange={(value) => setAssigneeId(value === 'unassigned' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select an assignee" />
                 </SelectTrigger>
                 <SelectContent>
-                  <div
-                    className="w-full max-h-[200px]
-                   overflow-y-auto scrollbar
-                  "
-                  >
+                  <div className="w-full max-h-[200px] overflow-y-auto">
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members && members.length > 0 ? (
-                      members.map((member: any) => {
-                        const name = member.userId?.name || 'Unknown';
+                      members.map((member: Record<string, unknown>) => {
+                        const userId = member.userId as Record<string, unknown>;
+                        if (!userId) return null;
+                        const name = (userId.name as string) || 'Unknown';
+                        const userId_id = String(userId._id || '');
                         const initials = getAvatarFallbackText(name);
-                        const avatarColor = getAvatarColor(name);
+                        const avatarColor = getAvatarColor(initials || 'NA');
                         return (
                           <SelectItem
-                            key={member.userId._id}
-                            value={member.userId._id}
+                            key={userId_id}
+                            value={userId_id}
                             className="cursor-pointer"
                           >
                             <div className="flex items-center space-x-2">
                               <Avatar className="h-7 w-7">
-                                <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+                                <AvatarImage src={(userId.profilePicture as string) || ''} alt={name} />
                                 <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
                               </Avatar>
                               <span>{name}</span>
@@ -478,29 +400,80 @@ export function BoardCardDialog() {
                   </div>
                 </SelectContent>
               </Select>
-            ) : resolvedAssignee ? (
-              <div className="flex items-center gap-2">
-                <Avatar className="h-8 w-8">
-                  <AvatarImage src={resolvedAssignee?.profilePicture || ''} alt={resolvedAssignee?.name || 'User'} />
-                  <AvatarFallback className={getAvatarColor(resolvedAssignee?.name || '')}>
-                    {getAvatarFallbackText(resolvedAssignee?.name || '')}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-gray-900">{resolvedAssignee?.name || 'Assigned'}</span>
-              </div>
-            ) : (
-              <span className="text-gray-400">Unassigned</span>
-            )}
+            ) : (() => {
+              // Find assignee details from members list if assignee ID exists
+              const assigneeIdToCheck = assigneeId || issue.assignee?._id || (typeof issue.assignee === 'string' ? issue.assignee : null);
+              if (assigneeIdToCheck) {
+                const assigneeMember = members.find((member: Record<string, unknown>) => {
+                  const userId = member.userId as Record<string, unknown>;
+                  return String(userId?._id) === String(assigneeIdToCheck);
+                });
+                
+                if (assigneeMember) {
+                  const userId = assigneeMember.userId as Record<string, unknown>;
+                  const name = (userId.name as string) || 'Unknown';
+                  const initials = getAvatarFallbackText(name);
+                  const avatarColor = getAvatarColor(initials || 'NA');
+                  
+                  return (
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarImage src={(userId.profilePicture as string) || ''} alt={name} />
+                        <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                      </Avatar>
+                      <span className="text-gray-900">{name}</span>
+                    </div>
+                  );
+                }
+              }
+              
+              // Fallback for API-returned assignee data
+              if (issue.assignee && (typeof issue.assignee === 'object') && 'name' in issue.assignee && (issue.assignee as any).name) {
+                const assigneeObj = issue.assignee as any;
+                const name = assigneeObj.name || 'Unknown';
+                const initials = getAvatarFallbackText(name);
+                const avatarColor = getAvatarColor(initials || 'NA');
+                
+                return (
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarImage src={assigneeObj.email || assigneeObj.profilePicture || ''} alt={name} />
+                      <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                    </Avatar>
+                    <span className="text-gray-900">{name}</span>
+                  </div>
+                );
+              }
+              
+              return <span className="text-gray-400">Unassigned</span>;
+            })()
+            }
+          </div>
+
+          {/* Metadata */}
+          <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Created</p>
+              <p className="text-sm text-gray-700">
+                {issue.createdAt ? new Date(issue.createdAt).toLocaleString() : '—'}
+              </p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-500 mb-1">Updated</p>
+              <p className="text-sm text-gray-700">
+                {issue.updatedAt ? new Date(issue.updatedAt).toLocaleString() : '—'}
+              </p>
+            </div>
           </div>
 
           {/* Comments Count */}
-          {selectedCard.comments && selectedCard.comments.length > 0 && (
+          {issue.comments && issue.comments.length > 0 && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Comments ({selectedCard.comments.length})
+                Comments ({issue.comments.length})
               </label>
               <div className="space-y-3 max-h-48 overflow-y-auto">
-                {selectedCard.comments.map((comment) => (
+                {issue.comments.map((comment) => (
                   <div key={comment._id} className="bg-gray-50 p-3 rounded">
                     <p className="text-xs font-semibold text-gray-700">
                       {comment.author?.name || 'Unknown'}

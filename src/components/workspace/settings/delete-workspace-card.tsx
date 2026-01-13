@@ -26,10 +26,21 @@ const DeleteWorkspaceCard = () => {
   const handleConfirm = () => {
     mutate(workspaceId, {
       onSuccess: (data) => {
+        toast({
+          title: "Success",
+          description: "Workspace deleted successfully",
+          variant: "success",
+        });
         queryClient.invalidateQueries({
           queryKey: ["userWorkspaces"],
         });
-        navigate(`/workspace/${data.currentWorkspace}`);
+        // Navigate to next workspace or dashboard
+        if (data.currentWorkspace) {
+          navigate(`/workspace/${data.currentWorkspace}`);
+        } else {
+          // No other workspaces, go to dashboard
+          navigate("/");
+        }
         setTimeout(() => onCloseDialog(), 100);
       },
       onError: (error) => {
@@ -43,7 +54,7 @@ const DeleteWorkspaceCard = () => {
   };
   return (
     <>
-      <div className="w-full">
+     <div className="w-full">
         <div className="mb-5 border-b">
           <h1
             className="text-[17px] tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5

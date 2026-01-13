@@ -1,29 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useParams } from 'react-router-dom';
+import { useQueries } from '@tanstack/react-query';
 import { useGetScrumboardBoard } from '@/api/scrumboard/hooks/boards/useGetScrumboardBoard';
 import { useGetScrumboardBoardLists } from '@/api/scrumboard/hooks/lists/useGetScrumboardBoardLists';
 import { useScrumboardReorder } from '@/api/scrumboard/hooks/order/useScrumboardReorder';
 import { useGetScrumboardBoardCards } from '@/api/scrumboard/hooks/cards/useGetScrumboardBoardCards';
 import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
+import { ScrumboardCard } from '@/api/scrumboard/types';
+import { Issue } from '@/api/issue/types';
+import { issueApiService } from '@/api/issue/services/issueApiService';
 import { BoardHeader } from './BoardHeader';
 import { BoardList } from './BoardList';
 import { BoardCardDialog } from './dialogs/BoardCardDialog';
 import { IssueCreateDialog } from '@/components/issue';
 import useWorkspaceId from '@/hooks/use-workspace-id';
+import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 
 export function ScrumboardBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
   const workspaceId = useWorkspaceId();
   const { data: board, isLoading, error } = useGetScrumboardBoard(boardId || '');
   const { data: lists } = useGetScrumboardBoardLists(boardId || null);
-  // Debug: log fetched board columns and lists to diagnose missing list names
-  try {
-    console.log('ScrumboardBoardView: board.columns', board?.columns);
-    console.log('ScrumboardBoardView: lists', lists);
-  } catch (e) {
-    // ignore
-  }
+  
+  // Get projects for finding project ID for issues
+  const { data: projectsData } = useGetProjectsInWorkspaceQuery({ 
+    workspaceId, 
+    pageSize: 100, 
+    pageNumber: 1, 
+    skip: !workspaceId 
+  });
+  const projects = projectsData?.projects || [];
+  
   const { 
     setSelectedBoard, 
     setSelectedCard, 
@@ -31,9 +39,68 @@ export function ScrumboardBoardView() {
     isIssueCreateDialogOpen,
     setIsIssueCreateDialogOpen,
     issueCreateProjectId,
+    selectedProjectId,
+    setSelectedProjectId,
   } = useScrumboardAppContext();
+
+  // Initialize selected project to first project if not set
+  useEffect(() => {
+    if (!selectedProjectId && projects.length > 0) {
+      setSelectedProjectId(projects[0]._id);
+    }
+  }, [projects, selectedProjectId, setSelectedProjectId]);
+
+  // Fetch issues from ALL projects
+  const projectIssuesQueries = useQueries({
+    queries: projects.map((project) => ({
+      queryKey: ['issues', 'project', project._id],
+      queryFn: async () => {
+        try {
+          const response = await issueApiService.getIssuesByProject(project._id);
+          const issues = response.data || response || [];
+          return Array.isArray(issues) ? issues : [];
+        } catch (error) {
+          console.error(`Error fetching issues for project ${project.name}:`, error);
+          return [];
+        }
+      },
+      enabled: !!project._id,
+    })),
+  });
+
+  // Combine all issues from all projects
+  const issues = useMemo(() => {
+    return projectIssuesQueries
+      .flatMap((query) => query.data || [])
+      .filter((issue): issue is Issue => issue !== undefined);
+  }, [projectIssuesQueries]);
+  
   const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useScrumboardReorder(boardId || null);
   const { data: cards } = useGetScrumboardBoardCards(boardId || '');
+  
+  // Debug: log fetched board columns and lists to diagnose missing list names
+  try {
+    console.log('🔍 ScrumboardBoardView Debug:', {
+      workspaceId,
+      projectsCount: projects.length,
+      selectedProjectId,
+      selectedProjectName: projects.find(p => p._id === selectedProjectId)?.name,
+      issuesCount: issues.length,
+      issuesList: issues.map((i: any) => ({
+        id: i._id,
+        title: i.title,
+        type: i.type,
+        status: i.status,
+        projectName: projects.find(p => p._id === i.projectId)?.name,
+        statusString: String(i.status).toLowerCase(),
+      })),
+      boardId,
+      listsCount: lists?.length,
+      cardsCount: cards?.length,
+    });
+  } catch (e) {
+    console.error('Debug logging error:', e);
+  }
   
   // Track the last drag state for potential undo on error
   const lastDragState = useRef<{
@@ -51,6 +118,12 @@ export function ScrumboardBoardView() {
       setSelectedBoard(board);
     }
   }, [board, setSelectedBoard]);
+
+  // Handle card click - accepts both ScrumboardCard and Issue types
+  const handleCardClick = useCallback((card: ScrumboardCard | Issue) => {
+    setSelectedCard(card);
+    setIsCardDialogOpen(true);
+  }, [setSelectedCard, setIsCardDialogOpen]);
 
   const handleDragEnd = useCallback(
     (result: DropResult) => {
@@ -346,10 +419,8 @@ export function ScrumboardBoardView() {
                               <BoardList
                                 list={list}
                                 boardId={board._id}
-                                onCardClick={(card) => {
-                                  setSelectedCard(card);
-                                  setIsCardDialogOpen(true);
-                                }}
+                                onCardClick={handleCardClick}
+                                issues={issues}
                               />
                             </div>
                           )}

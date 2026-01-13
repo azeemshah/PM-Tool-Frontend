@@ -14,11 +14,33 @@ const usePermissions = (
       const member = members.find((m: any) => {
         // member.userId may be object or id string
         const userId = m?.userId?._id || m?.userId;
-        return userId === user._id;
+        const memberEmail = m?.userId?.email;
+        
+        // Match by ID first, then by email as fallback
+        const idMatch = userId === user._id;
+        const emailMatch = memberEmail && user.email && memberEmail === user.email;
+        
+        console.log('[usePermissions] Checking member:', {
+          userId,
+          memberEmail,
+          currentUserId: user._id,
+          currentUserEmail: user.email,
+          idMatch,
+          emailMatch,
+          willMatch: idMatch || emailMatch
+        });
+        
+        return idMatch || emailMatch;
       });
+      
+      console.log('[usePermissions] Found member:', member);
+      
       if (member && member.role) {
-        setPermissions(member.role.permissions || []);
+        const perms = member.role.permissions || [];
+        console.log('[usePermissions] Setting permissions:', perms);
+        setPermissions(perms);
       } else {
+        console.log('[usePermissions] No member found or no role, setting empty permissions');
         setPermissions([]);
       }
     }
