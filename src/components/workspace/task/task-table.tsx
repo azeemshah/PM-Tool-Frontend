@@ -1,22 +1,18 @@
 import { FC, useState } from "react";
-import { getColumns } from "./table/columns";
-import { DataTable } from "./table/table";
 import { useParams } from "react-router-dom";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { X, Trash2, Zap } from "lucide-react";
+import { DataTable } from "./table/table";
+import { getColumns } from "./table/columns";
 import { DataTableFacetedFilter } from "./table/table-faceted-filter";
 import { priorities, statuses } from "./table/data";
 import useTaskTableFilter from "@/hooks/use-task-table-filter";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { issueApiService } from '@/api/issue/services/issueApiService';
-import API from '@/lib/axios-client';
-import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getAllTasksQueryFn, bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
-import { TaskType } from "@/types/api.type";
-import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { issueApiService } from "@/api/issue/services/issueApiService";
+import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -26,7 +22,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { toast } from "@/hooks/use-toast";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,22 +29,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuCheckboxItem,
 } from "@/components/ui/dropdown-menu";
+import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
+import { TaskType } from "@/api/issue/types";
+// ---- Define TaskType ----
 
-type Filters = ReturnType<typeof useTaskTableFilter>[0];
-type SetFilters = ReturnType<typeof useTaskTableFilter>[1];
-
-interface DataTableFilterToolbarProps {
-  isLoading?: boolean;
-  projectId?: string;
-  filters: Filters;
-  setFilters: SetFilters;
-}
-
-// No local mock fallback here — prefer showing live data from backend
-
-const TaskTable = () => {
-  const param = useParams();
-  const projectId = param.projectId as string;
+// ---- Main TaskTable Component ----
+const TaskTable: FC = () => {
+  const { workspaceId } = useParams<{ workspaceId: string }>();
   const queryClient = useQueryClient();
 
   const [pageNumber, setPageNumber] = useState(1);
@@ -58,264 +44,84 @@ const TaskTable = () => {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
   const [filters, setFilters] = useTaskTableFilter();
-  const workspaceId = useWorkspaceId();
-  const columns = getColumns(projectId);
+  const columns = getColumns(); // remove projectId logic
 
+  // Fetch tasks
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: [
-      "all-tasks",
-      workspaceId,
-      pageSize,
-      pageNumber,
-      filters,
-      projectId,
-    ],
+    queryKey: ["all-tasks", workspaceId, pageSize, pageNumber, filters],
     queryFn: async () => {
-      // If user selected an issue type filter, fetch from Issue API and map to TaskType[] shape
-      if (filters.issueType) {
-        // If viewing a project, use project-specific endpoint
-        if (projectId || filters.projectId) {
-          const pid = projectId || filters.projectId || "";
-          const issues = await issueApiService.getIssuesByType(pid, filters.issueType);
-          const mapped = (issues || []).map((iss: any) => ({
-            _id: iss._id,
-            title: iss.title,
-            description: iss.description,
-            project: { _id: iss.projectId || pid, emoji: "", name: "" },
-            // include issue type so table can show it
-            type: iss.type,
-            priority: iss.priority,
-            status: iss.status,
-            assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : null,
-            createdBy: iss.reporter?._id || undefined,
-            dueDate: iss.dueDate || "",
-            taskCode: iss.key || "",
-            createdAt: iss.createdAt,
-            updatedAt: iss.updatedAt,
-          }));
-          return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
-        }
+      if (!workspaceId) return { tasks: [], pagination: {} };
 
-        // If no specific project (All Tasks), try workspace-level issues endpoint
-        const params: any = { type: filters.issueType };
-        if (workspaceId) params.workspaceId = workspaceId;
-        if (pageNumber) params.pageNumber = pageNumber;
-        if (pageSize) params.pageSize = pageSize;
-        const resp = await API.get(`/issues`, { params });
-        const issues = resp.data?.data || resp.data || [];
-        const mapped = (issues || []).map((iss: any) => ({
-          _id: iss._id,
-          title: iss.title,
-          description: iss.description,
-          project: { _id: iss.projectId || "", emoji: "", name: "" },
-          // include issue type so table can show it
-          type: iss.type,
-          priority: iss.priority,
-          status: iss.status,
-          assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : (iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null),
-          reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,
-          createdBy: iss.reporter?._id || undefined,
-          dueDate: iss.dueDate || "",
-          taskCode: iss.key || "",
-          createdAt: iss.createdAt,
-          updatedAt: iss.updatedAt,
-        }));
-        return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
-      }
+      const allTasks: TaskType[] = await issueApiService.getTasksByWorkspace(workspaceId);
 
-      // default: try fetching issues from the new Issue API and map to TaskType[]
-      // If viewing a specific project, use that project's issues endpoint.
-      try {
-        // If project context is available, fetch issues for that project
-        if (projectId) {
-          const resp = await API.get(`/issues/project/${projectId}`);
-          const issues = resp.data?.data || resp.data || [];
-          const mapped = (issues || []).map((iss: any) => ({
-            _id: iss._id,
-            title: iss.title,
-            description: iss.description,
-            project: { _id: iss.projectId || projectId, emoji: "", name: "" },
-            type: iss.type,
-            priority: iss.priority,
-            status: iss.status,
-            assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : null,            reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,            createdBy: iss.reporter?._id || undefined,
-            dueDate: iss.dueDate || "",
-            taskCode: iss.key || "",
-            createdAt: iss.createdAt,
-            updatedAt: iss.updatedAt,
-          }));
-          return { tasks: mapped, pagination: { totalCount: mapped.length, pageSize, pageNumber, totalPages: 1, skip: 0, limit: mapped.length } } as any;
-        }
-
-        // No specific project: fetch all projects in workspace then fetch issues per project
-        console.log('[task-table] Fetching issues for workspace:', workspaceId);
-        
-        if (!workspaceId) {
-          console.log('[task-table] No workspaceId available, falling back to getAllTasksQueryFn');
-          return getAllTasksQueryFn({
-            workspaceId,
-            keyword: filters.keyword,
-            priority: filters.priority,
-            status: filters.status,
-            assignedTo: filters.assigneeId,
-            pageNumber,
-            pageSize,
-          });
-        }
-
-        console.log('[task-table] Fetching projects for workspace:', workspaceId);
-        const projectsResp = await API.get(`/projects`, { params: { workspaceId } });
-        const projects = projectsResp.data?.data || projectsResp.data?.projects || projectsResp.data || [];
-        console.log('[task-table] Found projects:', projects.length);
-
-        if (!projects || projects.length === 0) {
-          console.log('[task-table] No projects found in workspace');
-          return { tasks: [], pagination: { totalCount: 0, pageNumber, pageSize } } as any;
-        }
-
-        const issuesPromises = projects.map((p: any) =>
-          API.get(`/issues/project/${p._id}`)
-            .then((r) => {
-              const items = (r.data?.data || r.data || []) as any[];
-              console.log(`[task-table] Project ${p.name} (${p._id}): ${items.length} issues`);
-              return items.map((iss) => ({
-                _id: iss._id,
-                title: iss.title,
-                description: iss.description,
-                project: { _id: iss.projectId || p._id, emoji: p.emoji || "", name: p.name || "" },
-                type: iss.type,
-                priority: iss.priority,
-                status: iss.status,
-                assignedTo: iss.assignee && iss.assignee._id ? { _id: iss.assignee._id, name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(), profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null } : (iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null),
-                reporter: iss.reporter && iss.reporter._id ? { _id: iss.reporter._id, name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(), profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null } : null,
-                createdBy: iss.reporter?._id || undefined,
-                dueDate: iss.dueDate || "",
-                taskCode: iss.key || "",
-                createdAt: iss.createdAt,
-                updatedAt: iss.updatedAt,
-              }));
-            })
-            .catch((err) => {
-              console.error(`[task-table] Error fetching issues for project ${p._id}:`, err);
-              return [];
-            }),
+      // Client-side filtering
+      let filtered = allTasks;
+      if (filters.keyword) {
+        filtered = filtered.filter(
+          (t) =>
+            (t.title || "").toLowerCase().includes(filters.keyword.toLowerCase()) ||
+            (t.taskCode || "").toLowerCase().includes(filters.keyword.toLowerCase())
         );
-
-        const allIssuesArrays = await Promise.all(issuesPromises);
-        const allMapped = allIssuesArrays.flat();
-        console.log('[task-table] Total issues fetched:', allMapped.length);
-
-        // Apply client-side filtering
-        let filtered = allMapped;
-        if (filters.keyword) {
-          filtered = filtered.filter(
-            (t) =>
-              (t.title || "").toLowerCase().includes(filters.keyword.toLowerCase()) ||
-              (t.taskCode || "").toLowerCase().includes(filters.keyword.toLowerCase())
-          );
-        }
-        if (filters.assigneeId) {
-          filtered = filtered.filter((t) => t.assignedTo && t.assignedTo._id === filters.assigneeId);
-        }
-        if (filters.priority) {
-          filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());
-        }
-        if (filters.status) {
-          filtered = filtered.filter((t) => (t.status || "").toLowerCase() === filters.status.toLowerCase());
-        }
-
-        console.log('[task-table] After filtering:', filtered.length);
-
-        // Apply pagination
-        const total = filtered.length;
-        const pn = pageNumber || 1;
-        const ps = pageSize || 10;
-        const start = (pn - 1) * ps;
-        const paged = filtered.slice(start, start + ps);
-
-        console.log('[task-table] Returning paginated results:', paged.length, 'of', total);
-        return { tasks: paged, pagination: { totalCount: total, pageSize: ps, pageNumber: pn, totalPages: Math.ceil(total / ps), skip: start, limit: ps } } as any;
-      } catch (err: any) {
-        // Rethrow authentication errors so UI can show a helpful message
-        if (err?.response?.status === 401) throw err;
-        console.error('[task-table] Error fetching issues:', err);
-        // fallback to tasks endpoint if anything else goes wrong
-        return getAllTasksQueryFn({
-          workspaceId,
-          keyword: filters.keyword,
-          priority: filters.priority,
-          status: filters.status,
-          assignedTo: filters.assigneeId,
-          pageNumber,
-          pageSize,
-        });
       }
+      if (filters.assigneeId) {
+        filtered = filtered.filter((t) => t.assignedTo?._id === filters.assigneeId);
+      }
+      if (filters.priority) {
+        filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());
+      }
+      if (filters.status) {
+        filtered = filtered.filter((t) => (t.status || "").toLowerCase() === filters.status.toLowerCase());
+      }
+
+      const total = filtered.length;
+      const start = (pageNumber - 1) * pageSize;
+      const paged = filtered.slice(start, start + pageSize);
+
+      return {
+        tasks: paged,
+        pagination: {
+          totalCount: total,
+          pageSize,
+          pageNumber,
+          totalPages: Math.ceil(total / pageSize),
+          skip: start,
+          limit: pageSize,
+        },
+      };
     },
-    staleTime: 0,
+    enabled: !!workspaceId,
   });
 
+  // Bulk delete
   const bulkDeleteMutation = useMutation({
-    mutationFn: bulkDeleteTasksMutationFn,
+    mutationFn: (ids: string[]) => issueApiService.bulkDeleteTasks(ids),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          "all-tasks",
-          workspaceId,
-          pageSize,
-          pageNumber,
-          filters,
-          projectId,
-        ],
-      });
-      toast({
-        title: "Success",
-        description: `${selectedTaskIds.length} task(s) deleted successfully`,
-        variant: "success",
-      });
+      queryClient.invalidateQueries(["all-tasks", workspaceId, pageSize, pageNumber, filters]);
+      toast({ title: "Success", description: `${selectedTaskIds.length} task(s) deleted successfully`, variant: "success" });
       setSelectedTaskIds([]);
       setIsDeleteAlertOpen(false);
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to delete tasks",
-        variant: "destructive",
-      });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to delete tasks", variant: "destructive" });
     },
   });
 
+  // Bulk status update
   const bulkUpdateMutation = useMutation({
-    mutationFn: bulkUpdateTasksMutationFn,
+    mutationFn: ({ ids, status }: { ids: string[]; status: string }) =>
+      issueApiService.bulkUpdateTasks(ids, { status }),
     onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: [
-          "all-tasks",
-          workspaceId,
-          pageSize,
-          pageNumber,
-          filters,
-          projectId,
-        ],
-      });
-      toast({
-        title: "Success",
-        description: `${selectedTaskIds.length} task(s) updated successfully`,
-        variant: "success",
-      });
+      queryClient.invalidateQueries(["all-tasks", workspaceId, pageSize, pageNumber, filters]);
+      toast({ title: "Success", description: `${selectedTaskIds.length} task(s) updated successfully`, variant: "success" });
       setSelectedTaskIds([]);
     },
-    onError: (error: Error) => {
-      toast({
-        title: "Error",
-        description: error?.message || "Failed to update tasks",
-        variant: "destructive",
-      });
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message || "Failed to update tasks", variant: "destructive" });
     },
   });
 
-  // Use backend data directly; if none, show empty list
   const tasks: TaskType[] = data?.tasks || [];
-  const totalCount = data?.pagination?.totalCount ?? (tasks ? tasks.length : 0);
+  const totalCount = data?.pagination?.totalCount ?? tasks.length;
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -327,13 +133,8 @@ const TaskTable = () => {
     setSelectedTaskIds([]);
   };
 
-  const handleBulkDelete = () => {
-    bulkDeleteMutation.mutate({ ids: selectedTaskIds });
-  };
-
-  const handleBulkStatusUpdate = (status: string) => {
-    bulkUpdateMutation.mutate({ ids: selectedTaskIds, data: { status } });
-  };
+  const handleBulkDelete = () => bulkDeleteMutation.mutate(selectedTaskIds);
+  const handleBulkStatusUpdate = (status: string) => bulkUpdateMutation.mutate({ ids: selectedTaskIds, status });
 
   return (
     <div className="w-full relative">
@@ -341,21 +142,17 @@ const TaskTable = () => {
         <BulkActionsBar
           selectedCount={selectedTaskIds.length}
           onClearSelection={() => setSelectedTaskIds([])}
-          onDelete={() => setIsDeleteAlertOpen(true)}
+          onDelete={handleBulkDelete}
           onStatusUpdate={handleBulkStatusUpdate}
-          isLoading={bulkDeleteMutation.isPending || bulkUpdateMutation.isPending}
+          isLoading={bulkDeleteMutation.isLoading || bulkUpdateMutation.isLoading}
         />
       )}
+
       {isError && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 mb-4 text-sm text-red-700">
-          {(error as any)?.response?.status === 401 ? (
-            "Authentication required — please sign in to view tasks."
-          ) : (
-            "Failed to load tasks. Ensure the backend is running."
-          )}
-          {error && (error as any).message ? (
-            <div className="text-xs text-muted-foreground mt-1">{String((error as any).message)}</div>
-          ) : null}
+          {(error as any)?.response?.status === 401
+            ? "Authentication required — please sign in to view tasks."
+            : "Failed to load tasks."}
         </div>
       )}
 
@@ -365,20 +162,12 @@ const TaskTable = () => {
         columns={columns}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
-        pagination={{
-          totalCount,
-          pageNumber,
-          pageSize,
-        }}
+        pagination={{ totalCount, pageNumber, pageSize }}
         filtersToolbar={
-          <DataTableFilterToolbar
-            isLoading={isLoading}
-            projectId={projectId}
-            filters={filters}
-            setFilters={setFilters}
-          />
+          <DataTableFilterToolbar filters={filters} setFilters={setFilters} isLoading={isLoading} />
         }
       />
+
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -392,11 +181,9 @@ const TaskTable = () => {
             <AlertDialogAction
               onClick={handleBulkDelete}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-              disabled={bulkDeleteMutation.isPending}
+              disabled={bulkDeleteMutation.isLoading}
             >
-              {bulkDeleteMutation.isPending && (
-                <span className="mr-2">Deleting...</span>
-              )}
+              {bulkDeleteMutation.isLoading && <span className="mr-2">Deleting...</span>}
               Delete
             </AlertDialogAction>
           </div>
@@ -406,24 +193,19 @@ const TaskTable = () => {
   );
 };
 
-const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
-  isLoading,
-  projectId,
-  filters,
-  setFilters,
-}) => {
-  const workspaceId = useWorkspaceId();
+// ---- Filter Toolbar ----
+const DataTableFilterToolbar: FC<{
+  filters: ReturnType<typeof useTaskTableFilter>[0];
+  setFilters: ReturnType<typeof useTaskTableFilter>[1];
+  isLoading?: boolean;
+}> = ({ filters, setFilters, isLoading }) => {
+  const { data: memberData } = useGetWorkspaceMembers(useParams<{ workspaceId: string }>().workspaceId!);
+  const members = Array.isArray(memberData) ? memberData : memberData?.members || [];
 
-  const { data: memberData } = useGetWorkspaceMembers(workspaceId);
-
-  const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
-
-  // Workspace Members
-  const assigneesOptions = members?.map((member) => {
+  const assigneesOptions = members.map((member) => {
     const name = member.userId?.name || "Unknown";
     const initials = getAvatarFallbackText(name);
     const avatarColor = getAvatarColor(name);
-
     return {
       label: (
         <div className="flex items-center space-x-2">
@@ -438,13 +220,6 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
     };
   });
 
-  const handleFilterChange = (key: keyof Filters, values: string[]) => {
-    setFilters({
-      ...filters,
-      [key]: values.length > 0 ? values.join(",") : null,
-    });
-  };
-
   const issueTypeOptions = [
     { label: "Epic", value: "epic" },
     { label: "Story", value: "story" },
@@ -453,39 +228,34 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
     { label: "Subtask", value: "subtask" },
   ];
 
+  const handleFilterChange = (key: keyof typeof filters, values: string[]) => {
+    setFilters({ ...filters, [key]: values.length ? values.join(",") : null });
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row w-full items-start space-y-2 mb-2 lg:mb-0 lg:space-x-2  lg:space-y-0">
+    <div className="flex flex-col lg:flex-row w-full items-start space-y-2 mb-2 lg:mb-0 lg:space-x-2 lg:space-y-0">
       <Input
         placeholder="Filter tasks..."
         value={filters.keyword || ""}
-        onChange={(e) =>
-          setFilters({
-            keyword: e.target.value,
-          })
-        }
+        onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
         className="h-8 w-full lg:w-[250px]"
       />
-      {/* Status filter */}
       <DataTableFacetedFilter
         title="Status"
-        multiSelect={true}
+        multiSelect
         options={statuses}
         disabled={isLoading}
         selectedValues={filters.status?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("status", values)}
       />
-
-      {/* Priority filter */}
       <DataTableFacetedFilter
         title="Priority"
-        multiSelect={true}
+        multiSelect
         options={priorities}
         disabled={isLoading}
         selectedValues={filters.priority?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("priority", values)}
       />
-
-      {/* Issue Type filter */}
       <DataTableFacetedFilter
         title="Issue"
         multiSelect={false}
@@ -494,134 +264,68 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
         selectedValues={filters.issueType?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("issueType", values)}
       />
-
-      {/* Assigned To filter */}
       <DataTableFacetedFilter
         title="Assigned To"
-        multiSelect={true}
+        multiSelect
         options={assigneesOptions}
         disabled={isLoading}
         selectedValues={filters.assigneeId?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("assigneeId", values)}
       />
-
-      {Object.values(filters).some(
-        (value) => value !== null && value !== ""
-      ) && (
+      {Object.values(filters).some((v) => v) && (
         <Button
           disabled={isLoading}
           variant="ghost"
           className="h-8 px-2 lg:px-3"
-          onClick={() =>
-            setFilters({
-              keyword: null,
-              status: null,
-              priority: null,
-              issueType: null,
-              projectId: null,
-              assigneeId: null,
-            })
-          }
+          onClick={() => setFilters({ keyword: null, status: null, priority: null, issueType: null, assigneeId: null })}
         >
-          Reset
-          <X />
+          Reset <X />
         </Button>
       )}
     </div>
   );
 };
 
-export default TaskTable;
-
-interface BulkActionsBarProps {
+// ---- Bulk Actions ----
+const BulkActionsBar: FC<{
   selectedCount: number;
   onClearSelection: () => void;
   onDelete: () => void;
   onStatusUpdate: (status: string) => void;
   isLoading?: boolean;
-}
-
-const BulkActionsBar: FC<BulkActionsBarProps> = ({
-  selectedCount,
-  onClearSelection,
-  onDelete,
-  onStatusUpdate,
-  isLoading,
-}) => {
-  return (
-    <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
-      <div className="flex items-center gap-3">
-        <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-        <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-          {selectedCount} task{selectedCount !== 1 ? "s" : ""} selected
-        </span>
-      </div>
-
-      <div className="flex items-center gap-2">
-        <DropdownMenu>
-          <Button
-            size="sm"
-            variant="outline"
-            className="bg-white dark:bg-slate-800"
-            disabled={isLoading}
-          >
-            Update Status
-          </Button>
-          <DropdownMenuContent align="end">
-            <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-            <DropdownMenuSeparator />
-            <DropdownMenuCheckboxItem
-              onClick={() => onStatusUpdate("todo")}
-              disabled={isLoading}
-            >
-              To Do
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              onClick={() => onStatusUpdate("in-progress")}
-              disabled={isLoading}
-            >
-              In Progress
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              onClick={() => onStatusUpdate("in-review")}
-              disabled={isLoading}
-            >
-              In Review
-            </DropdownMenuCheckboxItem>
-            <DropdownMenuCheckboxItem
-              onClick={() => onStatusUpdate("done")}
-              disabled={isLoading}
-            >
-              Done
-            </DropdownMenuCheckboxItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <Button
-          size="sm"
-          variant="destructive"
-          onClick={onDelete}
-          disabled={isLoading}
-          className="gap-2"
-        >
-          <Trash2 className="h-4 w-4" />
-          Delete
-        </Button>
-
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={onClearSelection}
-          disabled={isLoading}
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
+}> = ({ selectedCount, onClearSelection, onDelete, onStatusUpdate, isLoading }) => (
+  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+    <div className="flex items-center gap-3">
+      <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+      <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
+        {selectedCount} task{selectedCount !== 1 ? "s" : ""} selected
+      </span>
     </div>
-  );
-};
+    <div className="flex items-center gap-2">
+      <DropdownMenu>
+        <Button size="sm" variant="outline" className="bg-white dark:bg-slate-800" disabled={isLoading}>
+          Update Status
+        </Button>
+        <DropdownMenuContent align="end">
+          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+          {["todo", "in-progress", "in-review", "done"].map((status) => (
+            <DropdownMenuCheckboxItem key={status} onClick={() => onStatusUpdate(status)} disabled={isLoading}>
+              {status.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase())}
+            </DropdownMenuCheckboxItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
 
+      <Button size="sm" variant="destructive" onClick={onDelete} disabled={isLoading} className="gap-2">
+        <Trash2 className="h-4 w-4" /> Delete
+      </Button>
 
+      <Button size="sm" variant="ghost" onClick={onClearSelection} disabled={isLoading}>
+        <X className="h-4 w-4" />
+      </Button>
+    </div>
+  </div>
+);
 
-
-
+export default TaskTable;

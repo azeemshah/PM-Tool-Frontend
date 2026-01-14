@@ -1,4 +1,4 @@
-import { Column, ColumnDef, Row } from "@tanstack/react-table";
+import { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
 
 import { DataTableColumnHeader } from "./table-column-header";
@@ -20,13 +20,20 @@ import { priorities, statuses } from "./data";
 import { TaskType } from "@/types/api.type";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
+export const getColumns = (): ColumnDef<TaskType>[] => {
   const columns: ColumnDef<TaskType>[] = [
+    // Selection Checkbox
     {
       id: "_id",
       header: ({ table }) => (
         <Checkbox
-          checked={table.getIsAllPageRowsSelected() ? true : table.getIsSomePageRowsSelected() ? "indeterminate" : false}
+          checked={
+            table.getIsAllPageRowsSelected()
+              ? true
+              : table.getIsSomePageRowsSelected()
+              ? "indeterminate"
+              : false
+          }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
           className="translate-y-[2px]"
@@ -43,79 +50,44 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
       enableSorting: false,
       enableHiding: false,
     },
+
+    // Title Column
     {
       accessorKey: "title",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Title" />
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
+      cell: ({ row }) => (
+        <div className="flex flex-wrap space-x-2">
+          <Badge variant="outline" className="capitalize shrink-0 h-[25px]">
+            {row.original.taskCode}
+          </Badge>
+          <span className="block lg:max-w-[220px] max-w-[200px] font-medium">
+            {row.original.title}
+          </span>
+        </div>
       ),
-      cell: ({ row }) => {
-        return (
-          <div className="flex flex-wrap space-x-2">
-            <Badge variant="outline" className="capitalize shrink-0 h-[25px]">
-              {row.original.taskCode}
-            </Badge>
-            <span className="block lg:max-w-[220px] max-w-[200px] font-medium">
-              {row.original.title}
-            </span>
-          </div>
-        );
-      },
     },
-    // Issue Type column (Epic / Story / Task / Bug / Subtask)
+
+    // Issue Type Column
     {
       accessorFn: (row) => (row as any).type || (row as any).issueType || null,
       id: "issueType",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Issue" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Issue" />,
       cell: ({ row }) => {
         const t = (row.original as any).type || (row.original as any).issueType || null;
         if (!t) return null;
-        // show capitalized label
-        return (
-          <span className="capitalize text-sm font-medium">{String(t)}</span>
-        );
+        return <span className="capitalize text-sm font-medium">{String(t)}</span>;
       },
     },
-    ...(projectId
-      ? [] // If projectId exists, exclude the "Project" column
-      : [
-          {
-            accessorKey: "project",
-            header: ({ column }: { column: Column<TaskType, unknown> }) => (
-              <DataTableColumnHeader column={column} title="Project" />
-            ),
-            cell: ({ row }: { row: Row<TaskType> }) => {
-              const project = row.original.project;
 
-              if (!project) {
-                return null;
-              }
-
-              return (
-                <div className="flex items-center gap-1">
-                  <span className="rounded-full border">{project.emoji}</span>
-                  <span className="block capitalize truncate w-[100px] text-ellipsis">
-                    {project.name}
-                  </span>
-                </div>
-              );
-            },
-          },
-        ]),
+    // Assigned To Column
     {
       accessorKey: "assignedTo",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Assigned To" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Assigned To" />,
       cell: ({ row }) => {
-        // Try to get assignee first, fallback to reporter
         const assignee = row.original.assignedTo || row.original.reporter || null;
         const name = assignee?.name || "";
 
-        if (!name) {
-          return <span className="text-sm text-muted-foreground">Unassigned</span>;
-        }
+        if (!name) return <span className="text-sm text-muted-foreground">Unassigned</span>;
 
         const initials = getAvatarFallbackText(name);
         const avatarColor = getAvatarColor(name);
@@ -124,67 +96,45 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
           <div className="flex items-center gap-1">
             <Avatar className="h-6 w-6">
               <AvatarImage src={assignee?.profilePicture || ""} alt={name} />
-              <AvatarFallback className={avatarColor}>
-                {initials}
-              </AvatarFallback>
+              <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
             </Avatar>
-            <span className="block text-ellipsis w-[100px] truncate">
-              {assignee?.name}
-            </span>
+            <span className="block text-ellipsis w-[100px] truncate">{assignee?.name}</span>
           </div>
         );
       },
     },
+
+    // Due Date Column
     {
       accessorKey: "dueDate",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Due Date" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Due Date" />,
       cell: ({ row }) => {
         const dueDate = row.original.dueDate;
-        
-        if (!dueDate) {
-          return <span className="text-sm text-muted-foreground">No due date</span>;
-        }
+        if (!dueDate) return <span className="text-sm text-muted-foreground">No due date</span>;
 
         try {
-          // Handle both string and Date object formats
           const dateObj = typeof dueDate === "string" ? new Date(dueDate) : dueDate;
           const formattedDate = format(dateObj, "PPP");
-          return (
-            <span className="lg:max-w-[100px] text-sm">
-              {formattedDate}
-            </span>
-          );
+          return <span className="lg:max-w-[100px] text-sm">{formattedDate}</span>;
         } catch {
           return <span className="text-sm text-muted-foreground">Invalid date</span>;
         }
       },
     },
+
+    // Status Column
     {
       accessorKey: "status",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Status" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const rawStatus = row.getValue("status");
         const normalizedStatus = typeof rawStatus === "string" ? rawStatus.toUpperCase() : rawStatus;
-        const status = statuses.find(
-          (status) => status.value === normalizedStatus
-        );
+        const status = statuses.find((s) => s.value === normalizedStatus);
 
-        if (!status) {
-          return <span className="text-sm text-muted-foreground">Unknown status</span>;
-        }
+        if (!status) return <span className="text-sm text-muted-foreground">Unknown status</span>;
 
-        const statusKey = formatStatusToEnum(
-          status.value
-        ) as TaskStatusEnumType;
+        const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
         const Icon = status.icon;
-
-        if (!Icon) {
-          return <span className="text-sm text-muted-foreground">Unknown status</span>;
-        }
 
         return (
           <div className="flex lg:w-[120px] items-center">
@@ -199,30 +149,20 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         );
       },
     },
+
+    // Priority Column
     {
       accessorKey: "priority",
-      header: ({ column }) => (
-        <DataTableColumnHeader column={column} title="Priority" />
-      ),
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
       cell: ({ row }) => {
         const rawPriority = row.getValue("priority");
         const normalizedPriority = typeof rawPriority === "string" ? rawPriority.toUpperCase() : rawPriority;
-        const priority = priorities.find(
-          (priority) => priority.value === normalizedPriority
-        );
+        const priority = priorities.find((p) => p.value === normalizedPriority);
 
-        if (!priority) {
-          return <span className="text-sm text-muted-foreground">No priority</span>;
-        }
+        if (!priority) return <span className="text-sm text-muted-foreground">No priority</span>;
 
-        const statusKey = formatStatusToEnum(
-          priority.value
-        ) as TaskPriorityEnumType;
+        const statusKey = formatStatusToEnum(priority.value) as TaskPriorityEnumType;
         const Icon = priority.icon;
-
-        if (!Icon) {
-          return <span className="text-sm text-muted-foreground">No priority</span>;
-        }
 
         return (
           <div className="flex items-center">
@@ -237,15 +177,11 @@ export const getColumns = (projectId?: string): ColumnDef<TaskType>[] => {
         );
       },
     },
+
+    // Actions Column
     {
       id: "actions",
-      cell: ({ row }) => {
-        return (
-          <>
-            <DataTableRowActions row={row} />
-          </>
-        );
-      },
+      cell: ({ row }) => <DataTableRowActions row={row} />,
     },
   ];
 
