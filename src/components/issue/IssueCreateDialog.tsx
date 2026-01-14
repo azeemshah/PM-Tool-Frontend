@@ -107,7 +107,7 @@ export function IssueCreateDialog({
 		type: 'task',
 		status: 'Todo',
 		priority: 'medium',
-		reporter: '',
+		assignedTo: '',
 		dueDate: undefined,
 		workspace: workspaceId,
 	});
@@ -120,14 +120,15 @@ export function IssueCreateDialog({
 		? membersQuery.data
 		: membersQuery.data?.members ?? [];
 
+	// Default selection for assignedTo
 	useEffect(() => {
-		if (!form.reporter && members.length > 0) {
+		if (!form.assignedTo && members.length > 0) {
 			setForm((prev) => ({
 				...prev,
-				reporter: members[0].userId?._id,
+				assignedTo: members[0].userId?._id,
 			}));
 		}
-	}, [members, form.reporter]);
+	}, [members, form.assignedTo]);
 
 	/* --------------------------------------------
 	 * Reset on close
@@ -140,7 +141,7 @@ export function IssueCreateDialog({
 				type: 'task',
 				status: 'Todo',
 				priority: 'medium',
-				reporter: '',
+				assignedTo: '',
 				dueDate: undefined,
 				workspace: workspaceId,
 			});
@@ -190,10 +191,10 @@ export function IssueCreateDialog({
 			return;
 		}
 
-		if (!form.reporter) {
+		if (!form.assignedTo) {
 			toast({
 				title: 'Error',
-				description: 'Reporter is required',
+				description: 'Assigned To is required',
 				variant: 'destructive',
 			});
 			return;
@@ -325,13 +326,13 @@ export function IssueCreateDialog({
 						/>
 					</div>
 
-					{/* Reporter */}
+					{/* Assigned To */}
 					<div className="space-y-2">
-						<label className="text-sm font-medium">Reporter *</label>
+						<label className="text-sm font-medium">Assigned To *</label>
 						<Select
-							value={form.reporter}
+							value={form.assignedTo}
 							onValueChange={(v) =>
-								setForm({ ...form, reporter: v })
+								setForm({ ...form, assignedTo: v })
 							}
 						>
 							<SelectTrigger>
@@ -380,8 +381,3 @@ export function IssueCreateDialog({
 		</Dialog>
 	);
 }
-
-
-
-
-
