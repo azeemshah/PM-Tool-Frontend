@@ -539,7 +539,7 @@ export const createTaskWithoutEpicMutationFn = async ({
     dueDate?: string;
   };
 }) => {
-  const response = await API.post(`/issues/task`, {
+  const response = await API.post(`/items/create`, {
     ...data,
     projectId,
   });
