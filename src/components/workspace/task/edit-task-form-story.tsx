@@ -59,6 +59,7 @@ interface Task {
 export default function EditTaskForm(props: {
   task: Task;
   storyId?: string;
+  workspaceId?: string;
   onClose: () => void;
 }) {
   const { task, storyId, onClose } = props;

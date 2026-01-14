@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { CreateBugDTO, Bug } from '../../types';
+import { CreateBugDTO, Bug } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateBug() {

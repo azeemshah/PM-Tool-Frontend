@@ -32,25 +32,20 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
 export default function CreateTaskForm(props: {
-  storyId?: string;
+  workspaceId?: string;
   onClose: () => void;
 }) {
-  const { storyId, onClose } = props;
+  const { workspaceId: propWorkspaceId, onClose } = props;
 
   const queryClient = useQueryClient();
-  const workspaceId = useWorkspaceId();
+  const workspaceId = propWorkspaceId || useWorkspaceId();
 
-  // Mutation for creating task under a story
-  const { mutate: mutateStoryTask, isPending: isStoryTaskPending } = useMutation({
-    mutationFn: createTaskMutationFn,
-  });
-
-  // Mutation for creating task without story
+  // Mutation for creating task in workspace
   const { mutate: mutateIndependentTask, isPending: isIndependentTaskPending } = useMutation({
     mutationFn: createTaskWithoutEpicMutationFn,
   });
 
-  const isPending = isStoryTaskPending || isIndependentTaskPending;
+  const isPending = isIndependentTaskPending;
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
 
@@ -122,37 +117,8 @@ export default function CreateTaskForm(props: {
       dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
     };
 
-    // Case 1: Creating task under a story
-    if (storyId) {
-      const payload = {
-        storyId,
-        data: taskData,
-      };
-
-      mutateStoryTask(payload, {
-        onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["tasks", storyId],
-          });
-
-          toast({
-            title: "Success",
-            description: "Task created successfully",
-            variant: "success",
-          });
-          onClose();
-        },
-        onError: (error) => {
-          toast({
-            title: "Error",
-            description: error.message,
-            variant: "destructive",
-          });
-        },
-      });
-    }
-    // Case 2: Creating task without a story (All Tasks page)
-    else {
+    // Create task in workspace
+    {
       const payload = {
         workspaceId,
         data: taskData,

@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { Epic } from '../../types';
+import { Epic } from '../types';
 
 export function useGetEpics(projectId: string | null) {
 	console.log('📡 useGetEpics called with projectId:', projectId);

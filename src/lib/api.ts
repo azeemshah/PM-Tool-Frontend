@@ -1,19 +1,13 @@
 import API from "./axios-client";
 import {
   AllMembersInWorkspaceResponseType,
-  AllProjectPayloadType,
-  AllProjectResponseType,
   AllTaskPayloadType,
   AllTaskResponseType,
   AnalyticsResponseType,
   ChangeWorkspaceMemberRoleType,
-  CreateProjectPayloadType,
   CreateTaskPayloadType,
   EditTaskPayloadType,
   CreateWorkspaceResponseType,
-  EditProjectPayloadType,
-  ProjectByIdPayloadType,
-  ProjectResponseType,
 } from "../types/api.type";
 import {
   AllWorkspaceResponseType,
@@ -430,76 +424,6 @@ export const invitedUserJoinWorkspaceMutationFn = async (
   };
 };
 
-//********* */
-//********* PROJECTS
-export const createProjectMutationFn = async ({
-  workspaceId,
-  data,
-}: CreateProjectPayloadType): Promise<ProjectResponseType> => {
-  // include workspaceId together with project data so backend can associate project
-  const payload = { workspaceId, ...data } as any;
-  const response = await API.post(`/projects`, payload);
-  return response.data;
-};
-
-export const editProjectMutationFn = async ({
-  projectId,
-  workspaceId,
-  data,
-}: EditProjectPayloadType): Promise<ProjectResponseType> => {
-  const response = await API.put(
-    `/projects/${projectId}`,
-    data
-  );
-  return response.data;
-};
-
-export const getProjectsInWorkspaceQueryFn = async ({
-  workspaceId,
-  pageSize = 10,
-  pageNumber = 1,
-}: AllProjectPayloadType): Promise<AllProjectResponseType> => {
-  const queryParams = new URLSearchParams();
-  if (workspaceId) queryParams.append("workspaceId", workspaceId);
-  if (pageNumber) queryParams.append("pageNumber", String(pageNumber));
-  if (pageSize) queryParams.append("pageSize", String(pageSize));
-
-  const url = queryParams.toString() ? `/projects?${queryParams.toString()}` : `/projects`;
-  const response = await API.get(url);
-  return response.data;
-};
-
-export const getProjectByIdQueryFn = async ({
-  workspaceId,
-  projectId,
-}: ProjectByIdPayloadType): Promise<ProjectResponseType> => {
-  const response = await API.get(
-    `/projects/${projectId}`
-  );
-  return response.data;
-};
-
-export const getProjectAnalyticsQueryFn = async ({
-  workspaceId,
-  projectId,
-}: ProjectByIdPayloadType): Promise<AnalyticsResponseType> => {
-  // Backend exposes analytics at /projects/:projectId/analytics
-  const response = await API.get(`/projects/${projectId}/analytics`);
-  return response.data;
-};
-
-export const deleteProjectMutationFn = async ({
-  workspaceId,
-  projectId,
-}: ProjectByIdPayloadType): Promise<{
-  message: string;
-}> => {
-  const response = await API.delete(
-    `/projects/${projectId}`
-  );
-  return response.data;
-};
-
 //*******TASKS ********************************
 //************************* */
 
@@ -526,10 +450,10 @@ export const createTaskMutationFn = async ({
  * Used in All Tasks page and Project Dashboard
  */
 export const createTaskWithoutEpicMutationFn = async ({
-  projectId,
+  workspaceId,
   data,
 }: {
-  projectId: string;
+  workspaceId: string;
   data: {
     title: string;
     description?: string;
@@ -541,7 +465,7 @@ export const createTaskWithoutEpicMutationFn = async ({
 }) => {
   const response = await API.post(`/issues/task`, {
     ...data,
-    projectId,
+    workspaceId,
   });
   return response.data;
 };
@@ -599,45 +523,42 @@ export const deleteTaskMutationFn = async (taskId: string) => {
 export const getAllTasksQueryFn = async ({
   workspaceId,
   keyword,
-  projectId,
   assignedTo,
   priority,
   status,
   dueDate,
+  page,
   pageNumber,
   pageSize,
 }: AllTaskPayloadType): Promise<AllTaskResponseType> => {
   // Fetch issues from workspace with server-side pagination and filtering
   try {
     const ps = pageSize || 10;
-    const pn = pageNumber || 1;
+    const pn = page ?? pageNumber ?? 1;
 
     let allMapped: any[] = [];
     let totalCount = 0;
 
-    // If projectId is specified, fetch only from that project
-    if (projectId) {
-      try {
-        const response = await API.get(`/issues/project/${projectId}`, {
-          params: {
-            pageNumber: pn,
-            pageSize: ps,
-            type: status === 'epic' ? 'epic' : undefined, // Optional type filter
-          },
-        });
-        const issuesData = response.data?.data || response.data || [];
-        const pagination = response.data?.pagination || { totalCount: issuesData.length };
-        totalCount = pagination.totalCount;
+    // Fetch issues for the workspace with server-side pagination
+    try {
+      // Fetch issues for workspace with server-side pagination
+      const issuesResp = await API.get(`/issues`, {
+        params: {
+          workspaceId,
+          pageNumber: pn,
+          pageSize: ps,
+        },
+      });
 
-        // Get project info for mapping
-        const projectResp = await API.get(`/projects/${projectId}`);
-        const project = projectResp.data?.project || projectResp.data || {};
+      const issuesData = issuesResp.data?.data || issuesResp.data || [];
+      const pagination = issuesResp.data?.pagination || { totalCount: issuesData.length };
+      totalCount = pagination.totalCount;
 
-        allMapped = issuesData.map((iss: any) => ({
+      allMapped = issuesData.map((iss: any) => {
+        return {
           _id: iss._id,
           title: iss.title,
           description: iss.description,
-          project: { _id: iss.projectId || projectId, emoji: project.emoji || '', name: project.name || '' },
           type: iss.type,
           priority: iss.priority,
           status: iss.status,
@@ -653,71 +574,12 @@ export const getAllTasksQueryFn = async ({
           taskCode: iss.key || '',
           createdAt: iss.createdAt,
           updatedAt: iss.updatedAt,
-        }));
-      } catch (err) {
-        console.error('Error fetching issues for project:', projectId, err);
-        return {
-          tasks: [],
-          pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
         };
-      }
-    } else {
-      // Fetch issues for the workspace with server-side pagination
-      try {
-        const projectsResp = await API.get(`/projects`, {
-          params: workspaceId ? { workspaceId } : {},
-        });
-        const projects = projectsResp.data?.projects || projectsResp.data?.data || projectsResp.data || [];
-        const projectMap = new Map((projects || []).map((p: any) => [String(p._id), p]));
-
-        // Fetch issues for workspace with server-side pagination
-        const issuesResp = await API.get(`/issues`, {
-          params: {
-            workspaceId,
-            pageNumber: pn,
-            pageSize: ps,
-          },
-        });
-
-        const issuesData = issuesResp.data?.data || issuesResp.data || [];
-        const pagination = issuesResp.data?.pagination || { totalCount: issuesData.length };
-        totalCount = pagination.totalCount;
-
-        allMapped = issuesData.map((iss: any) => {
-          const p = projectMap.get(String(iss.projectId)) || {};
-          return {
-            _id: iss._id,
-            title: iss.title,
-            description: iss.description,
-            project: {
-              _id: iss.projectId || p._id,
-              emoji: p.emoji || '',
-              name: p.name || '',
-            },
-            type: iss.type,
-            priority: iss.priority,
-            status: iss.status,
-            assignedTo: iss.assignee
-              ? {
-                  _id: iss.assignee._id,
-                  name: iss.assignee.name,
-                  profilePicture: iss.assignee.profilePicture || null,
-                }
-              : null,
-            createdBy: iss.reporter?._id || undefined,
-            dueDate: iss.dueDate || '',
-            taskCode: iss.key || '',
-            createdAt: iss.createdAt,
-            updatedAt: iss.updatedAt,
-          };
-        });
-      } catch (err) {
-        console.error('Error fetching issues for workspace:', err);
-        return {
-          tasks: [],
-          pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
-        };
-      }
+      });
+    } catch (err) {
+      console.error('Error fetching issues for workspace:', err);
+      // Continue with empty allMapped in case of error
+      allMapped = [];
     }
 
     // Apply client-side filtering on paginated data
@@ -752,21 +614,34 @@ export const getAllTasksQueryFn = async ({
     }
 
     // Return paginated data with total count from server
+    const totalPages = Math.ceil(totalCount / ps);
     return {
       tasks: filtered,
       pagination: {
         totalCount,
         pageNumber: pn,
         pageSize: ps,
+        totalPages,
+        skip: (pn - 1) * ps,
+        limit: ps,
       },
-    } as any;
+      message: 'Success',
+    };
   } catch (err: any) {
     console.error('getAllTasksQueryFn error:', err);
     const ps = pageSize || 10;
     const pn = pageNumber || 1;
     return {
       tasks: [],
-      pagination: { totalCount: 0, pageNumber: pn, pageSize: ps },
+      pagination: {
+        totalCount: 0,
+        pageNumber: pn,
+        pageSize: ps,
+        totalPages: 0,
+        skip: (pn - 1) * ps,
+        limit: ps,
+      },
+      message: 'Error',
     };
   }
 };

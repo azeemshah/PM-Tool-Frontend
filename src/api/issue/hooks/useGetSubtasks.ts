@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { Subtask } from '../../types';
+import { Subtask } from '../types';
 
 export function useGetSubtasks(parentIssueId: string | null) {
 	return useQuery({

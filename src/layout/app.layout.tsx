@@ -4,7 +4,6 @@ import { AuthProvider } from "@/context/auth-provider";
 import Asidebar from "@/components/asidebar/asidebar";
 import Header from "@/components/header";
 import CreateWorkspaceDialog from "@/components/workspace/create-workspace-dialog";
-import CreateProjectDialog from "@/components/workspace/project/create-project-dialog";
 import { useIssueSubscription } from "@/hooks/useIssueSubscription";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 
@@ -30,7 +29,6 @@ const AppLayout = () => {
               </div>
             </>
             <CreateWorkspaceDialog />
-            <CreateProjectDialog />
           </div>
         </SidebarInset>
       </SidebarProvider>

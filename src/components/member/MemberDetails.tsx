@@ -22,11 +22,12 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
   roles = [],
 }) => {
   const [isEditingRole, setIsEditingRole] = useState(false);
-  const initialSelectedRole = member.roleId?._id || (typeof member.role === 'string' ? member.role : undefined);
+  const m = member as any;
+  const initialSelectedRole = m.roleId?._id || (typeof m.role === 'string' ? m.role : undefined);
   const [selectedRole, setSelectedRole] = useState(initialSelectedRole);
 
   const handleRoleChange = () => {
-    if (onEditRole && selectedRole !== member.roleId._id) {
+    if (onEditRole && selectedRole !== m.roleId._id) {
       onEditRole(selectedRole);
       setIsEditingRole(false);
     }

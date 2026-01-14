@@ -59,7 +59,7 @@ const SignIn = () => {
       onSuccess: (data) => {
         const user = data.user;
         // set Authorization header for subsequent requests
-        const bearer = data.accessToken || data.token || data?.access_token;
+        const bearer = data.accessToken || data.token || (data as any)?.access_token;
         if (bearer) {
           localStorage.setItem('accessToken', bearer);
           API.defaults.headers.common['Authorization'] = `Bearer ${bearer}`;

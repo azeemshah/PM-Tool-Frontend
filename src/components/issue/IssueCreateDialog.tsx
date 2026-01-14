@@ -46,7 +46,7 @@ import { cn } from '@/lib/utils';
 interface IssueCreateDialogProps {
 	isOpen: boolean;
 	onOpenChange: (open: boolean) => void;
-	projectId: string;
+	projectId: string | null;
 	workspaceId: string;
 	onSuccess?: () => void;
 }
@@ -176,7 +176,7 @@ export function IssueCreateDialog({
 		if (!projectId) {
 			toast({
 				title: 'Error',
-				description: 'Workspace issue: No project context',
+				description: 'Workspace context is required',
 				variant: 'destructive',
 			});
 			return;

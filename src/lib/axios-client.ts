@@ -36,35 +36,11 @@ if (!baseURL) {
     },
   };
 
-  const sampleProjects = [
-    {
-      _id: "proj-1",
-      name: "Website Redesign",
-      emoji: "🎨",
-      description: "Redesign the marketing site",
-      workspace: sampleWorkspace._id,
-      createdBy: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      _id: "proj-2",
-      name: "Mobile App",
-      emoji: "📱",
-      description: "Build mobile companion app",
-      workspace: sampleWorkspace._id,
-      createdBy: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
-
   const sampleTasks = [
     {
       _id: "task-1",
       title: "Create wireframes",
       description: "Landing page wireframes",
-      project: { _id: "proj-1", emoji: "🎨", name: "Website Redesign" },
       priority: "medium",
       status: "todo",
       assignedTo: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
@@ -91,35 +67,16 @@ if (!baseURL) {
   ];
 
   const emptyPagination = {
-    totalCount: sampleProjects.length,
+    totalCount: sampleTasks.length,
     pageSize: 10,
     pageNumber: 1,
     totalPages: 1,
     skip: 0,
-    limit: sampleProjects.length,
+    limit: sampleTasks.length,
   };
 
   API = {
     get: async (url: string) => {
-      // projects list
-      if (url.includes("/project/workspace") && url.includes("/all")) {
-        return {
-          data: {
-            message: "local",
-            projects: sampleProjects,
-            pagination: emptyPagination,
-          },
-        };
-      }
-
-      // single project by id: /project/:projectId/workspace/:workspaceId
-      if (url.match(/\/project\/[a-zA-Z0-9\-]+\/workspace\/[a-zA-Z0-9\-]+$/)) {
-        const match = url.match(/\/project\/([a-zA-Z0-9\-]+)\/workspace\/([a-zA-Z0-9\-]+)$/);
-        const projectId = match ? match[1] : null;
-        const project = sampleProjects.find((p) => p._id === projectId) || sampleProjects[0];
-        return { data: { message: "local", project } };
-      }
-
       if (url.includes("/workspace/all")) {
         return { data: { message: "local", workspaces: [sampleWorkspace] } };
       }
@@ -128,7 +85,7 @@ if (!baseURL) {
         return { data: { message: "local", members: sampleMembers, roles: sampleRoles } };
       }
 
-      if (url.includes("/workspace/analytics") || (url.includes("/project/") && url.includes("/analytics"))) {
+      if (url.includes("/workspace/analytics")) {
         return {
           data: {
             message: "local",

@@ -9,7 +9,6 @@ import { useScrumboardAppContext } from '@/contexts/ScrumboardAppContext';
 import { Button } from '@/components/ui/button';
 import { BoardCard } from './BoardCard';
 import useWorkspaceId from '@/hooks/use-workspace-id';
-import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 
 interface BoardListProps {
   list: ScrumboardList;
@@ -20,20 +19,15 @@ interface BoardListProps {
 
 export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardListProps) {
   const workspaceId = useWorkspaceId();
-  const { setIsIssueCreateDialogOpen, setIssueCreateProjectId, selectedProjectId } = useScrumboardAppContext();
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({ workspaceId, pageSize: 100, pageNumber: 1, skip: !workspaceId });
+  const { setIsIssueCreateDialogOpen } = useScrumboardAppContext();
   
   const { mutate: deleteList } = useDeleteScrumboardBoardList();
 
   const { data: cards } = useGetScrumboardBoardCards(boardId);
 
   const handleCreateCard = useCallback(() => {
-    // Use the currently selected project, or fall back to the first project
-    const projects = projectsData?.projects || [];
-    const projectId = selectedProjectId || (projects.length > 0 ? projects[0]._id : '');
-    setIssueCreateProjectId(projectId);
     setIsIssueCreateDialogOpen(true);
-  }, [projectsData, selectedProjectId, setIsIssueCreateDialogOpen, setIssueCreateProjectId]);
+  }, [setIsIssueCreateDialogOpen]);
 
   const normalizeId = useCallback((v: unknown): string => {
     if (!v) return '';

@@ -6,7 +6,6 @@ import ResetPassword from "@/page/auth/Reset-password";
 import ChangePassword from "@/page/auth/Change-password";
 import WorkspaceDashboard from "@/page/workspace/Dashboard";
 import Members from "@/page/workspace/Members";
-import ProjectDetails from "@/page/workspace/ProjectDetails";
 import Settings from "@/page/workspace/Settings";
 import Tasks from "@/page/workspace/Tasks";
 import BoardPage from "@/page/workspace/Board";
@@ -31,7 +30,6 @@ export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.TASKS, element: <Tasks /> },
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },
-  { path: PROTECTED_ROUTES.PROJECT_DETAILS, element: <ProjectDetails /> },
 ];
 
 export const baseRoutePaths = [

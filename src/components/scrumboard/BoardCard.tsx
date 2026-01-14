@@ -4,7 +4,6 @@ import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
 import { useGetScrumboardBoards } from '@/api/scrumboard/hooks/boards/useGetScrumboardBoards';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
-import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { priorities } from '@/components/workspace/task/table/data';
@@ -19,8 +18,6 @@ interface BoardCardProps {
 export function BoardCard({ card }: BoardCardProps) {
   const { data: boards = [] } = useGetScrumboardBoards();
   const workspaceId = useWorkspaceId();
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({ workspaceId, pageSize: 100, pageNumber: 1, skip: !workspaceId });
-  const projects = projectsData?.projects || [];
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
 

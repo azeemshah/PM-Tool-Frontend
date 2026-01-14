@@ -6,7 +6,6 @@ import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { ScrumboardCard } from '@/api/scrumboard/types';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { useToast } from '@/hooks/use-toast';
@@ -27,19 +26,12 @@ export function BoardCardDialog() {
     isCardDialogOpen,
     setIsCardDialogOpen,
     setSelectedCard,
-    selectedProjectId,
-    setSelectedProjectId,
   } = useScrumboardAppContext();
-
   const workspaceId = useWorkspaceId();
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({
-    workspaceId,
-  });
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
 
   const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
-  const projects = Array.isArray(projectsData) ? projectsData : (projectsData?.projects ?? (projectsData?.data ?? []));
 
   // Check if selectedCard is actually an Issue (has 'type' field that's an issue type)
   const isIssue = selectedCard && ('type' in selectedCard) && 
@@ -54,7 +46,6 @@ export function BoardCardDialog() {
   const [status, setStatus] = useState<IssueStatus>(issue?.status || 'to-do');
   const [assigneeId, setAssigneeId] = useState(issue?.assignee?._id || '');
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
-  const [projectId, setProjectId] = useState(issue?.projectId || '');
 
   const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
   const { mutate: deleteIssueApi, isPending: isDeleting } = useDeleteIssue();
@@ -67,7 +58,6 @@ export function BoardCardDialog() {
       setStatus(issue.status || 'to-do');
       setAssigneeId(issue.assignee?._id || '');
       setDueDate(issue.dueDate || null);
-      setProjectId(issue.projectId || '');
     }
   }, [issue]);
 

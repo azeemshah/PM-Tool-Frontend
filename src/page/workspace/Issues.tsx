@@ -213,7 +213,7 @@ export default function Issues() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button onClick={() => dialogState.open(null, workspaceId)}>
+          <Button onClick={() => dialogState.open(workspaceId, workspaceId)}>
             <Plus />
             New Issue
           </Button>
@@ -222,7 +222,7 @@ export default function Issues() {
 
       <IssueCreateDialog
         isOpen={dialogState.isOpen}
-        onOpenChange={(open) => open ? dialogState.open(null, workspaceId) : dialogState.close()}
+        onOpenChange={(open) => open ? dialogState.open(workspaceId, workspaceId) : dialogState.close()}
         projectId={dialogState.projectId || null}
         workspaceId={dialogState.workspaceId || workspaceId}
       />

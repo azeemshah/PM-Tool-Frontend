@@ -15,7 +15,6 @@ import { BoardList } from './BoardList';
 import { BoardCardDialog } from './dialogs/BoardCardDialog';
 import { IssueCreateDialog } from '@/components/issue';
 import useWorkspaceId from '@/hooks/use-workspace-id';
-import useGetProjectsInWorkspaceQuery from '@/hooks/api/use-get-projects';
 
 export function ScrumboardBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -23,32 +22,13 @@ export function ScrumboardBoardView() {
   const { data: board, isLoading, error } = useGetScrumboardBoard(boardId || '');
   const { data: lists } = useGetScrumboardBoardLists(boardId || null);
   
-  // Get projects for finding project ID for issues
-  const { data: projectsData } = useGetProjectsInWorkspaceQuery({ 
-    workspaceId, 
-    pageSize: 100, 
-    pageNumber: 1, 
-    skip: !workspaceId 
-  });
-  const projects = projectsData?.projects || [];
-  
   const { 
     setSelectedBoard, 
     setSelectedCard, 
     setIsCardDialogOpen,
     isIssueCreateDialogOpen,
     setIsIssueCreateDialogOpen,
-    issueCreateProjectId,
-    selectedProjectId,
-    setSelectedProjectId,
   } = useScrumboardAppContext();
-
-  // Initialize selected project to first project if not set
-  useEffect(() => {
-    if (!selectedProjectId && projects.length > 0) {
-      setSelectedProjectId(projects[0]._id);
-    }
-  }, [projects, selectedProjectId, setSelectedProjectId]);
 
   // Fetch issues from ALL projects
   const projectIssuesQueries = useQueries({
@@ -442,7 +422,7 @@ export function ScrumboardBoardView() {
       <IssueCreateDialog
         isOpen={isIssueCreateDialogOpen}
         onOpenChange={(open) => setIsIssueCreateDialogOpen(open)}
-        projectId={issueCreateProjectId || ''}
+        projectId={workspaceId}
         workspaceId={workspaceId}
         onSuccess={() => {
           // Optionally close the card dialog after successful issue creation

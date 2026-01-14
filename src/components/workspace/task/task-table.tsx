@@ -14,7 +14,6 @@ import API from '@/lib/axios-client';
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { getAllTasksQueryFn, bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
 import { TaskType } from "@/types/api.type";
-import useGetProjectsInWorkspaceQuery from "@/hooks/api/use-get-projects";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -158,7 +157,6 @@ const TaskTable = () => {
             keyword: filters.keyword,
             priority: filters.priority,
             status: filters.status,
-            projectId: projectId || filters.projectId,
             assignedTo: filters.assigneeId,
             pageNumber,
             pageSize,
@@ -247,7 +245,6 @@ const TaskTable = () => {
           keyword: filters.keyword,
           priority: filters.priority,
           status: filters.status,
-          projectId: projectId || filters.projectId,
           assignedTo: filters.assigneeId,
           pageNumber,
           pageSize,
@@ -417,29 +414,11 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
 }) => {
   const workspaceId = useWorkspaceId();
 
-  const { data } = useGetProjectsInWorkspaceQuery({
-    workspaceId,
-  });
-
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
 
-  const projects = data?.projects || [];
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
-  //Workspace Projects
-  const projectOptions = projects?.map((project) => {
-    return {
-      label: (
-        <div className="flex items-center gap-1">
-          <span>{project.emoji}</span>
-          <span>{project.name}</span>
-        </div>
-      ),
-      value: project._id,
-    };
-  });
-
-  // Workspace Memebers
+  // Workspace Members
   const assigneesOptions = members?.map((member) => {
     const name = member.userId?.name || "Unknown";
     const initials = getAvatarFallbackText(name);
@@ -525,17 +504,6 @@ const DataTableFilterToolbar: FC<DataTableFilterToolbarProps> = ({
         selectedValues={filters.assigneeId?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("assigneeId", values)}
       />
-
-      {!projectId && (
-        <DataTableFacetedFilter
-          title="Projects"
-          multiSelect={false}
-          options={projectOptions}
-          disabled={isLoading}
-          selectedValues={filters.projectId?.split(",") || []}
-          onFilterChange={(values) => handleFilterChange("projectId", values)}
-        />
-      )}
 
       {Object.values(filters).some(
         (value) => value !== null && value !== ""

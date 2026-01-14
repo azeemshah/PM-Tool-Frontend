@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { CreateSubtaskDTO, Subtask } from '../../types';
+import { CreateSubtaskDTO, Subtask } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateSubtask() {
