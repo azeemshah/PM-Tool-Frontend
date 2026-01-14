@@ -58,7 +58,7 @@ export const KanbanApiService = {
 	},
 
 	async getKanbanBoard(boardId: string): Promise<KanbanBoard> {
-		const response = await API.get(`${KANBAN_ENDPOINT}/boards/${boardId}`);
+		const response = await API.get(`${KANBAN_ENDPOINT}/board/${boardId}`);
 		return response.data.data || response.data;
 	},
 
