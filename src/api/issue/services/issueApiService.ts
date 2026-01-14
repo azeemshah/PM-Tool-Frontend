@@ -18,6 +18,9 @@ import type {
 	CreateSubtaskDTO,
 	UpdateIssueDTO,
 	GetIssuesResponse,
+	CreateItemDto,
+	ItemType,
+	TaskType
 } from '../types';
 
 const ISSUES_ENDPOINT = '/issues';
@@ -29,8 +32,8 @@ export const issueApiService = {
 	 * Create Epic
 	 * POST /issues/epic
 	 */
-	async createEpic(data: CreateEpicDTO): Promise<Epic> {
-		const response = await API.post(`${ISSUES_ENDPOINT}/epic`, data);
+	async createEpic(data: CreateItemDto): Promise<Epic> {
+		const response = await API.post(`/items/create`, data);
 		return response.data.data || response.data;
 	},
 
@@ -153,6 +156,26 @@ export const issueApiService = {
 	async deleteTask(taskId: string): Promise<void> {
 		await API.delete(`${ISSUES_ENDPOINT}/${taskId}`);
 	},
+
+	async getTasksByWorkspace(workspaceId: string): Promise<TaskType[]> {
+		const resp = await API.get(`items/workspace/${workspaceId}`);
+		return (resp.data?.data || resp.data || []).map((task: any) => ({
+			_id: task._id,
+			title: task.title,
+			description: task.description,
+			type: task.type,
+			status: task.status,
+			priority: task.priority,
+			assignedTo: task.assignedTo || null,
+			reporter: task.reporter || null,
+			createdBy: task.createdBy || null,
+			dueDate: task.dueDate || "",
+			taskCode: task.taskCode || "",
+			createdAt: task.createdAt,
+			updatedAt: task.updatedAt,
+		}));
+	},
+
 
 	// ==================== BUGS ====================
 
