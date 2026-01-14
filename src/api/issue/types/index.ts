@@ -23,24 +23,33 @@ type IssueFormValues = {
 
 // At the top of task-table.tsx
 export interface TaskType {
-	_id: string;
-	title: string;
-	description?: string;
-	type: string;
-	status: string;
-	priority?: string;
-	assignedTo?: string | null;
-	reporter?: string | null;
-	createdBy?: string | null;
-	dueDate?: string | null;
-	taskCode?: string;
-	workspace: string;
-	createdAt: string;
-	updatedAt: string;
-	column?: string | null;
-	parent?: string | null;
-	path?: string;
+  _id: string;
+  title: string;
+  description?: string;
+  type: string;
+  status: string;
+  priority?: string;
+  assignedTo?: {
+    _id: string;
+    name: string;
+    profilePicture?: string;
+  } | null;
+  reporter?: {
+    _id: string;
+    name: string;
+    profilePicture?: string;
+  } | null;
+  createdBy?: string | null;
+  dueDate?: string | null;
+  taskCode?: string;
+  workspace: string;
+  createdAt: string;
+  updatedAt: string;
+  column?: string | null;
+  parent?: string | null;
+  path?: string;
 }
+
 
 
 
