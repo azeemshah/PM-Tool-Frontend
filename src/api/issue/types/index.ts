@@ -7,6 +7,56 @@ export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
 export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked';
 
+export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
+export type ItemPriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
+export type ItemStatus = 'Todo' | 'In Progress' | 'Review' | 'Done' | 'Blocked' | 'Backlog';
+
+type IssueFormValues = {
+  title: string;
+  description?: string;
+  issueType: ItemType;
+  priority?: ItemPriority;
+  status?: ItemStatus;
+  reporterId?: string;
+  dueDate?: Date | null;
+};
+
+// At the top of task-table.tsx
+export interface TaskType {
+  _id: string;
+  title: string;
+  description?: string;
+  type: string;
+  status: string;
+  priority?: string;
+  assignedTo?: { _id: string; name: string } | null;
+  reporter?: string | null;
+  createdBy?: string | null;
+  dueDate?: string | null;
+  taskCode?: string;
+  workspace: string;
+  createdAt: string;
+  updatedAt: string;
+  column?: string | null;
+  parent?: string | null;
+  path?: string;
+}
+
+
+
+export interface CreateItemDto {
+  title: string;
+  description?: string;
+  type: ItemType;
+  status?: ItemStatus;
+  priority?: ItemPriority;
+  assignedTo?: string;   // MongoDB ObjectId
+  reporter?: string;     // MongoDB ObjectId
+  dueDate?: string;      // ISO date string
+  workspace: string;     // MongoDB ObjectId
+  column?: string;       // MongoDB ObjectId
+  parent?: string;       // MongoDB ObjectId
+}
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
 	_id: string;
@@ -96,7 +146,6 @@ export interface IssueComment {
 
 // Create Epic DTO
 export interface CreateEpicDTO {
-	projectId: string;
 	title: string;
 	description?: string;
 	reporter: string;
