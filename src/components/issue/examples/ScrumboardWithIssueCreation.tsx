@@ -1,6 +1,6 @@
 /**
- * Example: Scrumboard with Issue Creation
- * Shows how to integrate IssueCreateDialog into ScrumboardLayout
+ * Example: Kanban with Issue Creation
+ * Shows how to integrate IssueCreateDialog into KanbanLayout
  */
 
 import React from 'react';
@@ -12,7 +12,7 @@ import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useParams } from 'react-router-dom';
 
 /**
- * Example integration into ScrumboardLayout
+ * Example integration into KanbanLayout
  * 
  * This shows how to:
  * 1. Get projectId and workspaceId
@@ -20,7 +20,7 @@ import { useParams } from 'react-router-dom';
  * 3. Display create button
  * 4. Handle success callback
  */
-export function ScrumboardWithIssueCreation() {
+export function KanbanWithIssueCreation() {
   // Get IDs from context/params
   const workspaceId = useWorkspaceId();
   const { projectId } = useParams<{ projectId: string }>();
@@ -59,7 +59,7 @@ export function ScrumboardWithIssueCreation() {
         </Button>
       </div>
 
-      {/* Your existing scrumboard content here */}
+      {/* Your existing Kanban content here */}
       <div>
         {/* Board columns, cards, etc. */}
       </div>
@@ -82,4 +82,9 @@ export function ScrumboardWithIssueCreation() {
   );
 }
 
-export default ScrumboardWithIssueCreation;
+export default KanbanWithIssueCreation;
+
+
+
+
+

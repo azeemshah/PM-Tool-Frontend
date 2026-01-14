@@ -50,3 +50,8 @@ export const getAvatarFallbackText = (name: string | undefined | null) => {
     .slice(0, 2); // Ensure only two initials
   return initials || "NA";
 };
+
+
+
+
+

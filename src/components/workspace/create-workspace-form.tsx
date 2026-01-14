@@ -18,6 +18,7 @@ import { createWorkspaceMutationFn } from "@/lib/api";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import BoardTypeSelector from "./board-type-selector";
 
 export default function CreateWorkspaceForm({
   onClose,
@@ -37,6 +38,9 @@ export default function CreateWorkspaceForm({
       message: "Workspace name is required",
     }),
     description: z.string().trim(),
+    boardType: z.enum(["kanban", "scrumboard"], {
+      errorMap: () => ({ message: "Please select a board type" }),
+    }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,12 +48,13 @@ export default function CreateWorkspaceForm({
     defaultValues: {
       name: "",
       description: "",
+      boardType: "kanban",
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate({ name: values.name || '', description: values.description || '' } as any, {
+    mutate({ name: values.name || '', description: values.description || '', boardType: values.boardType } as any, {
       onSuccess: (data) => {
         queryClient.resetQueries({
           queryKey: ["userWorkspaces"],
@@ -137,6 +142,8 @@ export default function CreateWorkspaceForm({
               />
             </div>
 
+            <BoardTypeSelector />
+
             <Button
               disabled={isPending}
               className="w-full h-[40px] text-white font-semibold"
@@ -156,3 +163,8 @@ export default function CreateWorkspaceForm({
     </main>
   );
 }
+
+
+
+
+

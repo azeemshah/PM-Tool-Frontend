@@ -62,8 +62,8 @@ The PM-Tool-Frontend has been fully updated with support for the new unified Iss
 │   └── Error handling
 │
 └── examples/
-    ├── ScrumboardWithIssueCreation.tsx
-    │   └── Example integration into ScrumboardLayout
+    ├── KanbanWithIssueCreation.tsx
+    │   └── Example integration into KanbanLayout
     │
     └── IssueCardDisplay.tsx
         ├── IssueCard - Single issue display
@@ -238,7 +238,7 @@ function CreateTaskButton({ epicId }: { epicId: string }) {
 - ✅ `src/components/issue/index.ts`
 
 ### Examples
-- ✅ `src/components/issue/examples/ScrumboardWithIssueCreation.tsx`
+- ✅ `src/components/issue/examples/KanbanWithIssueCreation.tsx`
 - ✅ `src/components/issue/examples/IssueCardDisplay.tsx`
 
 ### Documentation
@@ -420,8 +420,8 @@ For issues or questions:
 
 ## ✨ Next Steps
 
-1. **Integrate into Scrumboard**
-   - Use `ScrumboardWithIssueCreation.tsx` example
+1. **Integrate into Kanban**
+   - Use `KanbanWithIssueCreation.tsx` example
    - Add create button to board header
 
 2. **Update Issue Display**
@@ -457,3 +457,4 @@ For issues or questions:
 **Test Coverage:** Examples provided
 **Documentation:** Comprehensive
 **Ready for Production:** YES
+

@@ -201,22 +201,22 @@ subtasks.forEach(st => {
 
 ## Integration Points
 
-### In Scrumboard
+### In Kanban
 
-Add the dialog to your Scrumboard layout:
+Add the dialog to your Kanban layout:
 
 ```typescript
-// In ScrumboardLayout.tsx
+// In KanbanLayout.tsx
 import { IssueCreateDialog } from '@/components/issue';
 import { useIssueCreateDialog } from '@/hooks/useIssueCreateDialog';
 
-export function ScrumboardLayout() {
+export function KanbanLayout() {
   const dialogState = useIssueCreateDialog();
   const projectId = useProjectId(); // Get from context/params
 
   return (
     <>
-      {/* Existing scrumboard content */}
+      {/* Existing Kanban content */}
       
       {/* Create issue button */}
       <button onClick={() => dialogState.open(projectId, workspaceId)}>
@@ -394,7 +394,7 @@ src/
 
 ## Next Steps
 
-1. **Integrate into Scrumboard**
+1. **Integrate into Kanban**
    - Add create button to board header
    - Integrate IssueCreateDialog
    - Display issues in board
@@ -422,3 +422,4 @@ For test cases, see: `src/issue/HIERARCHY_TESTS.md`
 ---
 
 All code is production-ready. Happy coding! 🚀
+

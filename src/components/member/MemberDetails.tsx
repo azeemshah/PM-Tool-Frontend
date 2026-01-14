@@ -146,3 +146,8 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
 };
 
 export default MemberDetails;
+
+
+
+
+

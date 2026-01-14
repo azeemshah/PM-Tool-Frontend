@@ -124,3 +124,8 @@ function TypeIcon({ type }: { type: IssueType }) {
 	};
 	return <span>{icons[type]}</span>;
 }
+
+
+
+
+

@@ -25,11 +25,13 @@ export default function EditWorkspaceForm() {
   const { workspace, hasPermission } = useAuthContext();
   const canEditWorkspace = hasPermission(Permissions.EDIT_WORKSPACE);
   
-  console.log('[EditWorkspaceForm] Debug:', {
+  console.log('[EditWorkspaceForm] Full workspace data:', {
     workspaceName: workspace?.name,
-    hasPermission,
+    hasMembers: !!workspace?.members,
+    membersCount: (workspace as any)?.members?.length,
+    members: (workspace as any)?.members,
     canEditWorkspace,
-    permissions: (workspace?.members?.[0] as any)?.role?.permissions || 'NO PERMISSIONS'
+    hasPermissionFn: typeof hasPermission,
   });
 
   const queryClient = useQueryClient();
@@ -161,3 +163,8 @@ export default function EditWorkspaceForm() {
     </div>
   );
 }
+
+
+
+
+
