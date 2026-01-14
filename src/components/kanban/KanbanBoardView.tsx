@@ -30,25 +30,25 @@ export function KanbanBoardView() {
     setIsIssueCreateDialogOpen,
   } = useKanbanAppContext();
 
-  // Fetch issues from ALL projects
+  // Fetch issues from the workspace (workspace is the project)
   const projectIssuesQueries = useQueries({
-    queries: projects.map((project) => ({
-      queryKey: ['issues', 'project', project._id],
+    queries: workspaceId ? [{
+      queryKey: ['issues', 'workspace', workspaceId],
       queryFn: async () => {
         try {
-          const response = await issueApiService.getIssuesByProject(project._id);
+          const response = await issueApiService.getIssuesByProject(workspaceId);
           const issues = response.data || response || [];
           return Array.isArray(issues) ? issues : [];
         } catch (error) {
-          console.error(`Error fetching issues for project ${project.name}:`, error);
+          console.error(`Error fetching issues for workspace ${workspaceId}:`, error);
           return [];
         }
       },
-      enabled: !!project._id,
-    })),
+      enabled: !!workspaceId,
+    }] : [],
   });
 
-  // Combine all issues from all projects
+  // Combine all issues from workspace
   const issues = useMemo(() => {
     return projectIssuesQueries
       .flatMap((query) => query.data || [])
@@ -62,16 +62,12 @@ export function KanbanBoardView() {
   try {
     console.log('🔍 KanbanBoardView Debug:', {
       workspaceId,
-      projectsCount: projects.length,
-      selectedProjectId,
-      selectedProjectName: projects.find(p => p._id === selectedProjectId)?.name,
       issuesCount: issues.length,
       issuesList: issues.map((i: any) => ({
         id: i._id,
         title: i.title,
         type: i.type,
         status: i.status,
-        projectName: projects.find(p => p._id === i.projectId)?.name,
         statusString: String(i.status).toLowerCase(),
       })),
       boardId,
