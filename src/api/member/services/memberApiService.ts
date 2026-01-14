@@ -13,6 +13,7 @@ import type {
   MemberResponse,
   UserRole,
   JoinWorkspaceResponse,
+
 } from '../types';
 
 const MEMBER_ENDPOINT = '/members';
@@ -30,6 +31,22 @@ export const memberApiService = {
       return response.data.data || response.data;
     } catch (error) {
       console.error('addMember error:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Invite a member to a workspace
+   */
+  async inviteMember(data: { email: string; role: "USER" | "VIEWER"; workspaceId: string }): Promise<Member> {
+    try {
+      const response = await API.post(
+        `${MEMBER_ENDPOINT}/invite`,
+        { email: data.email, role: data.role, workspaceId: data.workspaceId }
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('inviteMember error:', error);
       throw error;
     }
   },

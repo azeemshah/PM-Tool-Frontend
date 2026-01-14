@@ -48,6 +48,7 @@ export type CurrentUserResponseType = {
 //******** */ WORLSPACE TYPES ****************
 // ******************************************
 export type WorkspaceType = {
+  id: string;
   _id: string;
   name: string;
   description?: string;
