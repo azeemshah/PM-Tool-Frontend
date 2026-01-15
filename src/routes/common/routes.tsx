@@ -12,6 +12,7 @@ import BoardPage from "@/page/workspace/Board";
 import WorkflowPage from "@/page/workspace/Workflow";
 import { AUTH_ROUTES, BASE_ROUTE, PROTECTED_ROUTES } from "./routePaths";
 import InviteUser from "@/page/invite/InviteUser";
+import AcceptInvite from "@/page/invite/AcceptInvite";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -34,6 +35,7 @@ export const protectedRoutePaths = [
 
 export const baseRoutePaths = [
   { path: BASE_ROUTE.INVITE_URL, element: <InviteUser /> },
+  { path: "/invite", element: <AcceptInvite /> },
 ];
 
 

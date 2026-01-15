@@ -10,11 +10,12 @@ const AuthRoute = () => {
 
   const _isAuthRoute = isAuthRoute(location.pathname);
   const isInviteRoute = location.pathname.includes("/invite/workspace/") && location.pathname.includes("/join");
+  const isTokenInviteRoute = location.pathname === "/invite" && location.search.includes("token=");
 
   if (isLoading && !_isAuthRoute) return <DashboardSkeleton />;
 
   // For invite routes, allow both logged-in and logged-out users
-  if (isInviteRoute) {
+  if (isInviteRoute || isTokenInviteRoute) {
     return <Outlet />;
   }
 

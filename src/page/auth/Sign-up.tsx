@@ -67,8 +67,29 @@ const SignUp = () => {
         navigate(decodedUrl || '/');
       },
       onError: (error: any) => {
-        console.log(error);
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        console.error('Signup error:', error);
+        
+        // Extract error message from various possible response formats
+        let errorMessage = 'Failed to create account. Please try again.';
+        
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Handle specific error cases
+        if (error?.response?.status === 409) {
+          errorMessage = 'This email is already registered. Please sign in or use a different email.';
+        }
+        
+        toast({ 
+          title: 'Error', 
+          description: errorMessage, 
+          variant: 'destructive' 
+        });
       },
     });
   };

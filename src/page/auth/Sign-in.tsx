@@ -71,10 +71,28 @@ const SignIn = () => {
           : user?.currentWorkspace?._id;
         navigate(decodedUrl || (workspaceId ? `/workspace/${workspaceId}` : `/workspace`));
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        console.error('Login error:', error);
+        
+        // Extract error message from various possible response formats
+        let errorMessage = 'Failed to login. Please try again.';
+        
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Handle specific error cases
+        if (error?.response?.status === 401) {
+          errorMessage = 'Invalid email or password.';
+        }
+        
         toast({
           title: "Error",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       },

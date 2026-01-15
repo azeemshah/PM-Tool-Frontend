@@ -82,7 +82,7 @@ export default function CreateWorkspaceForm({
             className="text-2xl tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5
            text-center sm:text-left"
           >
-            Let's build a Workspace
+            Let's build a Project
           </h1>
           <p className="text-muted-foreground text-lg leading-tight">
             Optimize workflow by ensuring every project is available from one central spot.
@@ -97,7 +97,7 @@ export default function CreateWorkspaceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                      Workspace name
+                      Project name
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -121,7 +121,7 @@ export default function CreateWorkspaceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                      Workspace description
+                      Project description
                       <span className="text-xs font-extralight ml-2">
                         Optional
                       </span>
@@ -134,7 +134,7 @@ export default function CreateWorkspaceForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      - Invite your team to join by sharing a quick note about your Workspace.
+                      - Invite your team to join by sharing a quick note about your Project.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -150,7 +150,7 @@ export default function CreateWorkspaceForm({
               type="submit"
             >
               {isPending && <Loader className="animate-spin" />}
-              Create Workspace
+              Create Project
             </Button>
           </form>
         </Form>
