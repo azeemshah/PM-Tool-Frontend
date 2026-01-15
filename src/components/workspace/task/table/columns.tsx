@@ -31,8 +31,8 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
             table.getIsAllPageRowsSelected()
               ? true
               : table.getIsSomePageRowsSelected()
-              ? "indeterminate"
-              : false
+                ? "indeterminate"
+                : false
           }
           onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
           aria-label="Select all"
@@ -135,6 +135,8 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
 
         const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
         const Icon = status.icon;
+        const displayLabel =
+          status.value === TaskStatusEnum.IN_REVIEW ? "In Review" : status.label;
 
         return (
           <div className="flex lg:w-[120px] items-center">
@@ -143,7 +145,7 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
               className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
             >
               <Icon className="h-4 w-4 rounded-full text-inherit" />
-              <span>{status.label}</span>
+              <span>{displayLabel}</span>
             </Badge>
           </div>
         );

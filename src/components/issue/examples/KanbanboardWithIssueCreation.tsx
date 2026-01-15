@@ -9,7 +9,6 @@ import { Plus } from 'lucide-react';
 import { IssueCreateDialog } from '@/components/issue';
 import { useIssueCreateDialog } from '@/hooks/useIssueCreateDialog';
 import useWorkspaceId from '@/hooks/use-workspace-id';
-import { useParams } from 'react-router-dom';
 
 /**
  * Example integration into KanbanLayout
@@ -21,9 +20,7 @@ import { useParams } from 'react-router-dom';
  * 4. Handle success callback
  */
 export function KanbanWithIssueCreation() {
-  // Get IDs from context/params
   const workspaceId = useWorkspaceId();
-  const { projectId } = useParams<{ projectId: string }>();
   
   // Manage dialog state
   const dialogState = useIssueCreateDialog();
@@ -39,7 +36,7 @@ export function KanbanWithIssueCreation() {
     // - Show a success message
   };
 
-  if (!projectId || !workspaceId) {
+  if (!workspaceId) {
     return <div>Loading...</div>;
   }
 
@@ -50,7 +47,7 @@ export function KanbanWithIssueCreation() {
         <h1 className="text-2xl font-bold">Scrum Board</h1>
         
         <Button
-          onClick={() => dialogState.open(projectId, workspaceId)}
+          onClick={() => dialogState.open(workspaceId)}
           size="sm"
           className="gap-2"
         >
@@ -69,12 +66,11 @@ export function KanbanWithIssueCreation() {
         isOpen={dialogState.isOpen}
         onOpenChange={(open) => {
           if (open) {
-            dialogState.open(projectId, workspaceId);
+            dialogState.open(workspaceId);
           } else {
             dialogState.close();
           }
         }}
-        projectId={dialogState.projectId || projectId}
         workspaceId={dialogState.workspaceId || workspaceId}
         onSuccess={handleCreateSuccess}
       />

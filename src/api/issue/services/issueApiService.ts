@@ -37,6 +37,11 @@ export const issueApiService = {
 		return response.data.data || response.data;
 	},
 
+	async createItem(data: CreateItemDto): Promise<TaskType> {
+		const response = await API.post(`/items/create`, data);
+		return response.data.data || response.data;
+	},
+
 	/**
 	 * Get all Epics in a project
 	 * GET /issues/epic/:projectId
@@ -51,6 +56,28 @@ export const issueApiService = {
 		const result = Array.isArray(data) ? data : [];
 		console.log('📥 getEpicsByProject - returning:', result);
 		return result;
+	},
+
+	async getEpicsByWorkspace(workspaceId: string): Promise<Epic[]> {
+		const resp = await API.get(`items/workspace/${workspaceId}`);
+		const items = resp.data?.data || resp.data || [];
+
+		return (items as any[])
+			.filter((item) => item.type === 'epic')
+			.map(
+				(item) =>
+					({
+						_id: item._id,
+						projectId: item.workspace,
+						type: 'epic',
+						title: item.title,
+						description: item.description,
+						priority: item.priority,
+						dueDate: item.dueDate || null,
+						createdAt: item.createdAt,
+						updatedAt: item.updatedAt
+					}) as Epic
+			);
 	},
 
 	/**
@@ -176,7 +203,13 @@ export const issueApiService = {
 				}
 				: null,
 
-			reporter: null,
+			reporter: task.reporter
+				? {
+					_id: task.reporter._id,
+					name: task.reporter.name,
+					profilePicture: task.reporter.profilePicture ?? null,
+				}
+				: null,
 
 			createdBy: task.createdBy || null,
 			dueDate: task.dueDate || "",

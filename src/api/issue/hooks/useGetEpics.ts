@@ -19,7 +19,7 @@ export function useGetEpics(projectId: string | null) {
 				return [];
 			}
 			try {
-				const result = await issueApiService.getEpicsByProject(projectId);
+				const result: Epic[] = await issueApiService.getEpicsByWorkspace(projectId);
 				console.log('📡 useGetEpics - API result:', result);
 				return result;
 			} catch (error) {

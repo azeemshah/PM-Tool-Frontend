@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useParams } from 'react-router-dom';
-import { useQueries } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useGetKanbanBoard } from '@/api/kanban/hooks/boards/useGetKanbanBoard';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { useKanbanReorder } from '@/api/kanban/hooks/order/useKanbanReorder';
@@ -21,43 +21,52 @@ export function KanbanBoardView() {
   const workspaceId = useWorkspaceId();
   const { data: board, isLoading, error } = useGetKanbanBoard(boardId || '');
   const { data: lists } = useGetKanbanBoardLists(boardId || null);
-  
-  const { 
-    setSelectedBoard, 
-    setSelectedCard, 
+
+  const {
+    setSelectedBoard,
+    setSelectedCard,
     setIsCardDialogOpen,
     isIssueCreateDialogOpen,
     setIsIssueCreateDialogOpen,
   } = useKanbanAppContext();
 
-  // Fetch issues from the workspace (workspace is the project)
-  const projectIssuesQueries = useQueries({
-    queries: workspaceId ? [{
-      queryKey: ['issues', 'workspace', workspaceId],
-      queryFn: async () => {
-        try {
-          const response = await issueApiService.getIssuesByProject(workspaceId);
-          const issues = response.data || response || [];
-          return Array.isArray(issues) ? issues : [];
-        } catch (error) {
-          console.error(`Error fetching issues for workspace ${workspaceId}:`, error);
-          return [];
-        }
-      },
-      enabled: !!workspaceId,
-    }] : [],
+  // Fetch workspace items (All Tasks) and treat them as issues for the board
+  const { data: workspaceItems = [] } = useQuery({
+    queryKey: ['all-tasks', 'kanban', workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      try {
+        const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
+        return Array.isArray(tasks) ? tasks : [];
+      } catch (error) {
+        console.error(`Error fetching tasks for workspace ${workspaceId}:`, error);
+        return [];
+      }
+    },
+    enabled: !!workspaceId,
   });
 
-  // Combine all issues from workspace
+  // Normalize workspace items into Issue-like objects for board usage
   const issues = useMemo(() => {
-    return projectIssuesQueries
-      .flatMap((query) => query.data || [])
-      .filter((issue): issue is Issue => issue !== undefined);
-  }, [projectIssuesQueries]);
-  
+    return (workspaceItems || []).map((item: any) => ({
+      _id: item._id,
+      type: item.type,
+      title: item.title,
+      description: item.description,
+      priority: item.priority,
+      status: item.status,
+      assignee: item.assignedTo
+        ? {
+          _id: item.assignedTo._id,
+          name: item.assignedTo.name,
+        }
+        : undefined,
+    })) as Issue[];
+  }, [workspaceItems]);
+
   const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useKanbanReorder(boardId || null);
   const { data: cards } = useGetKanbanBoardCards(boardId || '');
-  
+
   // Debug: log fetched board columns and lists to diagnose missing list names
   try {
     console.log('🔍 KanbanBoardView Debug:', {
@@ -77,7 +86,7 @@ export function KanbanBoardView() {
   } catch (e) {
     console.error('Debug logging error:', e);
   }
-  
+
   // Track the last drag state for potential undo on error
   const lastDragState = useRef<{
     sourceListId: string;
@@ -131,7 +140,7 @@ export function KanbanBoardView() {
 
         const sourceListId = source.droppableId;
         const destinationListId = destination.droppableId;
-        
+
         // Store the drag state for potential revert
         lastDragState.current = {
           sourceListId,
@@ -142,87 +151,87 @@ export function KanbanBoardView() {
 
         try {
           if (sourceListId === destinationListId) {
-              // Card reordered within same list
-              console.log('=== SAME-LIST REORDER ===');
-              console.log('Source list:', sourceListId);
-              console.log('Dragged card:', draggableId);
-              console.log('Destination index:', destination.index);
+            // Card reordered within same list
+            console.log('=== SAME-LIST REORDER ===');
+            console.log('Source list:', sourceListId);
+            console.log('Dragged card:', draggableId);
+            console.log('Destination index:', destination.index);
 
-              // Get ALL cards for debugging
-              console.log('All cards in state:', cards?.length || 0);
-              if (cards && cards.length > 0) {
-                console.log('Sample card:', cards[0]);
-              }
+            // Get ALL cards for debugging
+            console.log('All cards in state:', cards?.length || 0);
+            if (cards && cards.length > 0) {
+              console.log('Sample card:', cards[0]);
+            }
 
-              // Simple approach: just reorder based on drag-drop indices
-              // The backend doesn't actually care about the intermediate cards - just the order
-              
-              // Get cards currently assigned to this list
-              const listId = sourceListId;
-              const cardsInThisList = (cards || [])
-                .filter((c: any) => {
-                  // Check if card belongs to this list/column
-                  const colId = c.status || c.column || c.columnId;
-                  // Direct comparison - both should be ObjectId strings
-                  return colId && String(colId).includes(String(listId)) || String(colId) === String(listId);
-                })
-                .map((c: any) => c._id || c.id)
-                .filter(Boolean);
+            // Simple approach: just reorder based on drag-drop indices
+            // The backend doesn't actually care about the intermediate cards - just the order
 
-              console.log('Cards found in this list:', cardsInThisList.length);
-              console.log('Card IDs:', cardsInThisList);
+            // Get cards currently assigned to this list
+            const listId = sourceListId;
+            const cardsInThisList = (cards || [])
+              .filter((c: any) => {
+                // Check if card belongs to this list/column
+                const colId = c.status || c.column || c.columnId;
+                // Direct comparison - both should be ObjectId strings
+                return colId && String(colId).includes(String(listId)) || String(colId) === String(listId);
+              })
+              .map((c: any) => c._id || c.id)
+              .filter(Boolean);
 
-              // The dragged card ID is the draggableId
-              const draggedCardId = String(draggableId);
-              
-              // Get current order from Draggable indices
-              const currentOrder = [...cardsInThisList];
-              console.log('Current order before:', currentOrder);
+            console.log('Cards found in this list:', cardsInThisList.length);
+            console.log('Card IDs:', cardsInThisList);
 
-              // If list is empty, there's nothing to reorder
-              if (currentOrder.length === 0) {
-                console.warn('No cards in list, nothing to reorder');
-                lastDragState.current = null;
-                return;
-              }
+            // The dragged card ID is the draggableId
+            const draggedCardId = String(draggableId);
 
-              // Find the current position of the dragged card
-              const currentPosition = currentOrder.findIndex((id: any) => String(id) === draggedCardId);
-              console.log('Source index:', source.index, 'Destination index:', destination.index);
+            // Get current order from Draggable indices
+            const currentOrder = [...cardsInThisList];
+            console.log('Current order before:', currentOrder);
 
-              // If card moved to same index, no reorder needed
-              if (source.index === destination.index) {
-                console.log('Card moved to same index, no reorder needed');
-                lastDragState.current = null;
-                return;
-              }
+            // If list is empty, there's nothing to reorder
+            if (currentOrder.length === 0) {
+              console.warn('No cards in list, nothing to reorder');
+              lastDragState.current = null;
+              return;
+            }
 
-              // CRITICAL FIX: Correct array manipulation for drag-drop
-              // When removing an element, indices shift, so we need to adjust destination
-              const newOrder = [...currentOrder];
-              
-              // Remove from source position
-              const [movedItem] = newOrder.splice(source.index, 1);
-              
-              // When moving DOWN, destination index decreases by 1 after removal
-              // When moving UP, destination index stays the same
-              const adjustedDestination = source.index < destination.index 
-                ? destination.index - 1 
-                : destination.index;
-              
-              // Insert at adjusted destination
-              newOrder.splice(adjustedDestination, 0, movedItem);
+            // Find the current position of the dragged card
+            const currentPosition = currentOrder.findIndex((id: any) => String(id) === draggedCardId);
+            console.log('Source index:', source.index, 'Destination index:', destination.index);
 
-              console.log('Move direction:', source.index < destination.index ? 'DOWN' : 'UP');
-              console.log('Adjusted destination index:', adjustedDestination);
-              console.log('New order after:', newOrder);
-              console.log('Calling reorderCard mutation...');
-              
-              // Call the reorder mutation
-              reorderCard(sourceListId, newOrder.map(id => String(id)));
-            } else {
+            // If card moved to same index, no reorder needed
+            if (source.index === destination.index) {
+              console.log('Card moved to same index, no reorder needed');
+              lastDragState.current = null;
+              return;
+            }
+
+            // CRITICAL FIX: Correct array manipulation for drag-drop
+            // When removing an element, indices shift, so we need to adjust destination
+            const newOrder = [...currentOrder];
+
+            // Remove from source position
+            const [movedItem] = newOrder.splice(source.index, 1);
+
+            // When moving DOWN, destination index decreases by 1 after removal
+            // When moving UP, destination index stays the same
+            const adjustedDestination = source.index < destination.index
+              ? destination.index - 1
+              : destination.index;
+
+            // Insert at adjusted destination
+            newOrder.splice(adjustedDestination, 0, movedItem);
+
+            console.log('Move direction:', source.index < destination.index ? 'DOWN' : 'UP');
+            console.log('Adjusted destination index:', adjustedDestination);
+            console.log('New order after:', newOrder);
+            console.log('Calling reorderCard mutation...');
+
+            // Call the reorder mutation
+            reorderCard(sourceListId, newOrder.map(id => String(id)));
+          } else {
             // Card moved to different list
-            console.log('Moving card between lists:', { 
+            console.log('Moving card between lists:', {
               cardId: draggableId,
               fromListId: sourceListId,
               toListId: destinationListId,
@@ -388,9 +397,8 @@ export function KanbanBoardView() {
                               ref={provided.innerRef}
                               {...provided.draggableProps}
                               {...provided.dragHandleProps}
-                              className={`flex-shrink-0 ${
-                                snapshot.isDragging ? 'opacity-50' : ''
-                              }`}
+                              className={`flex-shrink-0 ${snapshot.isDragging ? 'opacity-50' : ''
+                                }`}
                             >
                               <BoardList
                                 list={list}

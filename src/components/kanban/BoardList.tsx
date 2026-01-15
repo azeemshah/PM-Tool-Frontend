@@ -20,7 +20,7 @@ interface BoardListProps {
 export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardListProps) {
   const workspaceId = useWorkspaceId();
   const { setIsIssueCreateDialogOpen } = useKanbanAppContext();
-  
+
   const { mutate: deleteList } = useDeleteKanbanBoardList();
 
   const { data: cards } = useGetKanbanBoardCards(boardId);
@@ -75,42 +75,42 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
         (listIdNorm && typeof statusId === 'string' && statusId.includes(listIdNorm))
       );
     });
-    
+
     // Map list names to issue statuses
-    // BACKEND RETURNS: 'backlog', 'todo', 'in_progress' (with underscores!)
+    // Items API returns statuses like: 'Backlog', 'Todo', 'In Progress', 'Review', 'Done'
     const listNameToIssueStatus: Record<string, string> = {
       // Handle frontend list names to backend issue statuses
-      'todo': 'todo', // Backend uses 'todo' not 'to-do'!
+      'todo': 'todo',
       'to-do': 'todo',
       'to do': 'todo',
       'backlog': 'backlog',
-      'in progress': 'in_progress', // Backend uses underscore!
-      'inprogress': 'in_progress',
-      'in-progress': 'in_progress',
-      'in_progress': 'in_progress', // Also accept underscore version
-      'in review': 'in_review',
-      'inreview': 'in_review',
-      'in-review': 'in_review',
-      'in_review': 'in_review',
+      'in progress': 'in progress',
+      'inprogress': 'in progress',
+      'in-progress': 'in progress',
+      'in_progress': 'in progress',
+      'in review': 'review',
+      'inreview': 'review',
+      'in-review': 'review',
+      'in_review': 'review',
       'done': 'done',
       'blocked': 'blocked',
     };
-    
+
     // Normalize list name: lowercase, remove extra spaces, replace spaces with nothing
     const normalizeListName = (name: string) => {
       return name.toLowerCase().trim().replace(/\s+/g, '');
     };
-    
+
     const listName = String(list.name || '').toLowerCase().trim();
     const listNameNormalized = normalizeListName(list.name || '');
-    
+
     // Try to find matching status
     let matchingIssueStatus = listNameToIssueStatus[listName];
     if (!matchingIssueStatus) {
       // Try normalized version (without spaces)
       matchingIssueStatus = listNameToIssueStatus[listNameNormalized];
     }
-    
+
     console.log(`🎯 Matching list "${list.name}" to issue status:`, {
       listName,
       listNameNormalized,
@@ -120,27 +120,35 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       issueTypes: issues?.map((i: any) => i.type) || [],
       issueStatuses: issues?.map((i: any) => i.status) || [],
     });
-    
+
     // Add issues that match the list's status
     if (matchingIssueStatus && issues && issues.length > 0) {
       const matchingIssues = issues.filter((issue: Issue) => {
-        const issueStatus = String(issue.status || 'to-do').toLowerCase();
+        let issueStatus = String(issue.status || 'todo').toLowerCase();
+
+        if (issueStatus === 'in_review' || issueStatus === 'in review') {
+          issueStatus = 'review';
+        }
+        if (issueStatus === 'in_progress' || issueStatus === 'in progress') {
+          issueStatus = 'in progress';
+        }
+
         const matches = issueStatus === matchingIssueStatus;
-        
+
         if (!matches) {
           console.log(`❌ Status mismatch: issue="${issue.title}" status="${issue.status}" (normalized="${issueStatus}") vs expected="${matchingIssueStatus}"`);
         } else {
           console.log(`✅ Issue matched: "${issue.title}" (type: ${issue.type}, status: ${issue.status})`);
         }
-        
+
         return matches;
       });
-      
+
       // Combine cards and issues
       cardsForList.push(...matchingIssues);
-      
+
       console.log(`📊 Added ${matchingIssues.length} issues matching status "${matchingIssueStatus}" to list "${listName}"`);
-      
+
       // Log all issues for debugging
       if (matchingIssues.length === 0 && issues.length > 0) {
         console.log(`📋 All issues available:`, issues.map((i: any) => ({
@@ -152,14 +160,14 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
     } else {
       console.log(`⚠️ No matching status found for list "${list.name}" or no issues available`);
     }
-    
+
     // CRITICAL FIX: Sort cards based on list's workItems array order
     // This ensures the UI respects the order stored in the backend
     if (list?.workItems && Array.isArray(list.workItems) && list.workItems.length > 0) {
       const workItemOrderMap = new Map(
         list.workItems.map((id: unknown, index: number) => [normalizeId(id), index])
       );
-      
+
       cardsForList.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
         const cardAId = normalizeId((a as any)._id) || normalizeId((a as any).id);
         const cardBId = normalizeId((b as any)._id) || normalizeId((b as any).id);
@@ -167,15 +175,15 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
         const orderB = workItemOrderMap.get(cardBId) ?? 999;
         return orderA - orderB;
       });
-      
+
       console.log('Sorted cards by workItems order:', cardsForList.map((c: Record<string, unknown>) => normalizeId((c as any)._id) || normalizeId((c as any).id)));
     }
-    
+
     // Deduplicate cards by id in case backend returns duplicates
     const uniqueCardsById = Array.from(
       new Map((cardsForList || []).map((c: Record<string, unknown>) => [normalizeId((c as any)._id) || normalizeId((c as any).id) || Math.random(), c])).values(),
     );
-    
+
     return uniqueCardsById;
   }, [cards, issues, list, normalizeId, droppableIdSafe]);
 
@@ -214,24 +222,34 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`p-3 space-y-2 min-h-[100px] transition-colors ${
-                snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-white'
-              }`}
+              className={`p-3 space-y-2 min-h-[100px] transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-white'
+                }`}
             >
               {cardsForThisList.length > 0 ? (
                 cardsForThisList.map((card: Record<string, unknown>, index: number) => {
-                  const cardIdSafe = normalizeId(card._id) || normalizeId(card.id) || `card-${index}-${droppableIdSafe}`;
+                  const cardIdSafe =
+                    normalizeId((card as any)._id) ||
+                    normalizeId((card as any).id) ||
+                    `card-${index}-${droppableIdSafe}`;
+
                   return (
                     <Draggable key={cardIdSafe} draggableId={String(cardIdSafe)} index={index}>
-                      {(provided, snapshot) => (
+                      {(provided) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
-                          onClick={() => onCardClick(card as KanbanCard)}
-                          className={`transition-all ${snapshot.isDragging ? 'opacity-50 shadow-lg' : 'opacity-100'}`}
+                          onClick={() => onCardClick(card as KanbanCard | Issue)}
                         >
-                          <BoardCard card={{ ...card, board: boardId, column: listIdNorm || list._id } as KanbanCard} />
+                          <BoardCard
+                            card={
+                              {
+                                ...(card as any),
+                                board: boardId,
+                                column: listIdNorm || (list as any)._id,
+                              } as KanbanCard
+                            }
+                          />
                         </div>
                       )}
                     </Draggable>

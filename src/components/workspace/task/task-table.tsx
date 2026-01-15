@@ -76,6 +76,16 @@ const TaskTable: FC = () => {
             selectedAssigneeIds.includes(t.assignedTo._id)
         );
       }
+      if (filters.issueType) {
+        const typeValues = filters.issueType
+          .split(",")
+          .map((v) => v.trim().toLowerCase())
+          .filter(Boolean);
+
+        filtered = filtered.filter((t) =>
+          t.type ? typeValues.includes(String(t.type).toLowerCase()) : false
+        );
+      }
       if (filters.priority) {
         filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());
       }
