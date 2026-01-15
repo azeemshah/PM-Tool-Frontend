@@ -53,6 +53,7 @@ const TaskTable: FC = () => {
       if (!workspaceId) return { tasks: [], pagination: {} };
 
       const allTasks: TaskType[] = await issueApiService.getTasksByWorkspace(workspaceId);
+      console.log("API RAW TASKS:", allTasks);
 
       // Client-side filtering
       let filtered = allTasks;
@@ -64,7 +65,16 @@ const TaskTable: FC = () => {
         );
       }
       if (filters.assigneeId) {
-        filtered = filtered.filter((t) => t.assignedTo?._id === filters.assigneeId);
+        const selectedAssigneeIds = filters.assigneeId
+          .split(",")
+          .map((id) => id.trim())
+          .filter(Boolean);
+
+        filtered = filtered.filter(
+          (t) =>
+            t.assignedTo &&
+            selectedAssigneeIds.includes(t.assignedTo._id)
+        );
       }
       if (filters.priority) {
         filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());

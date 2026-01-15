@@ -159,6 +159,7 @@ export const issueApiService = {
 
 	async getTasksByWorkspace(workspaceId: string): Promise<TaskType[]> {
 		const resp = await API.get(`items/workspace/${workspaceId}`);
+
 		return (resp.data?.data || resp.data || []).map((task: any) => ({
 			_id: task._id,
 			title: task.title,
@@ -166,8 +167,17 @@ export const issueApiService = {
 			type: task.type,
 			status: task.status,
 			priority: task.priority,
-			assignedTo: task.assignedTo || null,
-			reporter: task.reporter || null,
+
+			assignedTo: task.assignedTo
+				? {
+					_id: task.assignedTo._id,
+					name: task.assignedTo.name,
+					profilePicture: task.assignedTo.profilePicture ?? null,
+				}
+				: null,
+
+			reporter: null,
+
 			createdBy: task.createdBy || null,
 			dueDate: task.dueDate || "",
 			taskCode: task.taskCode || "",
@@ -175,6 +185,7 @@ export const issueApiService = {
 			updatedAt: task.updatedAt,
 		}));
 	},
+
 
 
 	// ==================== BUGS ====================
