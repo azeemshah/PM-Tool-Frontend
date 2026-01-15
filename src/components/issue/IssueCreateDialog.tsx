@@ -58,11 +58,9 @@ type CreateItemFormState = Omit<
  * Constants
  * ------------------------------------------ */
 const PRIORITIES: ItemPriority[] = [
-	'lowest',
 	'low',
 	'medium',
 	'high',
-	'highest',
 ];
 
 const STATUSES: ItemStatus[] = [

@@ -8,7 +8,7 @@ export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
 export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked';
 
 export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
-export type ItemPriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
+export type ItemPriority = 'low' | 'medium' | 'high';
 export type ItemStatus = 'Todo' | 'In Progress' | 'Review' | 'Done' | 'Blocked' | 'Backlog';
 
 type IssueFormValues = {
