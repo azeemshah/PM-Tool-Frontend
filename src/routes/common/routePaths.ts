@@ -3,8 +3,12 @@ export const isAuthRoute = (pathname: string): boolean => {
   if (Object.values(AUTH_ROUTES).includes(pathname)) {
     return true;
   }
-  // Check if it's an invite route
+  // Check if it's an invite route (both workspace invite and token invite)
   if (pathname.includes("/invite/workspace/") && pathname.includes("/join")) {
+    return true;
+  }
+  // Check if it's a token-based invite route (handled via query params in Outlet check)
+  if (pathname === "/invite") {
     return true;
   }
   return false;

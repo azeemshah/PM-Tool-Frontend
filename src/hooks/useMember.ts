@@ -12,6 +12,7 @@ interface UseMemberReturn {
   error: string | null;
   fetchWorkspaceMembers: (workspaceId: string) => Promise<void>;
   addMember: (data: CreateMemberDTO) => Promise<Member | null>;
+  inviteMember: (data: { email: string; role: "ADMIN" | "MEMBER" | "VIEWER"; workspaceId: string }) => Promise<Member | null>;
   getMember: (memberId: string) => Promise<Member | null>;
   updateMember: (memberId: string, data: UpdateMemberDTO) => Promise<Member | null>;
   removeMember: (memberId: string) => Promise<boolean>;
@@ -127,6 +128,28 @@ export const useMember = (): UseMemberReturn => {
     }
   }, []);
 
+  const inviteMemberCall = useCallback(
+    async (data: { email: string; role: "ADMIN" | "MEMBER" | "VIEWER"; workspaceId: string }): Promise<Member | null> => {
+      setLoading(true);
+      setError(null);
+      try {
+        if (!data.workspaceId) {
+          throw new Error("workspaceId is required for inviting members");
+        }
+        const newMember = await memberApiService.inviteMember(data);
+        return newMember;
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Failed to invite member";
+        setError(message);
+        console.error("inviteMember error:", err);
+        return null;
+      } finally {
+        setLoading(false);
+      }
+    },
+    []
+  );
+
   const getMemberStatsCall = useCallback(async (workspaceId: string): Promise<MemberStats | null> => {
     setLoading(true);
     setError(null);
@@ -149,6 +172,7 @@ export const useMember = (): UseMemberReturn => {
     error,
     fetchWorkspaceMembers,
     addMember,
+    inviteMember: inviteMemberCall,
     getMember,
     updateMember,
     removeMember,

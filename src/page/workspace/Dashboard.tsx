@@ -9,10 +9,10 @@ const WorkspaceDashboard = () => {
       <div className="space-y-2 mb-6">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">
-            Workspace Overview
+            Project Overview
           </h2>
           <p className="text-muted-foreground">
-            Here&apos;s an overview for this workspace!
+            Here&apos;s an overview for this project!
           </p>
         </div>
       </div>

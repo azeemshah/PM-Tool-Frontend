@@ -156,6 +156,23 @@ if (!baseURL) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
 
+      // Email invite acceptance
+      if (url.includes("/members/invite/accept")) {
+        console.log("[Mock] Accept invitation called");
+        localStorage.setItem("mockAuthToken", "true");
+        return { 
+          data: { 
+            message: "Login successful (local)",
+            accessToken: "mock-token-" + Date.now(),
+            member: {
+              id: sampleUser._id,
+              email: sampleUser.email,
+              role: "Member"
+            }
+          } 
+        };
+      }
+
       // Kanban: Create board (POST)
       if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
         const newBoard = {
