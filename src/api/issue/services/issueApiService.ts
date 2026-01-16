@@ -194,7 +194,6 @@ export const issueApiService = {
 			type: task.type,
 			status: task.status,
 			priority: task.priority,
-
 			assignedTo: task.assignedTo
 				? {
 					_id: task.assignedTo._id,
@@ -202,7 +201,6 @@ export const issueApiService = {
 					profilePicture: task.assignedTo.profilePicture ?? null,
 				}
 				: null,
-
 			reporter: task.reporter
 				? {
 					_id: task.reporter._id,
@@ -210,13 +208,20 @@ export const issueApiService = {
 					profilePicture: task.reporter.profilePicture ?? null,
 				}
 				: null,
-
 			createdBy: task.createdBy || null,
-			dueDate: task.dueDate || "",
-			taskCode: task.taskCode || "",
+			dueDate: task.dueDate || '',
+			taskCode: task.taskCode || '',
 			createdAt: task.createdAt,
 			updatedAt: task.updatedAt,
+			column: task.column || null,
+			parent: task.parent || null,
+			path: task.path || '',
+			workspace: task.workspace,
 		}));
+	},
+
+	async moveItemToColumn(itemId: string, columnId: string): Promise<void> {
+		await API.patch(`/items/${itemId}/move/column/${columnId}`);
 	},
 
 

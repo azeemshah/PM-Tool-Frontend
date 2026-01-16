@@ -42,6 +42,31 @@ export function BoardCard({ card }: BoardCardProps) {
     count + (checklist.checkItems?.length || 0), 0
   ) || 0;
 
+  const meta: any = card as any;
+  let hierarchyLabel: string | null = null;
+
+  if (issue) {
+    const t = String(issue.type || '').toLowerCase();
+    if (['story', 'task', 'bug'].includes(t)) {
+      if (meta.epicTitle) {
+        hierarchyLabel = `Epic: ${meta.epicTitle}`;
+      }
+    } else if (t === 'subtask') {
+      if (meta.parentTitle) {
+        const parentType = meta.parentType ? String(meta.parentType).toLowerCase() : '';
+        const prefix =
+          parentType === 'story'
+            ? 'Story'
+            : parentType === 'task'
+            ? 'Task'
+            : parentType === 'bug'
+            ? 'Bug'
+            : 'Parent';
+        hierarchyLabel = `${prefix}: ${meta.parentTitle}`;
+      }
+    }
+  }
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
       {/* Top row: type badge */}
@@ -76,6 +101,12 @@ export function BoardCard({ card }: BoardCardProps) {
       <h4 className="text-sm font-medium text-gray-900 line-clamp-3 mb-3">
         {cardTitle}
       </h4>
+
+      {hierarchyLabel && (
+        <p className="text-xs text-gray-500 mb-2">
+          {hierarchyLabel}
+        </p>
+      )}
 
       {/* Footer with icons, priority and assignee */}
       <div className="flex items-center justify-between text-xs text-gray-500">

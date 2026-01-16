@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useParams } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGetKanbanBoard } from '@/api/kanban/hooks/boards/useGetKanbanBoard';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { useKanbanReorder } from '@/api/kanban/hooks/order/useKanbanReorder';
@@ -18,7 +18,8 @@ import useWorkspaceId from '@/hooks/use-workspace-id';
 
 export function KanbanBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
-  const workspaceId = useWorkspaceId();
+  const workspaceIdParam = useWorkspaceId();
+  const queryClient = useQueryClient();
   const { data: board, isLoading, error } = useGetKanbanBoard(boardId || '');
   const { data: lists } = useGetKanbanBoardLists(boardId || null);
 
@@ -30,9 +31,17 @@ export function KanbanBoardView() {
     setIsIssueCreateDialogOpen,
   } = useKanbanAppContext();
 
+  const workspaceId =
+    workspaceIdParam ||
+    (board?.workspaceId
+      ? typeof board.workspaceId === 'object'
+        ? String((board.workspaceId as any)._id || (board.workspaceId as any).id || board.workspaceId)
+        : String(board.workspaceId)
+      : '');
+
   // Fetch workspace items (All Tasks) and treat them as issues for the board
   const { data: workspaceItems = [] } = useQuery({
-    queryKey: ['all-tasks', 'kanban', workspaceId],
+    queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
     queryFn: async () => {
       if (!workspaceId) return [];
       try {
@@ -48,20 +57,44 @@ export function KanbanBoardView() {
 
   // Normalize workspace items into Issue-like objects for board usage
   const issues = useMemo(() => {
-    return (workspaceItems || []).map((item: any) => ({
-      _id: item._id,
-      type: item.type,
-      title: item.title,
-      description: item.description,
-      priority: item.priority,
-      status: item.status,
-      assignee: item.assignedTo
-        ? {
-          _id: item.assignedTo._id,
-          name: item.assignedTo.name,
-        }
-        : undefined,
-    })) as Issue[];
+    const itemsArray = Array.isArray(workspaceItems) ? workspaceItems : [];
+    const byId = new Map<string, any>(
+      itemsArray.map((it: any) => [String(it._id), it]),
+    );
+
+    return itemsArray.map((item: any) => {
+      const base: any = {
+        _id: item._id,
+        type: item.type,
+        title: item.title,
+        description: item.description,
+        priority: item.priority,
+        status: item.status,
+        column: item.column,
+        assignee: item.assignedTo
+          ? {
+            _id: item.assignedTo._id,
+            name: item.assignedTo.name,
+          }
+          : undefined,
+      };
+
+      const parentId = item.parent || null;
+      const parentItem = parentId ? byId.get(String(parentId)) : null;
+      const parentType = parentItem ? String(parentItem.type || '').toLowerCase() : null;
+      const parentTitle = parentItem ? parentItem.title : null;
+
+      if (item.type === 'subtask') {
+        base.parentIssueId = parentId || undefined;
+        base.parentTitle = parentTitle || undefined;
+        base.parentType = parentType || undefined;
+      } else if (['story', 'task', 'bug'].includes(String(item.type).toLowerCase())) {
+        base.epicId = parentId || undefined;
+        base.epicTitle = parentTitle || undefined;
+      }
+
+      return base as Issue;
+    });
   }, [workspaceItems]);
 
   const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useKanbanReorder(boardId || null);
@@ -141,6 +174,13 @@ export function KanbanBoardView() {
         const sourceListId = source.droppableId;
         const destinationListId = destination.droppableId;
 
+        const draggedId = String(draggableId);
+        const kanbanCard =
+          (cards || []).find((c: any) => String(c._id) === draggedId || String((c as any).id) === draggedId) ||
+          null;
+        const issueCard =
+          issues.find((i: any) => String(i._id) === draggedId) || null;
+
         // Store the drag state for potential revert
         lastDragState.current = {
           sourceListId,
@@ -156,6 +196,12 @@ export function KanbanBoardView() {
             console.log('Source list:', sourceListId);
             console.log('Dragged card:', draggableId);
             console.log('Destination index:', destination.index);
+
+            if (!kanbanCard) {
+              console.log('Reorder within same list is only enabled for Kanban work items');
+              lastDragState.current = null;
+              return;
+            }
 
             // Get ALL cards for debugging
             console.log('All cards in state:', cards?.length || 0);
@@ -230,22 +276,46 @@ export function KanbanBoardView() {
             // Call the reorder mutation
             reorderCard(sourceListId, newOrder.map(id => String(id)));
           } else {
-            // Card moved to different list
             console.log('Moving card between lists:', {
-              cardId: draggableId,
-              fromListId: sourceListId,
-              toListId: destinationListId,
-              newIndex: destination.index
-            });
-            moveCard({
               cardId: draggableId,
               fromListId: sourceListId,
               toListId: destinationListId,
               newIndex: destination.index,
             });
+
+            if (kanbanCard) {
+              moveCard({
+                cardId: draggedId,
+                fromListId: sourceListId,
+                toListId: destinationListId,
+                newIndex: destination.index,
+              });
+            } else if (issueCard) {
+              issueApiService
+                .moveItemToColumn(draggedId, destinationListId)
+                .then(async () => {
+                  if (workspaceId) {
+                    await queryClient.invalidateQueries({
+                      queryKey: ['all-tasks', 'kanban', workspaceId],
+                    });
+                  }
+                  setDragError(null);
+                })
+                .catch((error) => {
+                  console.error('Error moving issue card:', error);
+                  setDragError('Failed to move card. Please try again.');
+                  lastDragState.current = null;
+                });
+            } else {
+              console.warn('Dragged card not found in Kanban cards or issues');
+              lastDragState.current = null;
+              return;
+            }
           }
-          // Clear error on successful move
-          setDragError(null);
+
+          if (kanbanCard) {
+            setDragError(null);
+          }
         } catch (err) {
           console.error('Error moving card:', err);
           setDragError('Failed to move card. Please try again.');
@@ -253,7 +323,7 @@ export function KanbanBoardView() {
         }
       }
     },
-    [boardId, cards, reorderCard, moveCard]
+    [boardId, cards, issues, reorderCard, moveCard, workspaceId, queryClient]
   );
 
   if (isLoading) {
