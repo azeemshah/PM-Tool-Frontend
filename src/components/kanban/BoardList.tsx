@@ -55,6 +55,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
     const listIdNormLocal = normalizeId(list._id);
     const cardsForList: Record<string, unknown>[] = [];
 
+    // 1. Add board-specific cards (KanbanCard)
     if (cards && cards.length > 0 && listIdNormLocal) {
       const matchingCardsByColumn = cards.filter((c: any) => {
         const colId = normalizeId((c as any).status || (c as any).column || (c as any).columnId);
@@ -63,66 +64,81 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       cardsForList.push(...matchingCardsByColumn);
     }
 
+    // 2. Add workspace issues (Task/Story/Bug)
     if (issues && issues.length > 0 && listIdNormLocal) {
-      const matchingIssuesByColumn = issues.filter((issue: Issue) => {
-        const issueColumnId = (issue as any).column
-          ? normalizeId((issue as any).column)
-          : '';
-        return issueColumnId === listIdNormLocal;
-      });
+      const listName = String(list.name || '').toLowerCase().trim();
+      const normalizeStr = (s: string) => s.toLowerCase().trim().replace(/[\s-_]+/g, '');
+      const listNameNormalized = normalizeStr(list.name || '');
 
-      cardsForList.push(...matchingIssuesByColumn);
+      // Debug log for first list only to avoid spam
+      if (list.position === 0 || listNameNormalized === 'todo') {
+        console.log(`[BoardList] Checking items for list: ${list.name} (${listIdNormLocal})`, {
+          totalIssues: issues.length,
+          listNameNormalized
+        });
+      }
 
+      // Define status mapping
       const listNameToIssueStatus: Record<string, string> = {
         todo: 'todo',
-        'to-do': 'todo',
-        'to do': 'todo',
         backlog: 'backlog',
-        'in progress': 'in progress',
         inprogress: 'in progress',
-        'in-progress': 'in progress',
-        in_progress: 'in progress',
-        'in review': 'review',
         inreview: 'review',
-        'in-review': 'review',
-        in_review: 'review',
         done: 'done',
         blocked: 'blocked',
       };
 
-      const normalizeListName = (name: string) => {
-        return name.toLowerCase().trim().replace(/\s+/g, '');
-      };
+      // Determine target status for this list
+      let targetStatus = listNameToIssueStatus[listNameNormalized];
+      // Fallback: if list name contains "review", assume review status
+      if (!targetStatus && listName.includes('review')) targetStatus = 'review';
+      if (!targetStatus && listName.includes('progress')) targetStatus = 'in progress';
+      if (!targetStatus && listName.includes('todo')) targetStatus = 'todo';
+      if (!targetStatus && listName.includes('done')) targetStatus = 'done';
 
-      const listName = String(list.name || '').toLowerCase().trim();
-      const listNameNormalized = normalizeListName(list.name || '');
-
-      let matchingIssueStatus = listNameToIssueStatus[listName];
-      if (!matchingIssueStatus) {
-        matchingIssueStatus = listNameToIssueStatus[listNameNormalized];
+      // Additional fallback for default lists if names vary slightly
+      if (!targetStatus) {
+        if (listNameNormalized === 'new' || listNameNormalized === 'open') targetStatus = 'todo';
       }
 
-      if (matchingIssueStatus) {
-        const issuesWithoutColumn = issues.filter((issue: Issue) => !(issue as any).column);
+      const matchingIssues = issues.filter((issue: Issue) => {
+        // A. Match by explicit column ID
+        if ((issue as any).column) {
+          const issueColumnId = normalizeId((issue as any).column);
+          if (issueColumnId === listIdNormLocal) return true;
+        }
 
-        const matchingIssuesByStatus = issuesWithoutColumn.filter((issue: Issue) => {
+        // B. Match by status if no column ID (or if we want to catch items that drifted)
+        if (targetStatus) {
           let issueStatus = String(issue.status || 'todo').toLowerCase();
 
-          if (issueStatus === 'in_review' || issueStatus === 'in review') {
-            issueStatus = 'review';
+          // Normalize issue status
+          if (issueStatus === 'in_review' || issueStatus === 'in-review') issueStatus = 'review';
+          if (issueStatus === 'in_progress' || issueStatus === 'in-progress') issueStatus = 'in progress';
+
+          const issueStatusNormalized = normalizeStr(issueStatus);
+          const targetStatusNormalized = normalizeStr(targetStatus);
+
+          const isMatch = issueStatusNormalized === targetStatusNormalized;
+
+          // Debug specific issue
+          if (listNameNormalized === 'todo' && (issue.title === 'Login Story' || (issue as any).name === 'Login Story')) {
+            console.log('[BoardList] Found Login Story:', {
+              issueStatus,
+              issueStatusNormalized,
+              targetStatus,
+              targetStatusNormalized,
+              isMatch
+            });
           }
-          if (issueStatus === 'in_progress' || issueStatus === 'in progress') {
-            issueStatus = 'in progress';
-          }
 
-          const normalizedIssueStatus = issueStatus.replace(/\s+/g, '');
-          const normalizedTarget = matchingIssueStatus.replace(/\s+/g, '');
+          if (isMatch) return true;
+        }
 
-          return normalizedIssueStatus === normalizedTarget;
-        });
+        return false;
+      });
 
-        cardsForList.push(...matchingIssuesByStatus);
-      }
+      cardsForList.push(...matchingIssues);
     }
 
     const nonEpicCards = (cardsForList || []).filter((c: Record<string, unknown>) => {
@@ -130,28 +146,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       return t !== 'epic';
     });
 
-    if (list?.workItems && Array.isArray(list.workItems) && list.workItems.length > 0) {
-      const workItemOrderMap = new Map(
-        list.workItems.map((id: unknown, index: number) => [normalizeId(id), index]),
-      );
-
-      nonEpicCards.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
-        const cardAId = normalizeId((a as any)._id) || normalizeId((a as any).id);
-        const cardBId = normalizeId((b as any)._id) || normalizeId((b as any).id);
-        const orderA = workItemOrderMap.get(cardAId) ?? 999;
-        const orderB = workItemOrderMap.get(cardBId) ?? 999;
-        return orderA - orderB;
-      });
-
-      console.log(
-        'Sorted cards by workItems order:',
-        nonEpicCards.map(
-          (c: Record<string, unknown>) =>
-            normalizeId((c as any)._id) || normalizeId((c as any).id),
-        ),
-      );
-    }
-
+    // Remove duplicates
     const uniqueCardsById = Array.from(
       new Map(
         (nonEpicCards || []).map((c: Record<string, unknown>) => [
@@ -161,8 +156,24 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       ).values(),
     );
 
+    // Sort by workItems order if available
+    if (list?.workItems && Array.isArray(list.workItems) && list.workItems.length > 0) {
+      // ... (sorting logic remains similar)
+      const workItemOrderMap = new Map(
+        list.workItems.map((id: unknown, index: number) => [normalizeId(id), index]),
+      );
+
+      uniqueCardsById.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+        const cardAId = normalizeId((a as any)._id) || normalizeId((a as any).id);
+        const cardBId = normalizeId((b as any)._id) || normalizeId((b as any).id);
+        const orderA = workItemOrderMap.has(cardAId) ? workItemOrderMap.get(cardAId)! : 9999;
+        const orderB = workItemOrderMap.has(cardBId) ? workItemOrderMap.get(cardBId)! : 9999;
+        return orderA - orderB;
+      });
+    }
+
     return uniqueCardsById;
-  }, [issues, list, normalizeId, droppableIdSafe]);
+  }, [issues, list, normalizeId, droppableIdSafe, cards]);
 
   const cardsForThisList = getCardsForList();
 

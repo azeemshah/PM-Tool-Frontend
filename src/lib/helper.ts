@@ -51,6 +51,26 @@ export const getAvatarFallbackText = (name: string | undefined | null) => {
   return initials || "NA";
 };
 
+export const mapColumnToStatus = (columnName: string): string => {
+  const normalizeStr = (s: string) => s.toLowerCase().trim().replace(/[\s-_]+/g, '');
+  const name = normalizeStr(columnName);
+
+  if (name === 'todo' || name === 'open' || name === 'new') return 'todo';
+  if (name === 'inprogress' || name === 'progress') return 'in progress';
+  if (name === 'inreview' || name === 'review') return 'review';
+  if (name === 'done' || name === 'completed') return 'done';
+  if (name === 'backlog') return 'backlog';
+  if (name === 'blocked') return 'blocked';
+
+  // Fallbacks based on inclusion
+  if (name.includes('review')) return 'review';
+  if (name.includes('progress')) return 'in progress';
+  if (name.includes('done')) return 'done';
+  if (name.includes('todo')) return 'todo';
+
+  return 'todo'; // Default
+};
+
 
 
 

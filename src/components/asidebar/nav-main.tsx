@@ -35,14 +35,14 @@ export function NavMain() {
       icon: LayoutDashboard,
     },
     {
-      title: "Kanban",
-      url: `/workspace/${workspaceId}/board`,
-      icon: LayoutDashboard,
-    },
-    {
       title: "Tasks",
       url: `/workspace/${workspaceId}/tasks`,
       icon: CheckCircle,
+    },
+    {
+      title: "Kanban",
+      url: `/workspace/${workspaceId}/board`,
+      icon: LayoutDashboard,
     },
     {
       title: "Members",

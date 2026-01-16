@@ -18,7 +18,11 @@ export function BoardHeader({ board }: BoardHeaderProps) {
   const { mutate: createList, isPending } = useCreateKanbanBoardList();
 
   const handleCreateList = () => {
-    if (!listName.trim()) return;
+    console.log('[BoardHeader] handleCreateList called', { listName, boardId: board._id });
+    if (!listName.trim()) {
+      console.log('[BoardHeader] listName is empty');
+      return;
+    }
 
     createList(
       {
@@ -29,9 +33,13 @@ export function BoardHeader({ board }: BoardHeaderProps) {
       },
       {
         onSuccess: () => {
+          console.log('[BoardHeader] List created successfully');
           setListName('');
           setIsCreatingList(false);
         },
+        onError: (err) => {
+          console.error('[BoardHeader] Failed to create list', err);
+        }
       }
     );
   };

@@ -10,6 +10,7 @@ import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
 import { issueApiService } from '@/api/issue/services/issueApiService';
+import { mapColumnToStatus } from '@/lib/helper';
 import { BoardHeader } from './BoardHeader';
 import { BoardList } from './BoardList';
 import { BoardCardDialog } from './dialogs/BoardCardDialog';
@@ -43,12 +44,14 @@ export function KanbanBoardView() {
   const { data: workspaceItems = [] } = useQuery({
     queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
     queryFn: async () => {
+      console.log('[KanbanBoardView] Fetching tasks for workspace:', workspaceId);
       if (!workspaceId) return [];
       try {
         const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
-        return Array.isArray(tasks) ? tasks : [];
-      } catch (error) {
-        console.error(`Error fetching tasks for workspace ${workspaceId}:`, error);
+        console.log('[KanbanBoardView] Fetched tasks:', tasks.length);
+        return tasks;
+      } catch (e) {
+        console.error('[KanbanBoardView] Failed to fetch tasks:', e);
         return [];
       }
     },
@@ -100,6 +103,17 @@ export function KanbanBoardView() {
   const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useKanbanReorder(boardId || null);
   const { data: cards } = useGetKanbanBoardCards(boardId || '');
 
+  // Determine which columns to render
+  // Prioritize 'lists' query result as it contains full column details
+  // If 'lists' is unavailable, fall back to 'board.columns'
+  const columnsToRender = useMemo(() => {
+    if (lists && lists.length > 0) {
+      // Sort lists by position
+      return [...lists].sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+    }
+    return board?.columns || [];
+  }, [lists, board?.columns]);
+
   // Debug: log fetched board columns and lists to diagnose missing list names
   try {
     console.log('🔍 KanbanBoardView Debug:', {
@@ -144,7 +158,7 @@ export function KanbanBoardView() {
   }, [setSelectedCard, setIsCardDialogOpen]);
 
   const handleDragEnd = useCallback(
-    (result: DropResult) => {
+    async (result: DropResult) => {
       const { source, destination, draggableId, type } = result;
 
       // If dropped outside a valid droppable
@@ -165,6 +179,7 @@ export function KanbanBoardView() {
       if (type === 'list') {
         if (!boardId) return;
         // Reorder lists - would call backend to persist order
+        return;
       }
 
       // Handle card moving between lists or within list
@@ -193,88 +208,39 @@ export function KanbanBoardView() {
           if (sourceListId === destinationListId) {
             // Card reordered within same list
             console.log('=== SAME-LIST REORDER ===');
-            console.log('Source list:', sourceListId);
-            console.log('Dragged card:', draggableId);
-            console.log('Destination index:', destination.index);
 
-            if (!kanbanCard) {
-              console.log('Reorder within same list is only enabled for Kanban work items');
-              lastDragState.current = null;
-              return;
+            if (kanbanCard) {
+              // Get cards currently assigned to this list
+              const listId = sourceListId;
+              const cardsInThisList = (cards || [])
+                .filter((c: any) => {
+                  // Check if card belongs to this list/column
+                  const colId = c.status || c.column || c.columnId;
+                  // Direct comparison - both should be ObjectId strings
+                  return colId && String(colId).includes(String(listId)) || String(colId) === String(listId);
+                })
+                .map((c: any) => c._id || c.id)
+                .filter(Boolean);
+
+              const currentOrder = [...cardsInThisList];
+              if (currentOrder.length === 0) return;
+
+              const currentPosition = currentOrder.findIndex((id: any) => String(id) === draggedId);
+              if (currentPosition === -1) return;
+
+              // Correct array manipulation for drag-drop
+              const newOrder = [...currentOrder];
+              // Remove from source position
+              const [movedItem] = newOrder.splice(source.index, 1);
+              // Insert at destination
+              newOrder.splice(destination.index, 0, movedItem);
+
+              reorderCard(sourceListId, newOrder.map(id => String(id)));
+              setDragError(null);
+            } else {
+              // Issue reordering within same list
+              console.log('Reordering issues within list is not yet persisted via API');
             }
-
-            // Get ALL cards for debugging
-            console.log('All cards in state:', cards?.length || 0);
-            if (cards && cards.length > 0) {
-              console.log('Sample card:', cards[0]);
-            }
-
-            // Simple approach: just reorder based on drag-drop indices
-            // The backend doesn't actually care about the intermediate cards - just the order
-
-            // Get cards currently assigned to this list
-            const listId = sourceListId;
-            const cardsInThisList = (cards || [])
-              .filter((c: any) => {
-                // Check if card belongs to this list/column
-                const colId = c.status || c.column || c.columnId;
-                // Direct comparison - both should be ObjectId strings
-                return colId && String(colId).includes(String(listId)) || String(colId) === String(listId);
-              })
-              .map((c: any) => c._id || c.id)
-              .filter(Boolean);
-
-            console.log('Cards found in this list:', cardsInThisList.length);
-            console.log('Card IDs:', cardsInThisList);
-
-            // The dragged card ID is the draggableId
-            const draggedCardId = String(draggableId);
-
-            // Get current order from Draggable indices
-            const currentOrder = [...cardsInThisList];
-            console.log('Current order before:', currentOrder);
-
-            // If list is empty, there's nothing to reorder
-            if (currentOrder.length === 0) {
-              console.warn('No cards in list, nothing to reorder');
-              lastDragState.current = null;
-              return;
-            }
-
-            // Find the current position of the dragged card
-            const currentPosition = currentOrder.findIndex((id: any) => String(id) === draggedCardId);
-            console.log('Source index:', source.index, 'Destination index:', destination.index);
-
-            // If card moved to same index, no reorder needed
-            if (source.index === destination.index) {
-              console.log('Card moved to same index, no reorder needed');
-              lastDragState.current = null;
-              return;
-            }
-
-            // CRITICAL FIX: Correct array manipulation for drag-drop
-            // When removing an element, indices shift, so we need to adjust destination
-            const newOrder = [...currentOrder];
-
-            // Remove from source position
-            const [movedItem] = newOrder.splice(source.index, 1);
-
-            // When moving DOWN, destination index decreases by 1 after removal
-            // When moving UP, destination index stays the same
-            const adjustedDestination = source.index < destination.index
-              ? destination.index - 1
-              : destination.index;
-
-            // Insert at adjusted destination
-            newOrder.splice(adjustedDestination, 0, movedItem);
-
-            console.log('Move direction:', source.index < destination.index ? 'DOWN' : 'UP');
-            console.log('Adjusted destination index:', adjustedDestination);
-            console.log('New order after:', newOrder);
-            console.log('Calling reorderCard mutation...');
-
-            // Call the reorder mutation
-            reorderCard(sourceListId, newOrder.map(id => String(id)));
           } else {
             console.log('Moving card between lists:', {
               cardId: draggableId,
@@ -283,38 +249,60 @@ export function KanbanBoardView() {
               newIndex: destination.index,
             });
 
-            if (kanbanCard) {
+            if (issueCard) {
+              // Optimistic Update for Issue
+              const destList = (lists || []).find(l => String(l._id || l.id) === destinationListId) ||
+                (board?.columns || []).find((c: any) => String(c._id || c.id) === destinationListId);
+
+              let newStatus = issueCard.status;
+              if (destList) {
+                const listName = destList.name || destList.title;
+                if (listName) {
+                  newStatus = mapColumnToStatus(listName);
+                }
+              }
+
+              const queryKey = ['all-tasks', 'kanban', workspaceId];
+              const previousData = queryClient.getQueryData(queryKey);
+
+              // Optimistically update cache
+              queryClient.setQueryData(queryKey, (old: any[]) => {
+                if (!old) return [];
+                return old.map((item: any) => {
+                  if (String(item._id) === draggedId) {
+                    return {
+                      ...item,
+                      column: destinationListId,
+                      status: newStatus
+                    };
+                  }
+                  return item;
+                });
+              });
+
+              setDragError(null);
+
+              try {
+                await issueApiService.moveItemToColumn(draggedId, destinationListId);
+                // Success
+              } catch (error) {
+                console.error('Error moving issue card:', error);
+                setDragError('Failed to move card. Please try again.');
+                // Revert
+                queryClient.setQueryData(queryKey, previousData);
+              }
+            } else if (kanbanCard) {
               moveCard({
                 cardId: draggedId,
                 fromListId: sourceListId,
                 toListId: destinationListId,
                 newIndex: destination.index,
               });
-            } else if (issueCard) {
-              issueApiService
-                .moveItemToColumn(draggedId, destinationListId)
-                .then(async () => {
-                  if (workspaceId) {
-                    await queryClient.invalidateQueries({
-                      queryKey: ['all-tasks', 'kanban', workspaceId],
-                    });
-                  }
-                  setDragError(null);
-                })
-                .catch((error) => {
-                  console.error('Error moving issue card:', error);
-                  setDragError('Failed to move card. Please try again.');
-                  lastDragState.current = null;
-                });
+              setDragError(null);
             } else {
               console.warn('Dragged card not found in Kanban cards or issues');
               lastDragState.current = null;
-              return;
             }
-          }
-
-          if (kanbanCard) {
-            setDragError(null);
           }
         } catch (err) {
           console.error('Error moving card:', err);
@@ -323,7 +311,7 @@ export function KanbanBoardView() {
         }
       }
     },
-    [boardId, cards, issues, reorderCard, moveCard, workspaceId, queryClient]
+    [boardId, cards, issues, reorderCard, moveCard, workspaceId, queryClient, lists, board]
   );
 
   if (isLoading) {
@@ -412,10 +400,10 @@ export function KanbanBoardView() {
                   {...provided.droppableProps}
                   className="inline-flex gap-4 p-4 min-w-min"
                 >
-                  {board.columns && board.columns.length > 0 ? (
-                    board.columns.map((col, index: number) => {
+                  {columnsToRender && columnsToRender.length > 0 ? (
+                    columnsToRender.map((col: any, index: number) => {
                       // Prefer fetching the full list object from lists query when available
-                      let list;
+                      let list = col;
                       // Normalize column id from different possible shapes
                       const normalizeId = (v: unknown): string => {
                         if (!v) return '';
@@ -429,7 +417,8 @@ export function KanbanBoardView() {
 
                       const colId = normalizeId(col);
 
-                      if (lists && Array.isArray(lists)) {
+                      // If we are iterating board.columns (which might be IDs or partials) and have lists
+                      if (lists && Array.isArray(lists) && (!list.name || !list._id)) {
                         const found = lists.find((l) => {
                           const lid = normalizeId(l) || normalizeId(l._id) || normalizeId(l.id);
                           return lid === colId || (!colId && lid === '');
@@ -442,7 +431,7 @@ export function KanbanBoardView() {
                       }
 
                       // Fallback normalization if not found in lists
-                      if (!list) {
+                      if (!list || !list._id) {
                         if (typeof col === 'string' || typeof col === 'number') {
                           list = { _id: String(col), board: board._id, name: '', position: index, workItems: [] };
                         } else {
@@ -452,7 +441,7 @@ export function KanbanBoardView() {
                             name: col.name || col.title || '',
                             position: col.position ?? index,
                             workItems: Array.isArray(col.workItems)
-                              ? col.workItems.map((w) => (typeof w === 'string' ? w : w._id))
+                              ? col.workItems.map((w: any) => (typeof w === 'string' ? w : w._id))
                               : [],
                           };
                         }
