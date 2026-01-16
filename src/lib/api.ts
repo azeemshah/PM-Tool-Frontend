@@ -56,7 +56,7 @@ export const logoutAndClearAuth = async () => {
   const response = await API.post('/auth/logout');
   try {
     delete API.defaults.headers.common['Authorization'];
-  } catch (e) {}
+  } catch (e) { }
   return response.data;
 };
 
@@ -105,12 +105,12 @@ export const getMembersInWorkspaceQueryFn = async (
     const response = await API.get(`/members/workspace/${workspaceId}`);
     // NestJS returns { statusCode, message, data: { members: [...], roles: [...] } }
     const data = response.data.data;
-    
+
     const members = Array.isArray(data) ? data : (data?.members || []);
     const roles = data?.roles || [];
-    
+
     console.log('Members API response:', { response: response.data, members, roles });
-    
+
     return {
       message: response.data.message || "Members retrieved",
       members: Array.isArray(members) ? members : [],
@@ -142,6 +142,7 @@ export const getWorkspaceAnalyticsQueryFn = async (
 ): Promise<AnalyticsResponseType> => {
   try {
     const response = await API.get(`/workspace/analytics/${workspaceId}`);
+    console.log('Workspace analytics response:', response.data);
     return response.data;
   } catch (err: any) {
     // If analytics endpoint is missing (404) or backend not ready,
@@ -408,7 +409,7 @@ export const invitedUserJoinWorkspaceMutationFn = async (
   const response = await API.post(`/members/join/${iniviteCode}`);
   // Handle both response structures: { data: { workspaceId, role } } or nested
   const responseData = response.data;
-  
+
   if (responseData.data?.workspaceId) {
     // Response has nested data structure
     return {
@@ -416,7 +417,7 @@ export const invitedUserJoinWorkspaceMutationFn = async (
       workspaceId: responseData.data.workspaceId,
     };
   }
-  
+
   // Handle flat response structure
   return {
     message: responseData.message || 'Successfully joined workspace',
@@ -564,10 +565,10 @@ export const getAllTasksQueryFn = async ({
           status: iss.status,
           assignedTo: iss.assignee
             ? {
-                _id: iss.assignee._id,
-                name: iss.assignee.name,
-                profilePicture: iss.assignee.profilePicture || null,
-              }
+              _id: iss.assignee._id,
+              name: iss.assignee.name,
+              profilePicture: iss.assignee.profilePicture || null,
+            }
             : null,
           createdBy: iss.reporter?._id || undefined,
           dueDate: iss.dueDate || '',

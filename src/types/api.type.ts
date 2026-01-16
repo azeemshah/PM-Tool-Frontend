@@ -139,11 +139,9 @@ export type AllMembersInWorkspaceResponseType = {
 
 export type AnalyticsResponseType = {
   message: string;
-  analytics: {
-    totalTasks: number;
-    overdueTasks: number;
-    completedTasks: number;
-  };
+  totalTasks: number;
+  overdueTasks: number;
+  completedTasks: number;
 };
 
 export type PaginationType = {
