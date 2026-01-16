@@ -92,7 +92,7 @@ export function WorkspaceSwitcher() {
                       <span className="truncate font-semibold">
                         {activeWorkspace?.name}
                       </span>
-                      <span className="truncate text-xs">Free</span>
+                      <span className="truncate text-xs">Project Tool</span>
                     </div>
                   </>
                 ) : (

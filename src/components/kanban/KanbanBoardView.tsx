@@ -32,13 +32,7 @@ export function KanbanBoardView() {
     setIsIssueCreateDialogOpen,
   } = useKanbanAppContext();
 
-  const workspaceId =
-    workspaceIdParam ||
-    (board?.workspaceId
-      ? typeof board.workspaceId === 'object'
-        ? String((board.workspaceId as any)._id || (board.workspaceId as any).id || board.workspaceId)
-        : String(board.workspaceId)
-      : '');
+  const workspaceId = workspaceIdParam || '';
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
   const { data: workspaceItems = [] } = useQuery({
@@ -153,8 +147,11 @@ export function KanbanBoardView() {
 
   // Handle card click - accepts both KanbanCard and Issue types
   const handleCardClick = useCallback((card: KanbanCard | Issue) => {
-    setSelectedCard(card);
-    setIsCardDialogOpen(true);
+    // Only open dialog for Issues, not KanbanCards
+    if ('type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type))) {
+      setSelectedCard(card);
+      setIsCardDialogOpen(true);
+    }
   }, [setSelectedCard, setIsCardDialogOpen]);
 
   const handleDragEnd = useCallback(
@@ -251,12 +248,12 @@ export function KanbanBoardView() {
 
             if (issueCard) {
               // Optimistic Update for Issue
-              const destList = (lists || []).find(l => String(l._id || l.id) === destinationListId) ||
+              const destList = (lists || []).find(l => String(l._id) === destinationListId) ||
                 (board?.columns || []).find((c: any) => String(c._id || c.id) === destinationListId);
 
               let newStatus = issueCard.status;
               if (destList) {
-                const listName = destList.name || destList.title;
+                const listName = typeof destList === 'string' ? destList : (destList.name || '');
                 if (listName) {
                   newStatus = mapColumnToStatus(listName);
                 }
@@ -408,10 +405,13 @@ export function KanbanBoardView() {
                       const normalizeId = (v: unknown): string => {
                         if (!v) return '';
                         if (typeof v === 'string' || typeof v === 'number') return String(v);
-                        if (v._id && typeof v._id === 'object' && v._id.$oid) return String(v._id.$oid);
-                        if (v._id) return String(v._id);
-                        if (v.id) return String(v.id);
-                        if (v.$oid) return String(v.$oid);
+                        if (typeof v === 'object' && v !== null) {
+                          const obj = v as Record<string, unknown>;
+                          if (obj._id && typeof obj._id === 'object' && (obj._id as any).$oid) return String((obj._id as any).$oid);
+                          if (obj._id) return String(obj._id);
+                          if (obj.id) return String(obj.id);
+                          if (obj.$oid) return String(obj.$oid);
+                        }
                         return '';
                       };
 
@@ -420,12 +420,12 @@ export function KanbanBoardView() {
                       // If we are iterating board.columns (which might be IDs or partials) and have lists
                       if (lists && Array.isArray(lists) && (!list.name || !list._id)) {
                         const found = lists.find((l) => {
-                          const lid = normalizeId(l) || normalizeId(l._id) || normalizeId(l.id);
+                          const lid = normalizeId(l._id);
                           return lid === colId || (!colId && lid === '');
                         });
                         if (found) {
                           // Ensure the list object has a normalized string _id that matches column ids
-                          const normalizedFoundId = normalizeId(found._id) || normalizeId(found.id) || normalizeId(found);
+                          const normalizedFoundId = normalizeId(found._id) || normalizeId(found);
                           list = { ...found, _id: normalizedFoundId || found._id };
                         }
                       }
@@ -485,7 +485,6 @@ export function KanbanBoardView() {
       <IssueCreateDialog
         isOpen={isIssueCreateDialogOpen}
         onOpenChange={(open) => setIsIssueCreateDialogOpen(open)}
-        projectId={workspaceId}
         workspaceId={workspaceId}
         onSuccess={() => {
           // Optionally close the card dialog after successful issue creation

@@ -1,6 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { KanbanAppContext, KanbanAppContextType } from './KanbanAppContext';
 import { KanbanBoard, KanbanCard } from '@/api/kanban/types';
+import { Issue } from '@/api/issue/types';
 
 interface KanbanAppContextProviderProps {
   children: ReactNode;
@@ -10,7 +11,7 @@ export function KanbanAppContextProvider({
   children,
 }: KanbanAppContextProviderProps) {
   const [selectedBoard, setSelectedBoard] = useState<KanbanBoard | null>(null);
-  const [selectedCard, setSelectedCard] = useState<KanbanCard | null>(null);
+  const [selectedCard, setSelectedCard] = useState<KanbanCard | Issue | null>(null);
   const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
   const [isIssueCreateDialogOpen, setIsIssueCreateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

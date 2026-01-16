@@ -135,6 +135,18 @@ export default function CreateTaskForm(props: {
           queryClient.invalidateQueries({
             queryKey: ["issues", "workspace", workspaceId],
           });
+          queryClient.invalidateQueries({
+            queryKey: ["all-tasks"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["recent-tasks"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["workspace-analytics"],
+          });
+          queryClient.invalidateQueries({
+            queryKey: ["project-analytics"],
+          });
 
           toast({
             title: "Success",

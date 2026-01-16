@@ -116,6 +116,10 @@ export function IssueCreateDialog({
             issueApiService.createItem(data),
         onSuccess: (_item, variables) => {
             queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+            queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban'] });
+            if (workspaceId) {
+                queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban', workspaceId] });
+            }
             queryClient.invalidateQueries({ queryKey: ['issues'] });
             queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
             queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
@@ -213,7 +217,7 @@ export function IssueCreateDialog({
             'backlog': 'Backlog',
             'todo': 'Todo',
             'in_progress': 'In Progress',
-            'in_review': 'Review',
+            'in_review': 'In Review',
             'done': 'Done'
         };
 

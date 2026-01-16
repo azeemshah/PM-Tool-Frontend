@@ -101,13 +101,13 @@ export default function EditTaskForm(props: {
     }),
     description: z.string().trim().optional(),
     status: z.enum(
-      Object.values(TaskStatusEnum) as [keyof typeof TaskStatusEnum],
+      Object.values(TaskStatusEnum) as [string, ...string[]],
       {
         required_error: "Status is required",
       }
     ),
     priority: z.enum(
-      Object.values(TaskPriorityEnum) as [keyof typeof TaskPriorityEnum],
+      Object.values(TaskPriorityEnum) as [string, ...string[]],
       {
         required_error: "Priority is required",
       }

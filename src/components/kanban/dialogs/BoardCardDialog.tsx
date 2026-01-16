@@ -1,9 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useParams } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 import { useUpdateIssue, useDeleteIssue } from '@/api/issue/hooks';
 import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { KanbanCard } from '@/api/kanban/types';
+import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
+import { issueApiService } from '@/api/issue/services/issueApiService';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -18,7 +22,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/helper';
 
 export function BoardCardDialog() {
   const {
@@ -28,27 +32,56 @@ export function BoardCardDialog() {
     setSelectedCard,
   } = useKanbanAppContext();
   const workspaceId = useWorkspaceId();
+  const { boardId } = useParams<{ boardId: string }>();
+  const { data: boardLists } = useGetKanbanBoardLists(boardId || null);
+  const queryClient = useQueryClient();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
 
   const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
 
   // Check if selectedCard is actually an Issue (has 'type' field that's an issue type)
-  const isIssue = selectedCard && ('type' in selectedCard) && 
+  const isIssue = selectedCard && ('type' in selectedCard) &&
     ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((selectedCard as any).type));
 
   const issue = isIssue ? (selectedCard as Issue) : null;
 
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(issue?.title || (selectedCard as KanbanCard)?.title || '');
-  const [description, setDescription] = useState(issue?.description || (selectedCard as KanbanCard)?.description || '');
-  const [priority, setPriority] = useState<IssuePriority>(issue?.priority || (selectedCard as KanbanCard)?.priority || 'medium');
+  const [description, setDescription] = useState(
+    issue?.description || (selectedCard as KanbanCard)?.description || ''
+  );
+  const [priority, setPriority] = useState<IssuePriority>(issue?.priority || 'medium');
   const [status, setStatus] = useState<IssueStatus>(issue?.status || 'to-do');
   const [assigneeId, setAssigneeId] = useState(issue?.assignee?._id || '');
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
 
   const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
   const { mutate: deleteIssueApi, isPending: isDeleting } = useDeleteIssue();
+
+  const normalizeStatusForColumn = (value: string | null): IssueStatus => {
+    const v = (value || '').toLowerCase().replace(/\s+/g, '_');
+    if (v === 'backlog') return 'to-do';
+    if (v === 'todo' || v === 'to-do') return 'to-do';
+    if (v === 'in_progress' || v === 'in-progress') return 'in-progress';
+    if (v === 'in_review' || v === 'in-review' || v === 'review') return 'in-review';
+    if (v === 'done') return 'done';
+    if (v === 'blocked') return 'blocked';
+    return 'to-do';
+  };
+
+  const findColumnIdForStatus = (statusValue: IssueStatus): string | null => {
+    const lists = boardLists || [];
+    if (!lists || lists.length === 0) return null;
+    const match = (lists as any[]).find((list) => {
+      const name = (list && (list as any).name) || '';
+      const mapped = mapColumnToStatus(String(name));
+      return mapped === statusValue;
+    });
+    if (!match) return null;
+    const id = (match as any)._id || (match as any).id;
+    return id ? String(id) : null;
+  };
 
   useEffect(() => {
     if (issue) {
@@ -65,6 +98,46 @@ export function BoardCardDialog() {
     return null;
   }
 
+  const mapStatusForApi = (value: string | null): string | undefined => {
+    if (!value) return undefined;
+    const normalized = value.toLowerCase().replace(/\s+/g, '_');
+    switch (normalized) {
+      case 'backlog':
+        return 'Backlog';
+      case 'todo':
+      case 'to-do':
+        return 'Todo';
+      case 'in_progress':
+      case 'in-progress':
+        return 'In Progress';
+      case 'in_review':
+      case 'in-review':
+      case 'review':
+        return 'In Review';
+      case 'done':
+        return 'Done';
+      default:
+        return undefined;
+    }
+  };
+
+  const mapPriorityForApi = (value: string | null): string | undefined => {
+    if (!value) return undefined;
+    const normalized = value.toLowerCase();
+    switch (normalized) {
+      case 'lowest':
+      case 'low':
+        return 'low';
+      case 'medium':
+        return 'medium';
+      case 'high':
+      case 'highest':
+        return 'high';
+      default:
+        return undefined;
+    }
+  };
+
   const handleSave = () => {
     if (!title.trim()) {
       toast({
@@ -75,21 +148,25 @@ export function BoardCardDialog() {
       return;
     }
 
+    const normalizedStatus = normalizeStatusForColumn(status);
+    const targetColumnId = findColumnIdForStatus(normalizedStatus);
+    const issueIdStr = String(issue._id);
+
     updateIssue(
       {
-        issueId: issue._id,
+        issueId: issueIdStr,
         data: {
           title,
           description,
-          priority,
-          status,
-          assignee: assigneeId || undefined,
+          status: mapStatusForApi(status),
+          priority: mapPriorityForApi(priority),
+          assignedTo: assigneeId || null,
           dueDate,
         },
       },
       {
-        onSuccess: (updatedIssue: Issue) => {
-          setSelectedCard(updatedIssue);
+        onSuccess: async (updatedIssue: Issue) => {
+          setSelectedCard(updatedIssue as any);
           setTitle(updatedIssue.title);
           setDescription(updatedIssue.description || '');
           setPriority(updatedIssue.priority || 'medium');
@@ -101,11 +178,33 @@ export function BoardCardDialog() {
             title: 'Success',
             description: 'Issue updated successfully',
           });
+          if (targetColumnId && workspaceId) {
+            try {
+              const queryKey = ['all-tasks', 'kanban', workspaceId || 'unknown'];
+              queryClient.setQueryData(queryKey, (old: any[] | undefined) => {
+                if (!old) return old;
+                return old.map((item: any) => {
+                  if (String(item._id) === issueIdStr) {
+                    return {
+                      ...item,
+                      column: targetColumnId,
+                    };
+                  }
+                  return item;
+                });
+              });
+              await issueApiService.moveItemToColumn(issueIdStr, targetColumnId);
+              queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban'] });
+            } catch (error) {
+              console.error('Failed to move issue to column after update:', error);
+              queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban'] });
+            }
+          }
         },
         onError: (error: unknown) => {
           console.error('Update error:', error);
-          const errorMessage = error && typeof error === 'object' && 'response' in error 
-            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+          const errorMessage = error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
             : 'Failed to update issue';
           toast({
             title: 'Error',
@@ -121,7 +220,7 @@ export function BoardCardDialog() {
     if (!confirm('Are you sure you want to delete this issue?')) return;
 
     deleteIssueApi(
-      { issueId: issue._id },
+      issue._id,
       {
         onSuccess: () => {
           setIsCardDialogOpen(false);
@@ -132,8 +231,8 @@ export function BoardCardDialog() {
           });
         },
         onError: (error: unknown) => {
-          const errorMessage = error && typeof error === 'object' && 'response' in error 
-            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message 
+          const errorMessage = error && typeof error === 'object' && 'response' in error
+            ? (error as { response?: { data?: { message?: string } } }).response?.data?.message
             : 'Failed to delete issue';
           toast({
             title: 'Error',
@@ -339,11 +438,11 @@ export function BoardCardDialog() {
               </Select>
             ) : (
               <div className="text-gray-600">
-                {assigneeId && members?.length > 0 
+                {assigneeId && members?.length > 0
                   ? members
-                      .filter((member: any) => member.userId?._id === assigneeId)
-                      .map((member: any) => member.userId?.name || 'Unknown')
-                      .join(', ')
+                    .filter((member: any) => member.userId?._id === assigneeId)
+                    .map((member: any) => member.userId?.name || 'Unknown')
+                    .join(', ')
                   : 'Unassigned'}
               </div>
             )}

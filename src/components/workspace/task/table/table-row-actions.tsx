@@ -15,7 +15,7 @@ import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
 import { TaskType } from "@/types/api.type";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteTaskMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { toast } from "@/hooks/use-toast";
 import EditTaskDialog from "../edit-task-dialog"; // Import the Edit Dialog
 
@@ -31,7 +31,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const workspaceId = useWorkspaceId();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: deleteTaskMutationFn,
+    mutationFn: issueApiService.deleteIssue,
   });
 
   const task = row.original;
@@ -39,19 +39,19 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const taskCode = task.taskCode;
 
   const handleConfirm = () => {
-    mutate(
-      taskId,
-      {
-        onSuccess: (data) => {
-          queryClient.invalidateQueries({ queryKey: ["all-tasks", workspaceId] });
-          toast({ title: "Success", description: data.message, variant: "success" });
-          setTimeout(() => setOpenDialog(false), 100);
-        },
-        onError: (error) => {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
-        },
-      }
-    );
+    mutate(taskId, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+        toast({ title: "Success", description: `Task ${taskCode} deleted successfully`, variant: "success" });
+        setTimeout(() => setOpenDialog(false), 100);
+      },
+      onError: (error: any) => {
+        toast({ title: "Error", description: error.message || "Failed to delete task", variant: "destructive" });
+      },
+    });
   };
 
   return (
@@ -66,7 +66,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         <DropdownMenuContent align="end" className="w-[160px]">
           {/* Edit Task Option */}
           <DropdownMenuItem className="cursor-pointer" onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="w-4 h-4 mr-2" /> Edit Task
+            <Pencil className="w-4 h-4 mr-2" /> Edit Issue
           </DropdownMenuItem>
           <DropdownMenuSeparator />
 
@@ -75,7 +75,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
             className="!text-destructive cursor-pointer"
             onClick={() => setOpenDialog(true)}
           >
-            Delete Task
+            Delete Issue
             <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>

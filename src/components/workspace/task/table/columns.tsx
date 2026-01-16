@@ -16,7 +16,7 @@ import {
   getAvatarColor,
   getAvatarFallbackText,
 } from "@/lib/helper";
-import { priorities, statuses } from "./data";
+import { priorities, statuses, issueTypes } from "./data";
 import { TaskType } from "@/types/api.type";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
@@ -73,9 +73,34 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       id: "issueType",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Issue" />,
       cell: ({ row }) => {
-        const t = (row.original as any).type || (row.original as any).issueType || null;
-        if (!t) return null;
-        return <span className="capitalize text-sm font-medium">{String(t)}</span>;
+        const rawType = (row.original as any).type || (row.original as any).issueType || null;
+        if (!rawType) {
+          return <span className="text-sm text-muted-foreground">No type</span>;
+        }
+
+        const typeValue = String(rawType);
+        const normalizedType = typeValue.toLowerCase();
+        const issueType = issueTypes.find(
+          (t) => t.value.toLowerCase() === normalizedType
+        );
+
+        if (!issueType) {
+          return <span className="capitalize text-sm font-medium">{typeValue}</span>;
+        }
+
+        const Icon = issueType.icon;
+
+        return (
+          <div className="flex items-center">
+            <Badge
+              variant="outline"
+              className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+            >
+              <Icon className="h-4 w-4 text-inherit" />
+              <span className="capitalize">{issueType.label}</span>
+            </Badge>
+          </div>
+        );
       },
     },
 
@@ -128,15 +153,14 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Status" />,
       cell: ({ row }) => {
         const rawStatus = row.getValue("status");
-        const normalizedStatus = typeof rawStatus === "string" ? rawStatus.toUpperCase() : rawStatus;
-        const status = statuses.find((s) => s.value === normalizedStatus);
+        const statusValue = typeof rawStatus === "string" ? rawStatus : String(rawStatus);
+        const status = statuses.find((s) => s.value.toLowerCase() === statusValue.toLowerCase());
 
         if (!status) return <span className="text-sm text-muted-foreground">Unknown status</span>;
 
         const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
         const Icon = status.icon;
-        const displayLabel =
-          status.value === TaskStatusEnum.IN_REVIEW ? "In Review" : status.label;
+        const displayLabel = status.label;
 
         return (
           <div className="flex lg:w-[120px] items-center">
@@ -158,8 +182,8 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Priority" />,
       cell: ({ row }) => {
         const rawPriority = row.getValue("priority");
-        const normalizedPriority = typeof rawPriority === "string" ? rawPriority.toUpperCase() : rawPriority;
-        const priority = priorities.find((p) => p.value === normalizedPriority);
+        const priorityValue = typeof rawPriority === "string" ? rawPriority : String(rawPriority);
+        const priority = priorities.find((p) => p.value.toLowerCase() === priorityValue.toLowerCase());
 
         if (!priority) return <span className="text-sm text-muted-foreground">No priority</span>;
 

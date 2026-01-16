@@ -41,13 +41,13 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
             {member.userId?.profilePicture && (
               <img
                 src={member.userId.profilePicture}
-                alt={member.userName || member.userId.name || ''}
+                alt={member.userId.name || ''}
                 className="w-16 h-16 rounded-full"
               />
             )}
             <div>
               <h3 className="text-xl font-semibold text-gray-900">
-                {member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name || 'Unknown'}
+                {member.userId?.name || 'Unknown'}
               </h3>
               <p className="text-gray-600">{member.userId?.email}</p>
             </div>
@@ -87,10 +87,7 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
                 </div>
               ) : (
                 <p className="text-lg font-semibold text-gray-900 mt-1">
-                  {(() => {
-                    const roleName = typeof member.role === 'string' ? member.role : member.roleId?.name;
-                    return roleName || 'Member';
-                  })()}
+                  {member.roleId?.name || 'Member'}
                 </p>
               )}
             </div>

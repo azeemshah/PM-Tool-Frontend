@@ -5,7 +5,7 @@ import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { priorities } from '@/components/workspace/task/table/data';
+import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
@@ -72,9 +72,35 @@ export function BoardCard({ card }: BoardCardProps) {
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
         <div>
-          <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
-            {cardType}
-          </Badge>
+          {(() => {
+            const typeValue = String(cardType || '').trim();
+            const normalizedType = typeValue.toLowerCase();
+            const issueType = issueTypes.find(
+              (t) =>
+                t.value.toLowerCase() === normalizedType ||
+                t.label.toLowerCase() === normalizedType
+            );
+
+            if (!issueType) {
+              return (
+                <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
+                  {typeValue}
+                </Badge>
+              );
+            }
+
+            const Icon = issueType.icon;
+
+            return (
+              <Badge
+                variant="outline"
+                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+              >
+                <Icon className="h-4 w-4 text-inherit" />
+                <span className="capitalize">{issueType.label}</span>
+              </Badge>
+            );
+          })()}
         </div>
       </div>
 

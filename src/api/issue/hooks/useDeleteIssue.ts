@@ -14,12 +14,16 @@ export function useDeleteIssue() {
 	return useMutation({
 		mutationFn: (issueId: string) => issueApiService.deleteIssue(issueId),
 		onSuccess: () => {
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+			queryClient.invalidateQueries({ queryKey: ['recent-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
 			queryClient.invalidateQueries({ queryKey: ['epics'] });
 			queryClient.invalidateQueries({ queryKey: ['stories'] });
 			queryClient.invalidateQueries({ queryKey: ['tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['bugs'] });
 			queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: 'Issue deleted successfully',

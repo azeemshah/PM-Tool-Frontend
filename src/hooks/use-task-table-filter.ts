@@ -8,12 +8,8 @@ import { parseAsString, parseAsStringEnum, useQueryStates } from "nuqs";
 
 const useTaskTableFilter = () => {
   return useQueryStates({
-    status: parseAsStringEnum<TaskStatusEnumType>(
-      Object.values(TaskStatusEnum)
-    ),
-    priority: parseAsStringEnum<TaskPriorityEnumType>(
-      Object.values(TaskPriorityEnum)
-    ),
+    status: parseAsStringEnum(Object.values(TaskStatusEnum) as TaskStatusEnumType[]),
+    priority: parseAsStringEnum(Object.values(TaskPriorityEnum) as TaskPriorityEnumType[]),
     keyword: parseAsString,
     // allow filtering by issue type (epic, story, task, bug, subtask)
     issueType: parseAsString,

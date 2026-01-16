@@ -29,6 +29,7 @@ export function BoardHeader({ board }: BoardHeaderProps) {
         boardId: board._id,
         data: {
           name: listName,
+          board: board._id,
         },
       },
       {
@@ -72,7 +73,7 @@ export function BoardHeader({ board }: BoardHeaderProps) {
           {isCreatingList ? (
             <div className="flex gap-2">
               <Input
-                placeholder="List name..."
+                placeholder="Status name..."
                 value={listName}
                 onChange={(e) => setListName(e.target.value)}
                 onKeyPress={(e) => {
@@ -110,7 +111,7 @@ export function BoardHeader({ board }: BoardHeaderProps) {
                 className="flex items-center gap-2"
               >
                 <Plus size={16} />
-                Add List
+                Add Column
               </Button>
               <Button variant="outline" size="sm">
                 <Settings size={16} />

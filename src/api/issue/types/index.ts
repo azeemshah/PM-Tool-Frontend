@@ -9,7 +9,7 @@ export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'bloc
 
 export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type ItemPriority = 'low' | 'medium' | 'high';
-export type ItemStatus = 'Todo' | 'In Progress' | 'Review' | 'Done' | 'Blocked' | 'Backlog';
+export type ItemStatus = 'Todo' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog';
 
 type IssueFormValues = {
 	title: string;
@@ -158,7 +158,7 @@ export interface CreateEpicDTO {
 	title: string;
 	description?: string;
 	reporter: string;
-	priority?: IssuePriority;
+	priority?: ItemPriority;
 	workspace: string;
 	type: IssueType;
 	status?: ItemStatus;
@@ -209,9 +209,10 @@ export interface CreateSubtaskDTO {
 export interface UpdateIssueDTO {
 	title?: string;
 	description?: string;
-	status?: IssueStatus;
-	priority?: IssuePriority;
+	status?: string;
+	priority?: string;
 	assignee?: string;
+	assignedTo?: string | null;
 	labels?: string[];
 	dueDate?: string | null;
 	reporter?: string;

@@ -57,20 +57,20 @@ export const MemberList: React.FC<MemberListProps> = ({
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">
               {member.userId?.profilePicture ? (
-                <img src={member.userId.profilePicture} alt={member.userName || member.userId.name || ''} className="w-10 h-10 rounded-full" />
+                <img src={member.userId.profilePicture} alt={member.userId.name || ''} className="w-10 h-10 rounded-full" />
               ) : (
-                <span>{initials(member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name)}</span>
+                <span>{initials(member.userId?.name)}</span>
               )}
             </div>
 
             <div>
-              <div className="font-medium text-gray-900">{member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name || 'Unknown'}</div>
+              <div className="font-medium text-gray-900">{member.userId?.name || 'Unknown'}</div>
               <div className="text-sm text-gray-600">{member.userId?.email}</div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-              <div className="px-4 py-1 border rounded-full text-sm text-gray-700 bg-white">{(typeof member.role === 'string' ? member.role : member.roleId?.name) || 'Member'}</div>
+              <div className="px-4 py-1 border rounded-full text-sm text-gray-700 bg-white">{member.roleId?.name || 'Member'}</div>
             <button
               onClick={() => handleRemove(member._id)}
               className="text-sm text-red-600 hover:text-red-800"

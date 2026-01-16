@@ -47,13 +47,13 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
     return '';
   }, []);
 
-  const listIdNorm = normalizeId(list._id) || normalizeId(list.id) || '';
+  const listIdNorm = normalizeId(list._id) || '';
   const droppableIdSafe = listIdNorm || `list-${boardId}-${Math.abs(String(list.name || '').length)}`;
 
   // Get cards for this list
   const getCardsForList = useCallback(() => {
     const listIdNormLocal = normalizeId(list._id);
-    const cardsForList: Record<string, unknown>[] = [];
+    const cardsForList: (KanbanCard | Issue)[] = [];
 
     // 1. Add board-specific cards (KanbanCard)
     if (cards && cards.length > 0 && listIdNormLocal) {
@@ -61,7 +61,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
         const colId = normalizeId((c as any).status || (c as any).column || (c as any).columnId);
         return colId === listIdNormLocal;
       });
-      cardsForList.push(...matchingCardsByColumn);
+      cardsForList.push(...(matchingCardsByColumn as KanbanCard[]));
     }
 
     // 2. Add workspace issues (Task/Story/Bug)
@@ -78,61 +78,53 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
         });
       }
 
-      // Define status mapping
+      // Define status mapping (canonical IssueStatus-style slugs)
       const listNameToIssueStatus: Record<string, string> = {
-        todo: 'todo',
-        backlog: 'backlog',
-        inprogress: 'in progress',
-        inreview: 'review',
+        todo: 'to-do',
+        backlog: 'to-do',
+        inprogress: 'in-progress',
+        inreview: 'in-review',
         done: 'done',
         blocked: 'blocked',
       };
 
       // Determine target status for this list
       let targetStatus = listNameToIssueStatus[listNameNormalized];
-      // Fallback: if list name contains "review", assume review status
-      if (!targetStatus && listName.includes('review')) targetStatus = 'review';
-      if (!targetStatus && listName.includes('progress')) targetStatus = 'in progress';
-      if (!targetStatus && listName.includes('todo')) targetStatus = 'todo';
+      if (!targetStatus && listName.includes('review')) targetStatus = 'in-review';
+      if (!targetStatus && listName.includes('progress')) targetStatus = 'in-progress';
+      if (!targetStatus && listName.includes('todo')) targetStatus = 'to-do';
       if (!targetStatus && listName.includes('done')) targetStatus = 'done';
 
-      // Additional fallback for default lists if names vary slightly
       if (!targetStatus) {
-        if (listNameNormalized === 'new' || listNameNormalized === 'open') targetStatus = 'todo';
+        if (listNameNormalized === 'new' || listNameNormalized === 'open') targetStatus = 'to-do';
       }
 
       const matchingIssues = issues.filter((issue: Issue) => {
-        // A. Match by explicit column ID
-        if ((issue as any).column) {
-          const issueColumnId = normalizeId((issue as any).column);
-          if (issueColumnId === listIdNormLocal) return true;
+        const issueColumnId = normalizeId((issue as any).column);
+
+        // A. If issue has a column and it matches this list, use that as source of truth
+        if (issueColumnId && issueColumnId === listIdNormLocal) {
+          return true;
         }
 
-        // B. Match by status if no column ID (or if we want to catch items that drifted)
+        // B. Otherwise (no column or mismatched), fall back to logical status
         if (targetStatus) {
-          let issueStatus = String(issue.status || 'todo').toLowerCase();
+          const rawStatus = String(issue.status || '').toLowerCase();
+          const normalizedIssueStatus = normalizeStr(rawStatus);
 
-          // Normalize issue status
-          if (issueStatus === 'in_review' || issueStatus === 'in-review') issueStatus = 'review';
-          if (issueStatus === 'in_progress' || issueStatus === 'in-progress') issueStatus = 'in progress';
+          let canonicalIssueStatus: string;
+          if (normalizedIssueStatus === 'todo') canonicalIssueStatus = 'to-do';
+          else if (normalizedIssueStatus === 'backlog') canonicalIssueStatus = 'to-do';
+          else if (normalizedIssueStatus === 'inprogress') canonicalIssueStatus = 'in-progress';
+          else if (normalizedIssueStatus === 'inreview' || normalizedIssueStatus === 'review') canonicalIssueStatus = 'in-review';
+          else if (normalizedIssueStatus === 'done') canonicalIssueStatus = 'done';
+          else if (normalizedIssueStatus === 'blocked') canonicalIssueStatus = 'blocked';
+          else canonicalIssueStatus = 'to-do';
 
-          const issueStatusNormalized = normalizeStr(issueStatus);
+          const issueStatusNormalized = normalizeStr(canonicalIssueStatus);
           const targetStatusNormalized = normalizeStr(targetStatus);
 
-          const isMatch = issueStatusNormalized === targetStatusNormalized;
-
-          // Debug specific issue
-          if (listNameNormalized === 'todo' && (issue.title === 'Login Story' || (issue as any).name === 'Login Story')) {
-            console.log('[BoardList] Found Login Story:', {
-              issueStatus,
-              issueStatusNormalized,
-              targetStatus,
-              targetStatusNormalized,
-              isMatch
-            });
-          }
-
-          if (isMatch) return true;
+          if (issueStatusNormalized === targetStatusNormalized) return true;
         }
 
         return false;
@@ -141,7 +133,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       cardsForList.push(...matchingIssues);
     }
 
-    const nonEpicCards = (cardsForList || []).filter((c: Record<string, unknown>) => {
+    const nonEpicCards = (cardsForList || []).filter((c: KanbanCard | Issue) => {
       const t = String((c as any).type || '').toLowerCase();
       return t !== 'epic';
     });
@@ -149,7 +141,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
     // Remove duplicates
     const uniqueCardsById = Array.from(
       new Map(
-        (nonEpicCards || []).map((c: Record<string, unknown>) => [
+        (nonEpicCards || []).map((c: KanbanCard | Issue) => [
           normalizeId((c as any)._id) || normalizeId((c as any).id) || Math.random(),
           c,
         ]),
@@ -163,7 +155,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
         list.workItems.map((id: unknown, index: number) => [normalizeId(id), index]),
       );
 
-      uniqueCardsById.sort((a: Record<string, unknown>, b: Record<string, unknown>) => {
+      uniqueCardsById.sort((a: KanbanCard | Issue, b: KanbanCard | Issue) => {
         const cardAId = normalizeId((a as any)._id) || normalizeId((a as any).id);
         const cardBId = normalizeId((b as any)._id) || normalizeId((b as any).id);
         const orderA = workItemOrderMap.has(cardAId) ? workItemOrderMap.get(cardAId)! : 9999;
@@ -183,7 +175,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
         <div className="flex-1">
           {(() => {
-            const rawName = (list && (list.name || list.title || (list as Record<string, unknown>).label || ''));
+            const rawName = (list && (list.name || (list as any).label || ''));
             const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
             return <h3 className="font-semibold text-sm text-gray-900">{displayName}</h3>;
           })()}
@@ -214,7 +206,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
                 }`}
             >
               {cardsForThisList.length > 0 ? (
-                cardsForThisList.map((card: Record<string, unknown>, index: number) => {
+                cardsForThisList.map((card: KanbanCard | Issue, index: number) => {
                   const cardIdSafe =
                     normalizeId((card as any)._id) ||
                     normalizeId((card as any).id) ||

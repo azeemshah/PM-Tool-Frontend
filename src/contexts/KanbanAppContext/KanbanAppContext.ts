@@ -1,5 +1,6 @@
 import { createContext } from 'react';
 import { KanbanBoard, KanbanCard } from '@/api/kanban/types';
+import { Issue } from '@/api/issue/types';
 
 export interface KanbanAppContextType {
   // Board state
@@ -7,8 +8,8 @@ export interface KanbanAppContextType {
   setSelectedBoard: (board: KanbanBoard | null) => void;
 
   // Card state
-  selectedCard: KanbanCard | null;
-  setSelectedCard: (card: KanbanCard | null) => void;
+  selectedCard: KanbanCard | Issue | null;
+  setSelectedCard: (card: KanbanCard | Issue | null) => void;
 
   // Dialog state
   isCardDialogOpen: boolean;

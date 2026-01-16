@@ -647,13 +647,17 @@ export const getAllTasksQueryFn = async ({
 };
 
 export const bulkUpdateTasksMutationFn = async ({ ids, data }: { ids: string[]; data: { title?: string; description?: string; priority?: string; status?: string; assignedTo?: string; dueDate?: string } }) => {
-  const response = await API.put(`/projects/tasks/bulk`, { ids, data });
-  return response.data;
+  // Update each task individually since there's no bulk endpoint
+  const promises = ids.map(id => updateIssueMutationFn({ issueId: id, data }));
+  const results = await Promise.all(promises);
+  return results;
 };
 
 export const bulkDeleteTasksMutationFn = async ({ ids }: { ids: string[] }) => {
-  const response = await API.delete(`/projects/tasks/bulk`, { data: { ids } });
-  return response.data;
+  // Delete each task individually since there's no bulk endpoint
+  const promises = ids.map(id => deleteIssueMutationFn(id));
+  const results = await Promise.all(promises);
+  return results;
 };
 
 

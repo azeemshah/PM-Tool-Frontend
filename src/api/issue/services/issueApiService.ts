@@ -336,19 +336,19 @@ export const issueApiService = {
 
 	/**
 	 * Update any issue (works for all types)
-	 * PATCH /issues/:id
+	 * POST /items/update/:id
 	 */
 	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
-		const response = await API.patch(`${ISSUES_ENDPOINT}/${issueId}`, data);
+		const response = await API.post(`/items/update/${issueId}`, data);
 		return response.data.data || response.data;
 	},
 
 	/**
 	 * Delete any issue (works for all types)
-	 * DELETE /issues/:id
+	 * DELETE /items/delete/:id
 	 */
 	async deleteIssue(issueId: string): Promise<void> {
-		await API.delete(`${ISSUES_ENDPOINT}/${issueId}`);
+		await API.delete(`/items/delete/${issueId}`);
 	},
 
 	/**
@@ -356,7 +356,7 @@ export const issueApiService = {
 	 * PATCH /issues/:id
 	 */
 	async assignIssue(issueId: string, userId: string): Promise<Issue> {
-		return this.updateIssue(issueId, { assignee: userId });
+		return this.updateIssue(issueId, { assignedTo: userId });
 	},
 
 	/**
