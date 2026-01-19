@@ -62,7 +62,7 @@ export function IssueCreateDialog({
     const [dueDate, setDueDate] = useState<Date | undefined>();
     const [status, setStatus] = useState('');
 
-    const ISSUE_STATUSES = ['backlog', 'todo', 'in_progress', 'in_review', 'done'];
+    const ISSUE_STATUSES = [ 'todo', 'in_progress', 'in_review', 'done'];
 
     // Queries and mutations
     const membersQuery = useGetWorkspaceMembers(workspaceId);

@@ -103,7 +103,7 @@ export const KanbanApiService = {
 	// ==================== LISTS ====================
 
 	async getKanbanBoardLists(boardId: string): Promise<KanbanList[]> {
-		const response = await API.get(`${KANBAN_ENDPOINT}/boards/${boardId}/columns`);
+		const response = await API.get(`column/create/${boardId}`);
 		return response.data.data || response.data;
 	},
 
@@ -111,7 +111,7 @@ export const KanbanApiService = {
 		boardId: string,
 		data: CreateListDTO
 	): Promise<KanbanList> {
-		const response = await API.post(`${KANBAN_ENDPOINT}/boards/${boardId}/columns`, data);
+		const response = await API.post(`column/create`, data);
 		return response.data.data || response.data;
 	},
 
@@ -128,7 +128,7 @@ export const KanbanApiService = {
 		boardId: string,
 		listId: string
 	): Promise<void> {
-		await API.delete(`${KANBAN_ENDPOINT}/boards/${boardId}/columns/${listId}`);
+		await API.delete(`column/columns/${listId}`);
 	},
 
 	// ==================== CARDS ====================
