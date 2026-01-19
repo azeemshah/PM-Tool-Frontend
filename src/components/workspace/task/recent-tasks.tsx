@@ -11,7 +11,7 @@ import { TaskType } from "@/types/api.type";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { Loader, RefreshCw } from "lucide-react";
-import API from "@/lib/axios-client";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Button } from "@/components/ui/button";
 
 const RecentTasks = () => {
@@ -26,66 +26,17 @@ const RecentTasks = () => {
         return { tasks: [] } as any;
       }
       try {
-        console.log('[recent-tasks] Fetching projects for workspace:', workspaceId);
-        const projectsResp = await API.get(`/projects`, { params: { workspaceId } });
-        const projects = projectsResp.data?.data || projectsResp.data?.projects || projectsResp.data || [];
-        console.log('[recent-tasks] Projects response:', { count: projects?.length, data: projects });
+        console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
+        const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
+        console.log('[recent-tasks] Tasks response:', { count: tasks?.length, data: tasks });
         
-        if (!projects || projects.length === 0) {
-          console.log('[recent-tasks] No projects found');
+        if (!tasks || tasks.length === 0) {
+          console.log('[recent-tasks] No tasks found');
           return { tasks: [] } as any;
         }
 
-        console.log('[recent-tasks] Fetching issues from', projects.length, 'projects');
-        const issuesPromises = projects.map((p: any) =>
-          API.get(`/issues/project/${p._id}`)
-            .then((r) => {
-              const items = (r.data?.data || r.data || []) as any[];
-              console.log(`[recent-tasks] Project ${p.name} (${p._id}): ${items.length} issues`);
-              return items.map((iss) => {
-                // Handle assignedTo with fallback to reporter
-                let assignedTo = null;
-                if (iss.assignee && iss.assignee._id) {
-                  assignedTo = {
-                    _id: iss.assignee._id,
-                    name: iss.assignee.name || `${iss.assignee.firstName || ''} ${iss.assignee.lastName || ''}`.trim(),
-                    profilePicture: iss.assignee.profilePicture || iss.assignee.avatar || null,
-                  };
-                } else if (iss.reporter && iss.reporter._id) {
-                  assignedTo = {
-                    _id: iss.reporter._id,
-                    name: iss.reporter.name || `${iss.reporter.firstName || ''} ${iss.reporter.lastName || ''}`.trim(),
-                    profilePicture: iss.reporter.profilePicture || iss.reporter.avatar || null,
-                  };
-                }
-
-                return {
-                  _id: iss._id,
-                  taskCode: iss.key || iss._id,
-                  title: iss.title,
-                  description: iss.description,
-                  project: { _id: iss.projectId || p._id, emoji: p.emoji || "", name: p.name || "" },
-                  priority: iss.priority,
-                  status: iss.status,
-                  assignedTo: assignedTo,
-                  dueDate: iss.dueDate || "",
-                  createdAt: iss.createdAt,
-                  updatedAt: iss.updatedAt,
-                };
-              });
-            })
-            .catch((err) => {
-              console.error(`[recent-tasks] Error fetching issues for project ${p._id}:`, err);
-              return [];
-            }),
-        );
-
-        const allArrays = await Promise.all(issuesPromises);
-        const allMapped = allArrays.flat();
-        console.log('[recent-tasks] Total issues combined:', allMapped.length);
-        
         // Sort by createdAt descending and get top 5 recent
-        const recent = allMapped.sort((a: any, b: any) => {
+        const recent = tasks.sort((a: any, b: any) => {
           const dateA = new Date(a.createdAt || 0).getTime();
           const dateB = new Date(b.createdAt || 0).getTime();
           return dateB - dateA;
@@ -157,7 +108,7 @@ const RecentTasks = () => {
                 {/* Task Info */}
                 <div className="flex flex-col space-y-1 flex-grow">
                   <span className="text-sm capitalize text-gray-600 font-medium">
-                    {task.taskCode}
+                    {task.taskCode || task._id}
                   </span>
                   <p className="text-md font-semibold text-gray-800 truncate">
                     {task.title}
