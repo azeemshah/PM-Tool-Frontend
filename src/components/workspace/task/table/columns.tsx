@@ -57,9 +57,6 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       header: ({ column }) => <DataTableColumnHeader column={column} title="Title" />,
       cell: ({ row }) => (
         <div className="flex flex-wrap space-x-2">
-          <Badge variant="outline" className="capitalize shrink-0 h-[25px]">
-            {row.original.taskCode}
-          </Badge>
           <span className="block lg:max-w-[220px] max-w-[200px] font-medium">
             {row.original.title}
           </span>
