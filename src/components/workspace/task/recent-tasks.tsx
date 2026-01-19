@@ -1,21 +1,37 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
-import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
+import { TaskPriorityEnum, TaskStatusEnum, TaskStatusEnumType, TaskPriorityEnumType } from "@/constant";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import {
   getAvatarColor,
   getAvatarFallbackText,
   transformStatusEnum,
+  formatStatusToEnum,
 } from "@/lib/helper";
 import { TaskType } from "@/types/api.type";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader, RefreshCw } from "lucide-react";
+import { Loader, RefreshCw, ArrowDown, ArrowRight, ArrowUp, CheckCircle, Circle, HelpCircle, Timer, View } from "lucide-react";
 import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Button } from "@/components/ui/button";
 
 const RecentTasks = () => {
   const workspaceId = useWorkspaceId();
+
+  // Icon mappings for status and priority
+  const statusIcons = {
+    [TaskStatusEnum.BACKLOG]: HelpCircle,
+    [TaskStatusEnum.TODO]: Circle,
+    [TaskStatusEnum.IN_PROGRESS]: Timer,
+    [TaskStatusEnum.IN_REVIEW]: View,
+    [TaskStatusEnum.DONE]: CheckCircle,
+  };
+
+  const priorityIcons = {
+    [TaskPriorityEnum.LOW]: ArrowDown,
+    [TaskPriorityEnum.MEDIUM]: ArrowRight,
+    [TaskPriorityEnum.HIGH]: ArrowUp,
+  };
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: ["recent-tasks", workspaceId],
@@ -108,7 +124,7 @@ const RecentTasks = () => {
                 {/* Task Info */}
                 <div className="flex flex-col space-y-1 flex-grow">
                   <span className="text-sm capitalize text-gray-600 font-medium">
-                    {task.taskCode || task._id}
+                    {task.project?.name || ""}
                   </span>
                   <p className="text-md font-semibold text-gray-800 truncate">
                     {task.title}
@@ -120,22 +136,36 @@ const RecentTasks = () => {
 
                 {/* Task Status */}
                 <div className="text-sm font-medium ">
-                  <Badge
-                    variant={TaskStatusEnum[task.status]}
-                    className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
-                  >
-                    <span>{transformStatusEnum(task.status)}</span>
-                  </Badge>
+                  {(() => {
+                    const statusKey = formatStatusToEnum(task.status) as TaskStatusEnumType;
+                    const IconComponent = statusIcons[TaskStatusEnum[statusKey]];
+                    return (
+                      <Badge
+                        variant={TaskStatusEnum[statusKey]}
+                        className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+                      >
+                        {IconComponent && <IconComponent className="h-4 w-4 rounded-full text-inherit" />}
+                        <span>{transformStatusEnum(task.status)}</span>
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 {/* Task Priority */}
                 <div className="text-sm ml-2">
-                  <Badge
-                    variant={TaskPriorityEnum[task.priority]}
-                    className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
-                  >
-                    <span>{transformStatusEnum(task.priority)}</span>
-                  </Badge>
+                  {(() => {
+                    const priorityKey = formatStatusToEnum(task.priority) as TaskPriorityEnumType;
+                    const IconComponent = priorityIcons[TaskPriorityEnum[priorityKey]];
+                    return (
+                      <Badge
+                        variant={TaskPriorityEnum[priorityKey]}
+                        className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+                      >
+                        {IconComponent && <IconComponent className="h-4 w-4 rounded-full text-inherit" />}
+                        <span>{transformStatusEnum(task.priority)}</span>
+                      </Badge>
+                    );
+                  })()}
                 </div>
 
                 {/* Assignee */}
