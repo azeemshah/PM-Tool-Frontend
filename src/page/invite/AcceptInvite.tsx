@@ -128,7 +128,7 @@ const AcceptInvite = () => {
       <div className="flex w-full max-w-md flex-col gap-6">
         <a href="/" className="flex items-center gap-2 self-center font-medium">
           <Logo />
-          TM Tool
+          PM Tool
         </a>
         <div className="flex flex-col gap-6">
           <Card>
