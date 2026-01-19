@@ -3,7 +3,12 @@ import WorkspaceAnalytics from "@/components/workspace/workspace-analytics";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentTasks from "@/components/workspace/task/recent-tasks";
 import RecentMembers from "@/components/workspace/member/recent-members";
+import { useAuthContext } from "@/context/auth-provider";
+
 const WorkspaceDashboard = () => {
+  const { workspace, workspaceLoading } = useAuthContext();
+  console.log('Dashboard render - workspace:', workspace?._id, 'loading:', workspaceLoading);
+
   return (
     <main className="flex flex-1 flex-col py-4 md:pt-3">
       <div className="space-y-2 mb-6">
