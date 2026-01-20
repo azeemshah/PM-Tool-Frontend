@@ -1,4 +1,4 @@
-import { FC, useState } from "react";
+import { FC, useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
@@ -9,6 +9,7 @@ import { getColumns } from "./table/columns";
 import { DataTableFacetedFilter } from "./table/table-faceted-filter";
 import { priorities, statuses } from "./table/data";
 import useTaskTableFilter from "@/hooks/use-task-table-filter";
+import useDebounce from "@/hooks/use-debounce";
 import { issueApiService } from "@/api/issue/services/issueApiService";
 import { toast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -328,12 +329,30 @@ const DataTableFilterToolbar: FC<{
     setFilters({ ...filters, [key]: values.length ? values.join(",") : null });
   };
 
+  // Debounce logic for keyword search (centralized via hook)
+  const [searchTerm, setSearchTerm] = useState(filters.keyword || "");
+
+  // Sync local state with parent filter state when it changes externally
+  useEffect(() => {
+    setSearchTerm(filters.keyword || "");
+  }, [filters.keyword]);
+
+  // Use debounced value (300-500ms) to update parent filters
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  useEffect(() => {
+    if ((filters.keyword || "") !== debouncedSearch) {
+      setFilters({ ...filters, keyword: debouncedSearch || null });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch]);
+
   return (
     <div className="flex flex-col lg:flex-row w-full items-start space-y-2 mb-2 lg:mb-0 lg:space-x-2 lg:space-y-0">
       <Input
         placeholder="Filter tasks..."
-        value={filters.keyword || ""}
-        onChange={(e) => setFilters({ ...filters, keyword: e.target.value })}
+        value={searchTerm}
+        onChange={(e) => setSearchTerm(e.target.value)}
         className="h-8 w-full lg:w-[250px]"
       />
       <DataTableFacetedFilter
