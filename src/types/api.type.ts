@@ -52,6 +52,7 @@ export type WorkspaceType = {
   _id: string;
   name: string;
   description?: string;
+  boardType: 'kanban' | 'scrumboard';
   owner: string;
   inviteCode: string;
 };
@@ -59,6 +60,7 @@ export type WorkspaceType = {
 export type CreateWorkspaceType = {
   name: string;
   description: string;
+  boardType: 'kanban' | 'scrumboard';
 };
 
 export type EditWorkspaceType = {

@@ -42,6 +42,11 @@ export const issueApiService = {
 		return response.data.data || response.data;
 	},
 
+	async updateItem(itemId: string, data: UpdateIssueDTO): Promise<any> {
+		const response = await API.patch(`/items/${itemId}`, data);
+		return response.data.data || response.data;
+	},
+
 	/**
 	 * Get all Epics in a project
 	 * GET /issues/epic/:projectId

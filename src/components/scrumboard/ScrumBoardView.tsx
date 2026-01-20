@@ -1,26 +1,57 @@
-import { Suspense } from "react";
+import { useState } from 'react';
+import { useParams } from 'react-router-dom';
+import useWorkspaceId from '@/hooks/use-workspace-id';
+import { useGetWorkspaceSprints } from '@/api/scrumboard/hooks/sprints/useGetWorkspaceSprints';
+import { ScrumboardProvider } from '@/contexts/ScrumboardContext';
+import SprintList from './components/SprintList';
+import BacklogPanel from './components/BacklogPanel';
+import SprintBoard from './components/SprintBoard';
 
 const ScrumBoardView = () => {
-  const LoadingFallback = () => (
-    <div className="flex items-center justify-center h-full">
-      <div className="text-center">
-        <div className="inline-block animate-spin">
-          <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
-        </div>
-        <p className="mt-4 text-gray-600">Loading Scrum Board...</p>
-      </div>
-    </div>
+  const workspaceId = useWorkspaceId();
+  const { sprintId } = useParams<{ sprintId?: string }>();
+
+  const { data: sprints, isLoading } = useGetWorkspaceSprints(workspaceId);
+
+  const [activeSprintId, setActiveSprintId] = useState<string | null>(
+    sprintId || null
   );
 
-  return (
-    <div className="w-full h-full flex items-center justify-center">
-      <Suspense fallback={<LoadingFallback />}>
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold mb-2">Scrum Board</h2>
-          <p className="text-gray-600">Scrum board feature coming soon...</p>
+          <div className="inline-block animate-spin">
+            <div className="w-8 h-8 border-4 border-gray-200 border-t-blue-600 rounded-full"></div>
+          </div>
+          <p className="mt-4 text-gray-600">Loading Sprints...</p>
         </div>
-      </Suspense>
-    </div>
+      </div>
+    );
+  }
+
+  const activeSprint = sprints?.find(s => s._id === activeSprintId);
+
+  return (
+    <ScrumboardProvider>
+      <div className="flex h-full bg-gray-50">
+        {/* Sprint List Sidebar */}
+        <SprintList
+          sprints={sprints || []}
+          activeSprintId={activeSprintId}
+          onSprintSelect={setActiveSprintId}
+        />
+
+        {/* Main Content */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {activeSprint ? (
+            <SprintBoard sprint={activeSprint} />
+          ) : (
+            <BacklogPanel workspaceId={workspaceId} />
+          )}
+        </div>
+      </div>
+    </ScrumboardProvider>
   );
 };
 

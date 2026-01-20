@@ -1,0 +1,214 @@
+import React, { useState } from 'react';
+import { Plus, Play, CheckCircle, RotateCcw, Clock } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Sprint } from '@/api/scrumboard/types';
+import { useUpdateSprint } from '@/api/scrumboard/hooks/sprints/useUpdateSprint';
+import SprintCreationDialog from './SprintCreationDialog';
+
+interface SprintListProps {
+  sprints: Sprint[];
+  activeSprintId: string | null;
+  onSprintSelect: (sprintId: string | null) => void;
+}
+
+const SprintList: React.FC<SprintListProps> = ({
+  sprints,
+  activeSprintId,
+  onSprintSelect,
+}) => {
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const updateSprintMutation = useUpdateSprint();
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'PLANNED':
+        return <Clock className="w-4 h-4 text-gray-500" />;
+      case 'ACTIVE':
+        return <Play className="w-4 h-4 text-green-500" />;
+      case 'COMPLETED':
+        return <CheckCircle className="w-4 h-4 text-blue-500" />;
+      default:
+        return <Clock className="w-4 h-4 text-gray-500" />;
+    }
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'PLANNED':
+        return 'secondary';
+      case 'ACTIVE':
+        return 'default';
+      case 'COMPLETED':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const handleSprintAction = async (sprintId: string, action: 'start' | 'complete' | 'reopen') => {
+    try {
+      await updateSprintMutation.mutateAsync({
+        sprintId,
+        action,
+        workspaceId: sprints.find(s => s._id === sprintId)?.workspaceId || '',
+      });
+    } catch (error) {
+      console.error(`Failed to ${action} sprint:`, error);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+    });
+  };
+
+  return (
+    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+      {/* Header */}
+      <div className="p-4 border-b border-gray-200">
+        <div className="flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-gray-900">Sprints</h2>
+          <Button
+            size="sm"
+            onClick={() => setShowCreateDialog(true)}
+            className="flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" />
+            Create Sprint
+          </Button>
+        </div>
+      </div>
+
+      {/* Sprint List */}
+      <div className="flex-1 overflow-y-auto">
+        {/* Backlog Option */}
+        <div
+          className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
+            activeSprintId === null ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+          }`}
+          onClick={() => onSprintSelect(null)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+              📋
+            </div>
+            <div className="flex-1">
+              <h3 className="font-medium text-gray-900">Backlog</h3>
+              <p className="text-sm text-gray-500">Work items not in sprints</p>
+            </div>
+          </div>
+        </div>
+
+        {/* Sprints */}
+        {sprints.map((sprint) => (
+          <Card
+            key={sprint._id}
+            className={`m-2 cursor-pointer transition-colors ${
+              activeSprintId === sprint._id
+                ? 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500'
+                : 'hover:bg-gray-50'
+            }`}
+            onClick={() => onSprintSelect(sprint._id)}
+          >
+            <div className="p-3">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  {getStatusIcon(sprint.status)}
+                  <h3 className="font-medium text-gray-900 truncate">
+                    {sprint.name}
+                  </h3>
+                </div>
+                <Badge variant={getStatusColor(sprint.status) as any} className="text-xs">
+                  {sprint.status}
+                </Badge>
+              </div>
+
+              {sprint.goal && (
+                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                  {sprint.goal}
+                </p>
+              )}
+
+              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                <span>
+                  {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
+                </span>
+                <span>{sprint.workItems.length} items</span>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-1">
+                {sprint.status === 'PLANNED' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSprintAction(sprint._id, 'start');
+                    }}
+                    disabled={updateSprintMutation.isPending}
+                  >
+                    <Play className="w-3 h-3 mr-1" />
+                    Start
+                  </Button>
+                )}
+
+                {sprint.status === 'ACTIVE' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSprintAction(sprint._id, 'complete');
+                    }}
+                    disabled={updateSprintMutation.isPending}
+                  >
+                    <CheckCircle className="w-3 h-3 mr-1" />
+                    Complete
+                  </Button>
+                )}
+
+                {sprint.status === 'COMPLETED' && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="text-xs h-7"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleSprintAction(sprint._id, 'reopen');
+                    }}
+                    disabled={updateSprintMutation.isPending}
+                  >
+                    <RotateCcw className="w-3 h-3 mr-1" />
+                    Reopen
+                  </Button>
+                )}
+              </div>
+            </div>
+          </Card>
+        ))}
+
+        {sprints.length === 0 && (
+          <div className="p-8 text-center text-gray-500">
+            <p>No sprints yet</p>
+            <p className="text-sm">Create your first sprint to get started</p>
+          </div>
+        )}
+      </div>
+
+      {/* Sprint Creation Dialog */}
+      <SprintCreationDialog
+        open={showCreateDialog}
+        onClose={() => setShowCreateDialog(false)}
+      />
+    </div>
+  );
+};
+
+export default SprintList;
