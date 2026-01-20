@@ -103,7 +103,7 @@ export const KanbanApiService = {
 	// ==================== LISTS ====================
 
 	async getKanbanBoardLists(boardId: string): Promise<KanbanList[]> {
-		const response = await API.get(`column/create/${boardId}`);
+		const response = await API.get(`/column/${boardId}/columns`);
 		return response.data.data || response.data;
 	},
 
@@ -241,11 +241,18 @@ export const KanbanApiService = {
 
 	// ==================== REORDER ====================
 
-	async reorderListsInBoard(
-		boardId: string,
-		listIds: string[]
+	async moveColumn(
+		columnId: string,
+		position: number
 	): Promise<void> {
-		await API.put(`${KANBAN_ENDPOINT}/boards/${boardId}/reorder-lists`, { listIds });
+		await API.patch(`/column/move/${columnId}`, { position });
+	},
+
+	async reorderColumnsInBoard(
+		boardId: string,
+		columnIds: string[]
+	): Promise<void> {
+		await API.put(`/column/columns/reorder/${boardId}`, { columnIds });
 	},
 
 	async reorderCardsInList(

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { DragDropContext, DropResult } from '@hello-pangea/dnd';
+import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Calendar, Target, Users, TrendingUp } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -20,6 +20,7 @@ interface SprintBoardProps {
 const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
+  const [columnOrder, setColumnOrder] = useState<string[]>(['todo', 'in-progress', 'done']);
 
   const { data: allWorkItems = [] } = useQuery({
     queryKey: ['workspace-items', workspaceId],
@@ -82,7 +83,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   };
 
   const handleDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
 
     // If no destination or dropped in same position
     if (!destination || (
@@ -92,27 +93,39 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       return;
     }
 
-    // Determine new status based on destination column
-    let newStatus: string;
-    switch (destination.droppableId) {
-      case 'todo':
-        newStatus = 'Todo';
-        break;
-      case 'in-progress':
-        newStatus = 'In Progress';
-        break;
-      case 'done':
-        newStatus = 'Done';
-        break;
-      default:
-        return;
+    // Handle column reordering
+    if (type === 'column') {
+      const newColumnOrder = [...columnOrder];
+      const [movedColumn] = newColumnOrder.splice(source.index, 1);
+      newColumnOrder.splice(destination.index, 0, movedColumn);
+      setColumnOrder(newColumnOrder);
+      return;
     }
 
-    // Update work item status
-    updateWorkItemMutation.mutate({
-      itemId: draggableId,
-      data: { status: newStatus },
-    });
+    // Handle card movement between columns
+    if (type === 'card') {
+      // Determine new status based on destination column
+      let newStatus: string;
+      switch (destination.droppableId) {
+        case 'todo':
+          newStatus = 'Todo';
+          break;
+        case 'in-progress':
+          newStatus = 'In Progress';
+          break;
+        case 'done':
+          newStatus = 'Done';
+          break;
+        default:
+          return;
+      }
+
+      // Update work item status
+      updateWorkItemMutation.mutate({
+        itemId: draggableId,
+        data: { status: newStatus },
+      });
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -237,34 +250,63 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       <DragDropContext onDragEnd={handleDragEnd}>
         <div className="flex-1 overflow-hidden">
           <div className="h-full overflow-x-auto">
-            <div className="inline-flex gap-4 p-4 min-w-min">
-              <SprintColumn
-                title="To Do"
-                workItems={sprintWorkItems.filter(item =>
-                  ['backlog', 'todo'].includes(item.status?.toLowerCase()) || !item.status
-                )}
-                columnId="todo"
-                sprintId={sprint._id}
-              />
+            <Droppable
+              droppableId="sprint-columns"
+              type="column"
+              direction="horizontal"
+              ignoreContainerClipping
+            >
+              {(provided) => (
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="inline-flex gap-4 p-4 min-w-min"
+                >
+                  {columnOrder.map((columnId, index) => {
+                    let title = '';
+                    let workItems: any[] = [];
 
-              <SprintColumn
-                title="In Progress"
-                workItems={sprintWorkItems.filter(item =>
-                  ['in progress', 'in review', 'inprogress'].includes(item.status?.toLowerCase())
-                )}
-                columnId="in-progress"
-                sprintId={sprint._id}
-              />
+                    if (columnId === 'todo') {
+                      title = 'To Do';
+                      workItems = sprintWorkItems.filter(item =>
+                        ['backlog', 'todo'].includes(item.status?.toLowerCase()) || !item.status
+                      );
+                    } else if (columnId === 'in-progress') {
+                      title = 'In Progress';
+                      workItems = sprintWorkItems.filter(item =>
+                        ['in progress', 'in review', 'inprogress'].includes(item.status?.toLowerCase())
+                      );
+                    } else if (columnId === 'done') {
+                      title = 'Done';
+                      workItems = sprintWorkItems.filter(item =>
+                        item.status?.toLowerCase() === 'done'
+                      );
+                    }
 
-              <SprintColumn
-                title="Done"
-                workItems={sprintWorkItems.filter(item =>
-                  item.status?.toLowerCase() === 'done'
-                )}
-                columnId="done"
-                sprintId={sprint._id}
-              />
-            </div>
+                    return (
+                      <Draggable key={columnId} draggableId={columnId} index={index}>
+                        {(provided, snapshot) => (
+                          <div
+                            ref={provided.innerRef}
+                            {...provided.draggableProps}
+                            {...provided.dragHandleProps}
+                            className={snapshot.isDragging ? 'opacity-50' : ''}
+                          >
+                            <SprintColumn
+                              title={title}
+                              workItems={workItems}
+                              columnId={columnId}
+                              sprintId={sprint._id}
+                            />
+                          </div>
+                        )}
+                      </Draggable>
+                    );
+                  })}
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
           </div>
         </div>
       </DragDropContext>

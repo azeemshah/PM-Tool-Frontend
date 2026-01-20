@@ -4,10 +4,10 @@ import { KanbanApiService } from '../../services/KanbanApiService';
 export function useKanbanReorder(boardId: string | null) {
 	const queryClient = useQueryClient();
 
-	const reorderListMutation = useMutation({
-		mutationFn: (listIds: string[]) => {
+	const reorderColumnMutation = useMutation({
+		mutationFn: (columnIds: string[]) => {
 			if (!boardId) return Promise.resolve();
-			return KanbanApiService.reorderListsInBoard(boardId, listIds);
+			return KanbanApiService.reorderColumnsInBoard(boardId, columnIds);
 		},
 		onSuccess: () => {
 			if (boardId) {
@@ -98,7 +98,7 @@ export function useKanbanReorder(boardId: string | null) {
 	});
 
 	return {
-		reorderList: (listIds: string[]) => reorderListMutation.mutate(listIds),
+		reorderColumn: (columnIds: string[]) => reorderColumnMutation.mutate(columnIds),
 		reorderCard: (listId: string, cardIds: string[]) =>
 			reorderCardMutation.mutate({ listId, cardIds }),
 		moveCard: ({
@@ -118,7 +118,7 @@ export function useKanbanReorder(boardId: string | null) {
 				toListId,
 				newIndex,
 			}),
-		isReorderingList: reorderListMutation.isPending,
+		isReorderingColumn: reorderColumnMutation.isPending,
 		isReorderingCard: reorderCardMutation.isPending,
 		isMovingCard: moveCardMutation.isPending,
 	};

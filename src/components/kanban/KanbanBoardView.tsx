@@ -94,7 +94,7 @@ export function KanbanBoardView() {
     });
   }, [workspaceItems]);
 
-  const { reorderCard, moveCard, isMovingCard, isReorderingCard } = useKanbanReorder(boardId || null);
+  const { reorderCard, moveCard, reorderColumn, isMovingCard, isReorderingCard, isReorderingColumn } = useKanbanReorder(boardId || null);
   const { data: cards } = useGetKanbanBoardCards(boardId || '');
 
   // Determine which columns to render
@@ -175,7 +175,21 @@ export function KanbanBoardView() {
       // Handle list reordering
       if (type === 'list') {
         if (!boardId) return;
-        // Reorder lists - would call backend to persist order
+        
+        // Get current column order from columnsToRender
+        const currentColumnIds = columnsToRender.map((col: any) => {
+          if (typeof col === 'string') return col;
+          return col._id || col.id;
+        });
+
+        // Create new order by moving column from source to destination
+        const newColumnIds = [...currentColumnIds];
+        const [movedColumn] = newColumnIds.splice(source.index, 1);
+        newColumnIds.splice(destination.index, 0, movedColumn);
+
+        // Call backend to persist reorder
+        reorderColumn(newColumnIds);
+        setDragError(null);
         return;
       }
 
@@ -308,7 +322,7 @@ export function KanbanBoardView() {
         }
       }
     },
-    [boardId, cards, issues, reorderCard, moveCard, workspaceId, queryClient, lists, board]
+    [boardId, cards, issues, reorderCard, moveCard, reorderColumn, workspaceId, queryClient, lists, board, columnsToRender]
   );
 
   if (isLoading) {
@@ -367,7 +381,7 @@ export function KanbanBoardView() {
       )}
 
       {/* Loading indicator for drag operations */}
-      {(isMovingCard || isReorderingCard) && (
+      {(isMovingCard || isReorderingCard || isReorderingColumn) && (
         <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mx-4 mt-4">
           <div className="flex">
             <div className="flex-shrink-0">
@@ -376,7 +390,7 @@ export function KanbanBoardView() {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-blue-700">Moving card...</p>
+              <p className="text-sm text-blue-700">{isReorderingColumn ? 'Moving column...' : 'Moving card...'}</p>
             </div>
           </div>
         </div>
