@@ -1,6 +1,6 @@
 import React from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
@@ -11,6 +11,8 @@ interface SprintColumnProps {
   workItems: KanbanCard[];
   columnId: string;
   sprintId: string;
+  onDelete?: (columnId: string) => void;
+  isDeleting?: boolean;
 }
 
 const SprintColumn: React.FC<SprintColumnProps> = ({

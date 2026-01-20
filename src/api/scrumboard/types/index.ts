@@ -9,6 +9,7 @@ export interface Sprint {
   endDate: string;
   status: 'PLANNED' | 'ACTIVE' | 'COMPLETED';
   workItems: string[]; // Work item IDs
+  columns?: string[]; // Column names/IDs
   createdAt?: string;
   updatedAt?: string;
 }

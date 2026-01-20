@@ -41,4 +41,12 @@ export const SprintApiService = {
     });
     return response.data.data || response.data;
   },
+
+  // Update sprint columns
+  async updateSprintColumns(sprintId: string, columns: string[]): Promise<Sprint> {
+    const response = await API.patch(`${SPRINT_ENDPOINT}/${sprintId}/columns`, {
+      columns
+    });
+    return response.data.data || response.data;
+  },
 };
