@@ -151,9 +151,14 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       cell: ({ row }) => {
         const rawStatus = row.getValue("status");
         const statusValue = typeof rawStatus === "string" ? rawStatus : String(rawStatus);
-        const status = statuses.find((s) => s.value.toLowerCase() === statusValue.toLowerCase());
+        
+        // Normalize the status for comparison
+        const normalize = (s: string) => s.toLowerCase().replace(/[\s-_]/g, '');
+        const normalizedValue = normalize(statusValue);
+        
+        const status = statuses.find((s) => normalize(s.value) === normalizedValue);
 
-        if (!status) return <span className="text-sm text-muted-foreground">Unknown status</span>;
+        if (!status) return <span className="text-sm text-muted-foreground">Unknown status: {statusValue}</span>;
 
         const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
         const Icon = status.icon;

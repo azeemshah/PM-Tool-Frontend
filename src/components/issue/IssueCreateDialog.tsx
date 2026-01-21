@@ -62,7 +62,7 @@ export function IssueCreateDialog({
     const [dueDate, setDueDate] = useState<Date | undefined>();
     const [status, setStatus] = useState('');
 
-    const ISSUE_STATUSES = [ 'todo', 'in_progress', 'in_review', 'done'];
+    const ISSUE_STATUSES = ['To Do', 'In Progress', 'In Review', 'Done', 'Backlog'];
 
     // Queries and mutations
     const membersQuery = useGetWorkspaceMembers(workspaceId);
@@ -214,11 +214,11 @@ export function IssueCreateDialog({
 
         // Validate parent selections
         const statusMap: Record<string, ItemStatus> = {
-            'backlog': 'Backlog',
-            'todo': 'Todo',
-            'in_progress': 'In Progress',
-            'in_review': 'In Review',
-            'done': 'Done'
+            'Backlog': 'Backlog',
+            'To Do': 'To Do',
+            'In Progress': 'In Progress',
+            'In Review': 'In Review',
+            'Done': 'Done'
         };
 
         const mapPriorityToItemPriority = (value: IssuePriority): ItemPriority => {

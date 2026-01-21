@@ -106,7 +106,7 @@ export function BoardCardDialog() {
         return 'Backlog';
       case 'todo':
       case 'to-do':
-        return 'Todo';
+        return 'To Do';
       case 'in_progress':
       case 'in-progress':
         return 'In Progress';
