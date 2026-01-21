@@ -11,9 +11,8 @@ import {
 import { TaskType } from "@/types/api.type";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { Loader, RefreshCw, ArrowDown, ArrowRight, ArrowUp, CheckCircle, Circle, HelpCircle, Timer, View } from "lucide-react";
+import { Loader, ArrowDown, ArrowRight, ArrowUp, CheckCircle, Circle, HelpCircle, Timer, View } from "lucide-react";
 import { issueApiService } from "@/api/issue/services/issueApiService";
-import { Button } from "@/components/ui/button";
 
 const RecentTasks = () => {
   const workspaceId = useWorkspaceId();
@@ -74,23 +73,6 @@ const RecentTasks = () => {
 
   return (
     <div className="flex flex-col space-y-6">
-      <div className="flex items-center justify-between">
-        {isLoading && (
-          <Loader className="w-5 h-5 animate-spin text-muted-foreground" />
-        )}
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => {
-            console.log('[recent-tasks] Manual refetch triggered');
-            refetch();
-          }}
-          disabled={isLoading}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-      </div>
-
       {isError && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {(error as any)?.response?.status === 401 ? (
