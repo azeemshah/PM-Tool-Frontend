@@ -425,7 +425,7 @@ const BulkActionsBar: FC<{
           <DropdownMenuLabel>Change Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
           {[
-            { value: "Todo", label: "Todo" },
+            { value: "To Do", label: "To Do" },
             { value: "In Progress", label: "In Progress" },
             { value: "In Review", label: "In Review" },
             { value: "Done", label: "Done" }

@@ -9,7 +9,7 @@ export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'bloc
 
 export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type ItemPriority = 'low' | 'medium' | 'high';
-export type ItemStatus = 'Todo' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog';
+export type ItemStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog';
 
 type IssueFormValues = {
 	title: string;

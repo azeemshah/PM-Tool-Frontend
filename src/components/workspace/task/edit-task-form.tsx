@@ -120,7 +120,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     defaultValues: {
       title: task?.title ?? "",
       description: task?.description ?? "",
-      status: (task?.status as string) || TaskStatusEnum.TODO,
+      status: (task?.status as string) || TaskStatusEnum.TO_DO,
       priority: apiPriorityToFormPriority(task?.priority ?? "medium"),
       assignedTo: task.assignedTo?._id ?? "",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,

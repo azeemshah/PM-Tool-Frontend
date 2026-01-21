@@ -154,6 +154,25 @@ export function KanbanBoardView() {
     }
   }, [setSelectedCard, setIsCardDialogOpen]);
 
+  const normalizeId = useCallback((v: unknown): string => {
+    if (!v) return '';
+    if (typeof v === 'string' || typeof v === 'number') return String(v);
+    if (typeof v === 'object' && v !== null) {
+      const obj = v as Record<string, unknown>;
+      if (obj.$oid) return String(obj.$oid);
+      if (obj.id) return String(obj.id);
+      if (obj._id && typeof obj._id === 'object' && obj._id !== null) {
+        const idObj = obj._id as Record<string, unknown>;
+        if (idObj.$oid) return String(idObj.$oid);
+      }
+      if (obj._id && (typeof obj._id === 'string' || typeof obj._id === 'number')) return String(obj._id);
+      if (obj._bsontype === 'ObjectID' && typeof (obj as { toHexString?: () => string }).toHexString === 'function') {
+        return String((obj as { toHexString: () => string }).toHexString());
+      }
+    }
+    return '';
+  }, []);
+
   const handleDragEnd = useCallback(
     async (result: DropResult) => {
       const { source, destination, draggableId, type } = result;
@@ -202,10 +221,10 @@ export function KanbanBoardView() {
 
         const draggedId = String(draggableId);
         const kanbanCard =
-          (cards || []).find((c: any) => String(c._id) === draggedId || String((c as any).id) === draggedId) ||
+          (cards || []).find((c: any) => normalizeId(c._id) === draggedId || normalizeId((c as any).id) === draggedId) ||
           null;
         const issueCard =
-          issues.find((i: any) => String(i._id) === draggedId) || null;
+          issues.find((i: any) => normalizeId(i._id) === draggedId) || null;
 
         // Store the drag state for potential revert
         lastDragState.current = {
@@ -236,7 +255,7 @@ export function KanbanBoardView() {
               const currentOrder = [...cardsInThisList];
               if (currentOrder.length === 0) return;
 
-              const currentPosition = currentOrder.findIndex((id: any) => String(id) === draggedId);
+              const currentPosition = currentOrder.findIndex((id: any) => normalizeId(id) === draggedId);
               if (currentPosition === -1) return;
 
               // Correct array manipulation for drag-drop
@@ -262,14 +281,20 @@ export function KanbanBoardView() {
 
             if (issueCard) {
               // Optimistic Update for Issue
-              const destList = (lists || []).find(l => String(l._id) === destinationListId) ||
-                (board?.columns || []).find((c: any) => String(c._id || c.id) === destinationListId);
+              const destList = (lists || []).find(l => normalizeId(l._id) === destinationListId) ||
+                (board?.columns || []).find((c: any) => normalizeId(c._id || c.id) === destinationListId);
 
               let newStatus = issueCard.status;
               if (destList) {
                 const listName = typeof destList === 'string' ? destList : (destList.name || '');
                 if (listName) {
-                  newStatus = mapColumnToStatus(listName);
+                  const mappedStatus = mapColumnToStatus(listName);
+                  // Map to Title Case if needed (TaskStatusEnum)
+                  if (mappedStatus === 'to-do') newStatus = 'To Do';
+                  else if (mappedStatus === 'in-progress') newStatus = 'In Progress';
+                  else if (mappedStatus === 'in-review') newStatus = 'In Review';
+                  else if (mappedStatus === 'done') newStatus = 'Done';
+                  else newStatus = mappedStatus;
                 }
               }
 
@@ -280,7 +305,7 @@ export function KanbanBoardView() {
               queryClient.setQueryData(queryKey, (old: any[]) => {
                 if (!old) return [];
                 return old.map((item: any) => {
-                  if (String(item._id) === draggedId) {
+                  if (normalizeId(item._id) === draggedId) {
                     return {
                       ...item,
                       column: destinationListId,
@@ -322,7 +347,7 @@ export function KanbanBoardView() {
         }
       }
     },
-    [boardId, cards, issues, reorderCard, moveCard, reorderColumn, workspaceId, queryClient, lists, board, columnsToRender]
+    [boardId, cards, issues, reorderCard, moveCard, reorderColumn, workspaceId, queryClient, lists, board, columnsToRender, normalizeId]
   );
 
   if (isLoading) {

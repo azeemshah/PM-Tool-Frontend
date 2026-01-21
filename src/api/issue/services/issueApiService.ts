@@ -225,8 +225,9 @@ export const issueApiService = {
 		}));
 	},
 
-	async moveItemToColumn(itemId: string, columnId: string): Promise<void> {
-		await API.patch(`/items/${itemId}/move/column/${columnId}`);
+	async moveItemToColumn(itemId: string, columnId: string): Promise<any> {
+		const response = await API.patch(`/items/${itemId}/move/column/${columnId}`);
+		return response.data.data || response.data;
 	},
 
 

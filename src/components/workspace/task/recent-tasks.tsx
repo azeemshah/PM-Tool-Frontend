@@ -21,7 +21,7 @@ const RecentTasks = () => {
   // Icon mappings for status and priority
   const statusIcons = {
     [TaskStatusEnum.BACKLOG]: HelpCircle,
-    [TaskStatusEnum.TODO]: Circle,
+    [TaskStatusEnum.TO_DO]: Circle,
     [TaskStatusEnum.IN_PROGRESS]: Timer,
     [TaskStatusEnum.IN_REVIEW]: View,
     [TaskStatusEnum.DONE]: CheckCircle,

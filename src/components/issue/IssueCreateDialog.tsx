@@ -215,7 +215,7 @@ export function IssueCreateDialog({
         // Validate parent selections
         const statusMap: Record<string, ItemStatus> = {
             'backlog': 'Backlog',
-            'todo': 'Todo',
+            'todo': 'To Do',
             'in_progress': 'In Progress',
             'in_review': 'In Review',
             'done': 'Done'

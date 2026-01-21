@@ -1,6 +1,6 @@
 export const TaskStatusEnum = {
   BACKLOG: "Backlog",
-  TODO: "Todo",
+  TO_DO: "To Do",
   IN_PROGRESS: "In Progress",
   IN_REVIEW: "In Review",
   DONE: "Done",
