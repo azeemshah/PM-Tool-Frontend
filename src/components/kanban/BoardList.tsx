@@ -102,12 +102,13 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       const matchingIssues = issues.filter((issue: Issue) => {
         const issueColumnId = normalizeId((issue as any).column);
 
-        // A. If issue has a column and it matches this list, use that as source of truth
-        if (issueColumnId && issueColumnId === listIdNormLocal) {
-          return true;
+        // Use column ID as source of truth if it exists and matches this list
+        if (issueColumnId) {
+          return issueColumnId === listIdNormLocal;
         }
 
-        // B. Otherwise (no column or mismatched), fall back to logical status
+        // Only fall back to status matching if NO column is set
+        // This prevents duplicates when column ID is the primary location
         if (targetStatus) {
           const rawStatus = String(issue.status || '').toLowerCase();
           const normalizedIssueStatus = normalizeStr(rawStatus);

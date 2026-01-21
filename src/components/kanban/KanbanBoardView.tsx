@@ -320,7 +320,10 @@ export function KanbanBoardView() {
 
               try {
                 await issueApiService.moveItemToColumn(draggedId, destinationListId);
-                // Success
+                // Invalidate cache to ensure fresh data
+                queryClient.invalidateQueries({
+                  queryKey: ['all-tasks', 'kanban', workspaceId],
+                });
               } catch (error) {
                 console.error('Error moving issue card:', error);
                 setDragError('Failed to move card. Please try again.');

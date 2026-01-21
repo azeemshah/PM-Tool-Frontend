@@ -53,22 +53,30 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     }
   }, [boardColumns, sprint._id]);
 
-  // Mutation to update columns in backend
+  // Mutation to update columns in backend using Kanban API
   const updateColumnsMutation = useMutation({
-    mutationFn: (columns: string[]) => SprintApiService.updateSprintColumns(sprint._id, columns),
+    mutationFn: (columns: string[]) => {
+      if (!boardId) {
+        throw new Error('Board ID not found');
+      }
+      return KanbanApiService.reorderColumnsInBoard(boardId, columns);
+    },
     onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ['kanban-board-lists', boardId],
+      });
       queryClient.invalidateQueries({
         queryKey: ['workspace-sprints'],
       });
       toast({
         title: 'Success',
-        description: 'Columns updated successfully',
+        description: 'Columns reordered successfully',
       });
     },
     onError: () => {
       toast({
         title: 'Error',
-        description: 'Failed to update columns',
+        description: 'Failed to reorder columns',
         variant: 'destructive',
       });
     },
@@ -170,11 +178,20 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
     // Handle column reordering
     if (type === 'column') {
+      if (!boardId) {
+        toast({
+          title: 'Error',
+          description: 'Board ID not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       const newColumnOrder = [...columnOrder];
       const [movedColumn] = newColumnOrder.splice(source.index, 1);
       newColumnOrder.splice(destination.index, 0, movedColumn);
       setColumnOrder(newColumnOrder);
-      // Persist to backend
+      // Persist to backend using Kanban API
       updateColumnsMutation.mutate(newColumnOrder);
       return;
     }
@@ -189,20 +206,17 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         return;
       }
 
-      // Use the column name as the status
-      const newStatus = targetColumn.name;
-      
       console.log('Moving item to column:', { 
         itemId: draggableId, 
         columnId: destination.droppableId, 
-        columnName: newStatus 
+        columnName: targetColumn.name 
       });
 
-      // Update work item status and column
+      // Update work item by moving to column (backend will normalize status)
       updateWorkItemMutation.mutate({
         itemId: draggableId,
         data: { 
-          status: newStatus,
+          columnId: destination.droppableId,
         },
       });
     }
@@ -393,9 +407,9 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                     const column = boardColumns.find((col: any) => col._id === columnId);
                     const title = column?.name || columnId;
 
-                    // Filter work items for this column by matching status to column name
+                    // Filter work items for this column by matching column ID
                     const workItems = sprintWorkItems.filter((item: any) =>
-                      item.status === title
+                      item.column === columnId || item.column?._id === columnId
                     );
 
                     return (
