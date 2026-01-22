@@ -3,7 +3,7 @@ import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { CalendarIcon, Loader, Trash2, Download } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Form,
   FormControl,
@@ -32,7 +32,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { issueApiService } from "@/api/issue/services/issueApiService";
-import { deleteTaskAttachment } from "@/lib/api";
+import { deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { TaskType } from "@/types/api.type";
@@ -48,10 +48,12 @@ const API_PRIORITY_MAP = {
   HIGH: "high",
 } as const;
 
+type AttachmentUI = { _id: string; url: string; name: string };
+
 export default function EditTaskForm({ task, onClose }: { task: TaskType; onClose: () => void }) {
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
-  const [attachments, setAttachments] = useState<string[]>((task as any)?.attachments ?? []);
+  const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
   const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
 
   const { data: kanbanBoards = [] } = useGetKanbanBoards(workspaceId);
@@ -127,6 +129,18 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     },
   });
 
+  useEffect(() => {
+    const loadAttachments = async () => {
+      try {
+        const items = await getWorkItemAttachments(String(task._id));
+        setAttachments(items);
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadAttachments();
+  }, [task._id]);
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
 
@@ -190,22 +204,50 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     });
   };
 
-  const handleAttachmentUploaded = (url: string) => {
-    setAttachments((prev) => [...prev, url]);
-    toast({
-      title: "Success",
-      description: "Attachment uploaded successfully",
-      variant: "success",
-    });
+  const handleAttachmentUploaded = async (url: string) => {
+    try {
+      if (url) {
+        const name = url.split('/').pop() || 'attachment';
+        setAttachments((prev) => [...prev, { _id: `temp-${Date.now()}`, url, name }]);
+      }
+      const items = await getWorkItemAttachments(String(task._id));
+      if (Array.isArray(items) && items.length > 0) {
+        setAttachments(items);
+      }
+      toast({
+        title: "Success",
+        description: "Attachment uploaded successfully",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load attachments after upload",
+        variant: "destructive",
+      });
+    }
   };
 
-  const handleDeleteAttachment = async (url: string) => {
+
+  const handleDeleteAttachment = async (att: AttachmentUI) => {
     if (!confirm("Are you sure you want to delete this attachment?")) return;
 
-    setDeletingAttachment(url);
+    setDeletingAttachment(att._id || att.url);
     try {
-      await deleteTaskAttachment({ taskId: task._id, url });
-      setAttachments((prev) => prev.filter((attachment) => attachment !== url));
+      let targetId = att._id;
+      if (!targetId || targetId.startsWith('temp-')) {
+        const items = await getWorkItemAttachments(String(task._id));
+        const match = items.find((x) => x.url === att.url || x.name === att.name);
+        targetId = match?._id;
+      }
+      if (!targetId) {
+        await deleteAttachmentByUrl(att.url);
+        setAttachments((prev) => prev.filter((a) => a.url !== att.url));
+      } else {
+        await deleteAttachmentById(targetId);
+        setAttachments((prev) => prev.filter((a) => a._id !== att._id && a.url !== att.url));
+      }
       toast({
         title: "Success",
         description: "Attachment deleted successfully",
@@ -339,15 +381,29 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                     {attachments.length} attachment{attachments.length !== 1 ? "s" : ""}
                   </p>
                   <div className="space-y-2 max-h-48 overflow-y-auto">
-                    {attachments.map((url, index) => {
-                      const fileName = url.split("/").pop() || `Attachment ${index + 1}`;
+                    {attachments.map((att, index) => {
+                      const fileNameRaw = att.name || att.url.split("/").pop() || `Attachment ${index + 1}`;
+                      const fileName = (() => {
+                        const parts = String(fileNameRaw).split("-");
+                        return parts.length >= 3 ? parts.slice(2).join("-") : fileNameRaw;
+                      })();
+                      const apiBase: string | undefined = import.meta.env.VITE_API_BASE_URL as any;
+                      const apiOrigin = (() => {
+                        try {
+                          return apiBase ? new URL(apiBase).origin : window.location.origin;
+                        } catch {
+                          return window.location.origin;
+                        }
+                      })();
+                      const absoluteUrl = att.url.startsWith("http") ? att.url : `${apiOrigin}${att.url}`;
                       return (
                         <div
-                          key={url}
-                          className="flex items-center justify-between p-2 bg-gray-100 rounded-md"
+                          key={att._id}
+                          className="flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer"
+                          onClick={() => window.open(absoluteUrl, '_blank', 'noopener')}
                         >
                           <a
-                            href={url}
+                            href={absoluteUrl}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
@@ -357,12 +413,12 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                           </a>
                           <button
                             type="button"
-                            onClick={() => handleDeleteAttachment(url)}
-                            disabled={deletingAttachment === url}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att); }}
+                            disabled={deletingAttachment === att._id || deletingAttachment === att.url}
                             className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
                             title="Delete attachment"
                           >
-                            {deletingAttachment === url ? (
+                            {deletingAttachment === att._id || deletingAttachment === att.url ? (
                               <Loader className="h-4 w-4 animate-spin" />
                             ) : (
                               <Trash2 className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import {
     Dialog,
@@ -18,7 +18,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Trash2, Download } from 'lucide-react';
 import { IssueTypeSelector } from './IssueTypeSelector';
 import { ParentSelector } from './ParentSelector';
 import { IssueType, IssuePriority, ItemStatus, ItemType, ItemPriority, CreateItemDto, TaskType } from '@/api/issue/types';
@@ -31,6 +31,7 @@ import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
+import { uploadWorkItemAttachment } from '@/lib/api';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -61,6 +62,9 @@ export function IssueCreateDialog({
     const [reporterId, setReporterId] = useState('');
     const [dueDate, setDueDate] = useState<Date | undefined>();
     const [status, setStatus] = useState('');
+    type LocalAttachment = { file: File; url: string; name: string };
+    const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const ISSUE_STATUSES = [ 'todo', 'in_progress', 'in_review', 'done'];
 
@@ -168,6 +172,9 @@ export function IssueCreateDialog({
             setReporterId('');
             setDueDate(undefined);
             setStatus('');
+            // revoke object URLs
+            attachments.forEach(att => URL.revokeObjectURL(att.url));
+            setAttachments([]);
         } else {
             // If a default type is provided and no type is selected yet, apply it
             if (defaultType && !issueType) {
@@ -243,7 +250,22 @@ export function IssueCreateDialog({
                     status: status ? statusMap[status] : undefined,
                 },
                 {
-                    onSuccess: () => {
+                    onSuccess: async (created: any) => {
+                        if (attachments.length > 0 && created?._id) {
+                            for (const att of attachments) {
+                                try {
+                                    await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                } catch (e: any) {
+                                    toast({
+                                        title: 'Error',
+                                        description: e?.response?.data?.message || 'Failed to upload attachment',
+                                        variant: 'destructive',
+                                    });
+                                }
+                            }
+                            attachments.forEach(att => URL.revokeObjectURL(att.url));
+                            setAttachments([]);
+                        }
                         refetchIssues();
                         onOpenChange(false);
                         onSuccess?.();
@@ -268,7 +290,22 @@ export function IssueCreateDialog({
             createItem(
                 { data, type: issueType as ItemType },
                 {
-                    onSuccess: () => {
+                    onSuccess: async (created: any) => {
+                        if (attachments.length > 0 && created?._id) {
+                            for (const att of attachments) {
+                                try {
+                                    await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                } catch (e: any) {
+                                    toast({
+                                        title: 'Error',
+                                        description: e?.response?.data?.message || 'Failed to upload attachment',
+                                        variant: 'destructive',
+                                    });
+                                }
+                            }
+                            attachments.forEach(att => URL.revokeObjectURL(att.url));
+                            setAttachments([]);
+                        }
                         refetchIssues();
                         onOpenChange(false);
                         onSuccess?.();
@@ -469,6 +506,87 @@ export function IssueCreateDialog({
                                 </div>
                             </SelectContent>
                         </Select>
+                    </div>
+                    
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Attachments</label>
+                        <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length > 0) {
+                                    const entries = files.map((f) => ({
+                                        file: f,
+                                        url: URL.createObjectURL(f),
+                                        name: f.name
+                                    }));
+                                    setAttachments((prev) => [...prev, ...entries]);
+                                }
+                                if (e.target) e.target.value = '';
+                            }}
+                            accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                        />
+                        <div className="flex items-center gap-2">
+                            <Button
+                                variant="outline"
+                                type="button"
+                                disabled={isLoading}
+                                onClick={() => fileInputRef.current?.click()}
+                            >
+                                Upload
+                            </Button>
+                            {attachments.length > 0 && (
+                                <span className="text-xs text-gray-600">
+                                    {attachments.length} file{attachments.length > 1 ? 's' : ''} selected
+                                </span>
+                            )}
+                        </div>
+                        {attachments.length > 0 ? (
+                            <div className="text-xs text-gray-500">
+                                {attachments.map((att, idx) => {
+                                    const fileName = att.name || `Attachment ${idx + 1}`;
+                                    return (
+                                        <div
+                                            key={`${att.name}-${idx}`}
+                                            className="flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer"
+                                            onClick={() => window.open(att.url, '_blank', 'noopener')}
+                                        >
+                                            <a
+                                                href={att.url}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
+                                            >
+                                                <Download className="h-4 w-4 flex-shrink-0" />
+                                                <span className="truncate text-sm">{fileName}</span>
+                                            </a>
+                                            <Button
+                                                variant="ghost"
+                                                size="sm"
+                                                type="button"
+                                                className="text-red-600"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setAttachments((prev) => {
+                                                        const updated = [...prev];
+                                                        const removed = updated.splice(idx, 1)[0];
+                                                        if (removed?.url) URL.revokeObjectURL(removed.url);
+                                                        return updated;
+                                                    });
+                                                }}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        ) : (
+                            <p className="text-sm text-gray-500">No attachments yet</p>
+                        )}
                     </div>
                 </div>
 

@@ -694,7 +694,38 @@ export const uploadTaskAttachment = async ({
   return response.data;
 };
 
-// Delete attachment from task
+// Upload attachments for issues
+export const uploadIssueAttachment = async ({
+  issueId,
+  file,
+}: {
+  issueId: string;
+  file: File;
+}) => {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await API.post(`/issues/${issueId}/attachments`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
+// Upload attachment via Kanban files module (workItem-based)
+export const uploadWorkItemAttachment = async ({
+  workItemId,
+  file,
+}: {
+  workItemId: string;
+  file: File;
+}) => {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await API.post(`/kanban/files/upload/${workItemId}`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+    // Delete attachment from task
 export const deleteTaskAttachment = async ({ taskId, url }: { taskId: string; url: string }) => {
   const response = await API.delete(`/projects/tasks/${taskId}/attachments?url=${encodeURIComponent(url)}`);
   return response.data;
@@ -703,6 +734,36 @@ export const deleteTaskAttachment = async ({ taskId, url }: { taskId: string; ur
 // Delete attachment from bug
 export const deleteBugAttachment = async ({ bugId, url }: { bugId: string; url: string }) => {
   const response = await API.delete(`/projects/bugs/${bugId}/attachments?url=${encodeURIComponent(url)}`);
+  return response.data;
+};
+
+// -------- Kanban Attachments (WorkItem-based) --------
+export const getAllAttachments = async () => {
+  const response = await API.get(`/kanban/files`);
+  return response.data?.data || response.data || [];
+};
+
+export const getWorkItemAttachments = async (workItemId: string) => {
+  const all = await getAllAttachments();
+  return (all as any[]).filter((a) => {
+    const w = (a as any).workItem;
+    if (!w) return false;
+    if (typeof w === 'string') return String(w) === String(workItemId);
+    return String(w?._id) === String(workItemId);
+  }).map((a) => ({
+    _id: a._id,
+    url: a.fileUrl,
+    name: a.fileName,
+  }));
+};
+
+export const deleteAttachmentById = async (attachmentId: string) => {
+  const response = await API.delete(`/kanban/files/${attachmentId}`);
+  return response.data;
+};
+
+export const deleteAttachmentByUrl = async (url: string) => {
+  const response = await API.delete(`/kanban/files/by-url?url=${encodeURIComponent(url)}`);
   return response.data;
 };
 
