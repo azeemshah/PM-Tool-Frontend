@@ -31,6 +31,8 @@ import { toast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { CreateItemDto, ItemPriority, ItemType } from '@/api/issue/types';
+import { ISSUE_TYPES_LIST } from '@/components/issue/constants';
+import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -170,10 +172,14 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Task">Task</SelectItem>
-                        <SelectItem value="Bug">Bug</SelectItem>
-                        <SelectItem value="Story">Story</SelectItem>
-                        <SelectItem value="Epic">Epic</SelectItem>
+                        {ISSUE_TYPES_LIST.filter(t => t.value !== 'subtask').map((type) => (
+                          <SelectItem key={type.value} value={type.label}>
+                            <div className="flex items-center gap-2">
+                              <IssueTypeIcon type={type.value} />
+                              <span>{type.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -149,13 +149,20 @@ const TaskTable: FC = () => {
   const bulkDeleteMutation = useMutation({
     mutationFn: bulkDeleteTasksMutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-      queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-      toast({ title: "Success", description: `${selectedTaskIds.length} task(s) deleted successfully`, variant: "success" });
-      setSelectedTaskIds([]);
       setIsDeleteAlertOpen(false);
+      setSelectedTaskIds([]);
+
+      setTimeout(() => {
+        // Manual cleanup to prevent UI freeze
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
+
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+        toast({ title: "Success", description: "Tasks deleted successfully", variant: "success" });
+      }, 300);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to delete tasks", variant: "destructive" });
@@ -169,51 +176,57 @@ const TaskTable: FC = () => {
       _,
       variables: { ids: string[]; data: { status?: string } }
     ) => {
-      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-      queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+      setTimeout(async () => {
+        // Manual cleanup to prevent UI freeze
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
 
-      const ids = variables?.ids || [];
-      const newStatusLabel = variables?.data?.status;
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
 
-      if (workspaceId && ids.length > 0 && newStatusLabel) {
-        const issueStatus = mapColumnToStatus(newStatusLabel);
-        const targetColumnId = findColumnIdForStatus(issueStatus);
-        if (targetColumnId) {
-          try {
-            const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
-            const idSet = new Set(ids.map(String));
-            queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
-              if (!old) return old;
-              return old.map((item: any) => {
-                if (idSet.has(String(item._id))) {
-                  return {
-                    ...item,
-                    column: targetColumnId,
-                    status: newStatusLabel,
-                  };
-                }
-                return item;
+        const ids = variables?.ids || [];
+        const newStatusLabel = variables?.data?.status;
+
+        if (workspaceId && ids.length > 0 && newStatusLabel) {
+          const issueStatus = mapColumnToStatus(newStatusLabel);
+          const targetColumnId = findColumnIdForStatus(issueStatus);
+          if (targetColumnId) {
+            try {
+              const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
+              const idSet = new Set(ids.map(String));
+              queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
+                if (!old) return old;
+                return old.map((item: any) => {
+                  if (idSet.has(String(item._id))) {
+                    return {
+                      ...item,
+                      column: targetColumnId,
+                      status: newStatusLabel,
+                    };
+                  }
+                  return item;
+                });
               });
-            });
-            await Promise.all(
-              ids.map((id) => issueApiService.moveItemToColumn(id, targetColumnId))
-            );
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-          } catch (error) {
-            console.error("Failed to move items to column after bulk update:", error);
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+              await Promise.all(
+                ids.map((id) => issueApiService.moveItemToColumn(id, targetColumnId))
+              );
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            } catch (error) {
+              console.error("Failed to move items to column after bulk update:", error);
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            }
           }
         }
-      }
 
-      toast({
-        title: "Success",
-        description: `${selectedTaskIds.length} task(s) updated successfully`,
-        variant: "success",
-      });
-      setSelectedTaskIds([]);
+        toast({
+          title: "Success",
+          description: `${selectedTaskIds.length} task(s) updated successfully`,
+          variant: "success",
+        });
+        setSelectedTaskIds([]);
+      }, 300);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to update tasks", variant: "destructive" });

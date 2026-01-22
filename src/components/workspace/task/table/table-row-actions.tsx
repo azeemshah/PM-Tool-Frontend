@@ -41,12 +41,19 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const handleConfirm = () => {
     mutate(taskId, {
       onSuccess: () => {
-        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-        toast({ title: "Success", description: `Task ${taskCode} deleted successfully`, variant: "success" });
-        setTimeout(() => setOpenDialog(false), 100);
+        setOpenDialog(false);
+        
+        setTimeout(() => {
+           // Manual cleanup to prevent UI freeze
+           document.body.style.pointerEvents = "";
+           document.body.style.overflow = "";
+
+          queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+          toast({ title: "Success", description: `Task ${taskCode} deleted successfully`, variant: "success" });
+        }, 300);
       },
       onError: (error: any) => {
         toast({ title: "Error", description: error.message || "Failed to delete task", variant: "destructive" });
