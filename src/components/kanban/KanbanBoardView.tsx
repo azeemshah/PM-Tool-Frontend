@@ -16,6 +16,7 @@ import { BoardList } from './BoardList';
 import { BoardCardDialog } from './dialogs/BoardCardDialog';
 import { IssueCreateDialog } from '@/components/issue';
 import useWorkspaceId from '@/hooks/use-workspace-id';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
 
 export function KanbanBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
@@ -33,6 +34,10 @@ export function KanbanBoardView() {
   } = useKanbanAppContext();
 
   const workspaceId = workspaceIdParam || '';
+  const { scrollableRef, setDragging } = useAutoScroll({
+    scrollThreshold: 50,
+    scrollSpeed: 8,
+  });
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
   const { data: workspaceItems = [] } = useQuery({
@@ -175,6 +180,7 @@ export function KanbanBoardView() {
 
   const handleDragEnd = useCallback(
     async (result: DropResult) => {
+      setDragging(false);
       const { source, destination, draggableId, type } = result;
 
       // If dropped outside a valid droppable
@@ -347,7 +353,7 @@ export function KanbanBoardView() {
         }
       }
     },
-    [boardId, cards, issues, reorderCard, moveCard, reorderColumn, workspaceId, queryClient, lists, board, columnsToRender, normalizeId]
+    [boardId, cards, issues, reorderCard, moveCard, reorderColumn, workspaceId, queryClient, lists, board, columnsToRender, normalizeId, setDragging]
   );
 
   if (isLoading) {
@@ -421,9 +427,15 @@ export function KanbanBoardView() {
         </div>
       )}
 
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext 
+        onDragEnd={handleDragEnd}
+        onBeforeDragStart={() => setDragging(true)}
+      >
         <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-x-auto">
+          <div 
+            ref={scrollableRef}
+            className="h-full overflow-x-auto"
+          >
             <Droppable
               droppableId="board"
               type="list"

@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Calendar, Target, Users, TrendingUp, Plus } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +14,7 @@ import WorkItemCard from './WorkItemCard';
 import SprintColumn from './SprintColumn';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { toast } from '@/hooks/use-toast';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
 
 interface SprintBoardProps {
   sprint: Sprint;
@@ -26,6 +26,10 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const [columnOrder, setColumnOrder] = useState<string[]>(sprint.columns || ['todo', 'in-progress', 'done']);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
+  const { scrollableRef, setDragging } = useAutoScroll({
+    scrollThreshold: 50,
+    scrollSpeed: 8,
+  });
 
   // Fetch workspace boards to get the board ID
   const { data: workspaceBoards = [] } = useQuery({
@@ -158,6 +162,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   };
 
   const handleDragEnd = (result: DropResult) => {
+    setDragging(false);
     const { destination, source, draggableId, type } = result;
 
     // If no destination or dropped in same position
@@ -373,9 +378,15 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       </div>
 
       {/* Sprint Board Columns */}
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext 
+        onDragEnd={handleDragEnd}
+        onBeforeDragStart={() => setDragging(true)}
+      >
         <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-x-auto">
+          <div 
+            ref={scrollableRef}
+            className="h-full overflow-x-auto"
+          >
             <Droppable
               droppableId="sprint-columns"
               type="column"
