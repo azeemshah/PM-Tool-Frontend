@@ -129,34 +129,42 @@ export default function CreateTaskForm(props: {
 
       mutateIndependentTask(payload, {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["tasks", "all"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["allTasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["issues", "workspace", workspaceId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["all-tasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["recent-tasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["workspace-analytics"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["project-analytics"],
-          });
-
-          toast({
-            title: "Success",
-            description: "Task created successfully",
-            variant: "success",
-          });
           onClose();
+          
+          // Delay invalidation to allow dialog to close properly and prevent UI freeze
+          setTimeout(() => {
+            // Manual cleanup to prevent UI freeze
+            document.body.style.pointerEvents = "";
+            document.body.style.overflow = "";
+
+            queryClient.invalidateQueries({
+              queryKey: ["tasks", "all"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["allTasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["issues", "workspace", workspaceId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["all-tasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["recent-tasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["workspace-analytics"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["project-analytics"],
+            });
+
+            toast({
+              title: "Success",
+              description: "Task created successfully",
+              variant: "success",
+            });
+          }, 300);
         },
         onError: (error) => {
           toast({
