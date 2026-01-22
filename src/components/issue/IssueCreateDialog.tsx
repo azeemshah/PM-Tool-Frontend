@@ -31,6 +31,7 @@ import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -62,7 +63,7 @@ export function IssueCreateDialog({
     const [dueDate, setDueDate] = useState<Date | undefined>();
     const [status, setStatus] = useState('');
 
-    const ISSUE_STATUSES = [ 'todo', 'in_progress', 'in_review', 'done'];
+    const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
 
     // Queries and mutations
     const membersQuery = useGetWorkspaceMembers(workspaceId);
@@ -443,9 +444,9 @@ export function IssueCreateDialog({
                                 <SelectValue placeholder="Select a status" />
                             </SelectTrigger>
                             <SelectContent>
-                                {ISSUE_STATUSES.map((s) => (
-                                    <SelectItem key={s} value={s}>
-                                        {s.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                {dynamicStatuses.map((s) => (
+                                    <SelectItem key={s.value} value={s.value}>
+                                        {s.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

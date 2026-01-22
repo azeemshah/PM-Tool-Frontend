@@ -119,7 +119,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
           else if (normalizedIssueStatus === 'inreview' || normalizedIssueStatus === 'review') canonicalIssueStatus = 'in-review';
           else if (normalizedIssueStatus === 'done') canonicalIssueStatus = 'done';
           else if (normalizedIssueStatus === 'blocked') canonicalIssueStatus = 'blocked';
-          else canonicalIssueStatus = 'to-do';
+          else canonicalIssueStatus = normalizedIssueStatus;
 
           const issueStatusNormalized = normalizeStr(canonicalIssueStatus);
           const targetStatusNormalized = normalizeStr(targetStatus);

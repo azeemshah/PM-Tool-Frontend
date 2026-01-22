@@ -44,7 +44,7 @@ const RecentTasks = () => {
         console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
         const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
         console.log('[recent-tasks] Tasks response:', { count: tasks?.length, data: tasks });
-        
+
         if (!tasks || tasks.length === 0) {
           console.log('[recent-tasks] No tasks found');
           return { tasks: [] } as any;
@@ -56,7 +56,7 @@ const RecentTasks = () => {
           const dateB = new Date(b.createdAt || 0).getTime();
           return dateB - dateA;
         }).slice(0, 5);
-        
+
         console.log('[recent-tasks] Recent tasks (after sort/slice):', recent.length);
         return { tasks: recent } as any;
       } catch (err: any) {
@@ -120,10 +120,25 @@ const RecentTasks = () => {
                 <div className="text-sm font-medium ">
                   {(() => {
                     const statusKey = formatStatusToEnum(task.status) as TaskStatusEnumType;
-                    const IconComponent = statusIcons[TaskStatusEnum[statusKey]];
+                    // Check if the status key exists in the enum
+                    // We cast to any because we are checking if the key exists dynamically
+                    const enumValue = (TaskStatusEnum as any)[statusKey];
+
+                    if (!enumValue) {
+                      return (
+                        <Badge
+                          variant="outline"
+                          className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 text-gray-700"
+                        >
+                          <span>{task.status}</span>
+                        </Badge>
+                      );
+                    }
+
+                    const IconComponent = statusIcons[enumValue as keyof typeof statusIcons];
                     return (
                       <Badge
-                        variant={TaskStatusEnum[statusKey]}
+                        variant={enumValue}
                         className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
                       >
                         {IconComponent && <IconComponent className="h-4 w-4 rounded-full text-inherit" />}

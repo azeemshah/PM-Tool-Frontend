@@ -71,10 +71,15 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     value: member.userId?._id || "",
   }));
 
-  const statusOptions = Object.values(TaskStatusEnum).map((value) => ({
-    label: value,
-    value,
-  }));
+  const statusOptions = boardLists && boardLists.length > 0
+    ? boardLists.map((list: any) => ({
+        label: list.name,
+        value: list.name,
+      }))
+    : Object.values(TaskStatusEnum).map((value) => ({
+        label: value,
+        value,
+      }));
 
   const priorityOptions = Object.keys(TaskPriorityEnum).map((key) => ({
     label: key.charAt(0) + key.slice(1).toLowerCase(),
