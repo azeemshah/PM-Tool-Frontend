@@ -97,6 +97,8 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
 
       if (!targetStatus) {
         if (listNameNormalized === 'new' || listNameNormalized === 'open') targetStatus = 'to-do';
+        // Fallback for custom columns: use the list name as the target status
+        else targetStatus = listNameNormalized;
       }
 
       const matchingIssues = issues.filter((issue: Issue) => {

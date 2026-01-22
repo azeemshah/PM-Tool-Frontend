@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useGetWorkspaceSprints } from '@/api/scrumboard/hooks/sprints/useGetWorkspaceSprints';
 import { ScrumboardProvider } from '@/contexts/ScrumboardContext';
@@ -10,12 +9,21 @@ import SprintBoard from './components/SprintBoard';
 const ScrumBoardView = () => {
   const workspaceId = useWorkspaceId();
   const { sprintId } = useParams<{ sprintId?: string }>();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const { data: sprints, isLoading } = useGetWorkspaceSprints(workspaceId);
 
-  const [activeSprintId, setActiveSprintId] = useState<string | null>(
-    sprintId || null
-  );
+  const activeSprintId = searchParams.get('sprint') || sprintId || null;
+
+  const handleSprintSelect = (id: string | null) => {
+    if (id) {
+      setSearchParams({ sprint: id });
+    } else {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.delete('sprint');
+      setSearchParams(newParams);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -39,13 +47,13 @@ const ScrumBoardView = () => {
         <SprintList
           sprints={sprints || []}
           activeSprintId={activeSprintId}
-          onSprintSelect={setActiveSprintId}
+          onSprintSelect={handleSprintSelect}
         />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col overflow-hidden">
           {activeSprint ? (
-            <SprintBoard sprint={activeSprint} />
+            <SprintBoard key={activeSprint._id} sprint={activeSprint} />
           ) : (
             <BacklogPanel workspaceId={workspaceId} />
           )}

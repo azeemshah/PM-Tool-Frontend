@@ -241,7 +241,7 @@ export function IssueCreateDialog({
                     reporter: reporterId,
                     priority: mappedPriority,
                     dueDate: dueDate?.toISOString(),
-                    status: status ? statusMap[status] : undefined,
+                    status: status ? (statusMap[status] || status) : undefined,
                 },
                 {
                     onSuccess: () => {
@@ -262,7 +262,7 @@ export function IssueCreateDialog({
                 reporter: reporterId,
                 dueDate: dueDate?.toISOString(),
                 workspace: workspaceId,
-                status: status ? statusMap[status] : undefined,
+                status: status ? (statusMap[status] || status) : undefined,
                 parent: epicId || undefined,
             };
 
@@ -296,7 +296,7 @@ export function IssueCreateDialog({
                 reporter: reporterId,
                 dueDate: dueDate?.toISOString(),
                 workspace: workspaceId,
-                status: status ? statusMap[status] : undefined,
+                status: status ? (statusMap[status] || status) : undefined,
                 parent: parentIssueId,
             };
 

@@ -73,13 +73,13 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
   const statusOptions = boardLists && boardLists.length > 0
     ? boardLists.map((list: any) => ({
-        label: list.name,
-        value: list.name,
-      }))
+      label: list.name,
+      value: list.name,
+    }))
     : Object.values(TaskStatusEnum).map((value) => ({
-        label: value,
-        value,
-      }));
+      label: value,
+      value,
+    }));
 
   const priorityOptions = Object.keys(TaskPriorityEnum).map((key) => ({
     label: key.charAt(0) + key.slice(1).toLowerCase(),
@@ -114,7 +114,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   const formSchema = z.object({
     title: z.string().trim().min(1, { message: "Title is required" }),
     description: z.string().trim(),
-    status: z.enum(Object.values(TaskStatusEnum) as [string, ...string[]]),
+    status: z.string().min(1, { message: "Status is required" }),
     priority: z.enum(Object.values(TaskPriorityEnum) as [string, ...string[]]),
     assignedTo: z.string().trim().optional(),
     dueDate: z.date().optional(),

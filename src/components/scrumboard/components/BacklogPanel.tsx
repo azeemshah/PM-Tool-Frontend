@@ -55,7 +55,7 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
     mutationFn: ({ sprintId, itemIds }: { sprintId: string; itemIds: string[] }) =>
       SprintApiService.addWorkItemsToSprint(sprintId, itemIds),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workspace-sprints'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['workspace-items'] });
       // Also invalidate board cards just in case
       queryClient.invalidateQueries({ queryKey: ['board-cards'] });
