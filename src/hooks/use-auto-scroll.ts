@@ -12,7 +12,7 @@ export function useAutoScroll(config: ScrollConfig = {}) {
   } = config;
 
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const scrollableRef = useRef<HTMLElement | null>(null);
+  const scrollableRef = useRef<HTMLDivElement | null>(null);
   const isDraggingRef = useRef(false);
   const lastScrollDirectionRef = useRef<'left' | 'right' | null>(null);
 

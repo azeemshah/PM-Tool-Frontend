@@ -98,6 +98,28 @@ export function BoardCardDialog() {
     return null;
   }
 
+  const mapStatusForSprint = (value: string | null): string | undefined => {
+    if (!value) return undefined;
+    const normalized = value.toLowerCase().replace(/\s+/g, '_');
+    switch (normalized) {
+      case 'backlog':
+      case 'todo':
+      case 'to-do':
+        return 'To Do';
+      case 'in_progress':
+      case 'in-progress':
+        return 'In Progress';
+      case 'in_review':
+      case 'in-review':
+      case 'review':
+        return 'In Review';
+      case 'done':
+        return 'Done';
+      default:
+        return value;
+    }
+  };
+
   const mapStatusForApi = (value: string | null): string | undefined => {
     if (!value) return undefined;
     const normalized = value.toLowerCase().replace(/\s+/g, '_');
@@ -178,6 +200,34 @@ export function BoardCardDialog() {
             title: 'Success',
             description: 'Issue updated successfully',
           });
+          if (workspaceId) {
+            const sprintKey = ['workspace-items', workspaceId];
+            const mappedSprintStatus = mapStatusForSprint(updatedIssue.status || '');
+            queryClient.setQueryData(sprintKey, (old: any[] | undefined) => {
+              if (!old) return old;
+              return old.map((item: any) => {
+                if (String(item._id) === issueIdStr) {
+                  return {
+                    ...item,
+                    title: updatedIssue.title,
+                    description: updatedIssue.description || '',
+                    priority: updatedIssue.priority || item.priority,
+                    status: mappedSprintStatus ?? item.status,
+                    assignedTo: updatedIssue.assignee
+                      ? {
+                          _id: (updatedIssue.assignee as any)._id,
+                          name: (updatedIssue.assignee as any).name,
+                          profilePicture: (updatedIssue.assignee as any).profilePicture ?? null,
+                        }
+                      : null,
+                    dueDate: updatedIssue.dueDate || item.dueDate || null,
+                  };
+                }
+                return item;
+              });
+            });
+            queryClient.invalidateQueries({ queryKey: sprintKey });
+          }
           if (targetColumnId && workspaceId) {
             try {
               const queryKey = ['all-tasks', 'kanban', workspaceId || 'unknown'];

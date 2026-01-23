@@ -1,6 +1,6 @@
 import React from 'react';
 import { KanbanCard } from '@/api/kanban/types';
-import { Issue } from '@/api/issue/types';
+import { Issue, TaskType } from '@/api/issue/types';
 import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
@@ -12,10 +12,11 @@ import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 
 interface WorkItemCardProps {
-  card: KanbanCard | Issue;
+  card: KanbanCard | Issue | TaskType;
+  onClick?: () => void;
 }
 
-const WorkItemCard: React.FC<WorkItemCardProps> = ({ card }) => {
+const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
@@ -69,7 +70,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card }) => {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
+    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={onClick}>
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -103,6 +104,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card }) => {
             );
           })()}
         </div>
+        
       </div>
 
       {/* Labels */}
@@ -198,7 +200,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card }) => {
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={issue.assignee?.email || ''} alt={issue.assignee?.name} />
+                  <AvatarImage src={(issue.assignee as any)?.profilePicture || ''} alt={issue.assignee?.name} />
                   <AvatarFallback className={getAvatarColor(issue.assignee?.name || '')}>
                     {getAvatarFallbackText(issue.assignee?.name || '')}
                   </AvatarFallback>

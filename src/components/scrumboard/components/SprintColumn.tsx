@@ -3,16 +3,17 @@ import { Droppable, Draggable } from '@hello-pangea/dnd';
 import { Plus, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { KanbanCard } from '@/api/kanban/types';
-import { Issue } from '@/api/issue/types';
+import { Issue, TaskType } from '@/api/issue/types';
 import WorkItemCard from './WorkItemCard';
 
 interface SprintColumnProps {
   title: string;
-  workItems: KanbanCard[];
+  workItems: TaskType[];
   columnId: string;
   sprintId: string;
   onDelete?: (columnId: string) => void;
   isDeleting?: boolean;
+  onCardClick?: (card: KanbanCard | Issue | TaskType) => void;
 }
 
 const SprintColumn: React.FC<SprintColumnProps> = ({
@@ -20,6 +21,8 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
   workItems,
   columnId,
   sprintId,
+  onDelete,
+  onCardClick,
 }) => {
   return (
     <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col max-h-full">
@@ -29,6 +32,17 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
           <h3 className="font-semibold text-sm text-gray-900">{title}</h3>
           <p className="text-xs text-gray-500 mt-1">{workItems.length || 0} items</p>
         </div>
+        <button
+          className="text-red-500 hover:text-red-700"
+          onClick={() => {
+            const ok = confirm('Are You Sure?');
+            if (!ok) return;
+            onDelete && onDelete(columnId);
+          }}
+          title="Delete Column"
+        >
+          <Trash2 size={16} />
+        </button>
       </div>
 
       {/* Cards */}
@@ -47,7 +61,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
               }`}
             >
               {workItems.length > 0 ? (
-                workItems.map((workItem, index) => {
+                workItems.map((workItem: TaskType, index: number) => {
                   const cardIdSafe = workItem._id || `card-${index}-${columnId}`;
 
                   return (
@@ -60,6 +74,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
                         >
                           <WorkItemCard
                             card={workItem}
+                            onClick={() => onCardClick && onCardClick(workItem as any)}
                           />
                         </div>
                       )}

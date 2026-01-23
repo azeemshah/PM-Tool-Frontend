@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Calendar, Target, Users, TrendingUp, Plus } from 'lucide-react';
+import { Calendar, Target, Plus } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -9,12 +9,15 @@ import { Sprint, SprintStats } from '@/api/scrumboard/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { SprintApiService } from '@/api/scrumboard/services/SprintApiService';
-import { KanbanApiService } from '@/api/kanban/services/KanbanApiService';
 import WorkItemCard from './WorkItemCard';
 import SprintColumn from './SprintColumn';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { toast } from '@/hooks/use-toast';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
+import { BoardCardDialog } from '@/components/kanban/dialogs/BoardCardDialog';
+import { KanbanCard } from '@/api/kanban/types';
+import { Issue, UpdateIssueDTO, TaskType } from '@/api/issue/types';
 
 interface SprintBoardProps {
   sprint: Sprint;
@@ -30,6 +33,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     scrollThreshold: 50,
     scrollSpeed: 8,
   });
+  const { setSelectedCard, setIsCardDialogOpen } = useKanbanAppContext();
 
   const normalizeColumnName = (name: string) => {
     switch (name.toLowerCase()) {
@@ -74,34 +78,34 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     },
   });
 
-  const { data: allWorkItems = [] } = useQuery({
+  const { data: allWorkItems = [] } = useQuery<TaskType[]>({
     queryKey: ['workspace-items', workspaceId],
     queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
     enabled: !!workspaceId,
   });
 
   const updateWorkItemMutation = useMutation({
-    mutationFn: ({ itemId, data }: { itemId: string; data: any }) =>
+    mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status'> }) =>
       issueApiService.updateItem(itemId, data),
     onMutate: async ({ itemId, data }) => {
       // Cancel any outgoing refetches
       await queryClient.cancelQueries({ queryKey: ['workspace-items', workspaceId] });
 
       // Snapshot the previous value
-      const previousItems = queryClient.getQueryData(['workspace-items', workspaceId]);
+      const previousItems = queryClient.getQueryData<TaskType[]>(['workspace-items', workspaceId]);
 
       // Optimistically update to the new value
-      queryClient.setQueryData(['workspace-items', workspaceId], (old: any[]) => {
-        return old?.map((item) =>
-          item._id === itemId ? { ...item, ...data } : item
-        );
+      queryClient.setQueryData<TaskType[]>(['workspace-items', workspaceId], (old) => {
+        return old?.map((item: TaskType) =>
+          item._id === itemId ? { ...item, status: data.status ?? item.status } : item
+        ) as TaskType[];
       });
 
       // Return a context object with the snapshotted value
-      return { previousItems };
+      return { previousItems } as { previousItems: TaskType[] | undefined };
     },
-    onError: (err, newTodo, context) => {
-      queryClient.setQueryData(['workspace-items', workspaceId], context?.previousItems);
+    onError: (_err, _newTodo, context) => {
+      queryClient.setQueryData<TaskType[]>(['workspace-items', workspaceId], context?.previousItems);
       toast({
         title: 'Error',
         description: 'Failed to update work item status',
@@ -114,31 +118,10 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     },
   });
 
-  const deleteColumnMutation = useMutation({
-    mutationFn: (columnId: string) => KanbanApiService.deleteKanbanBoardList(boardId || '', columnId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({
-        queryKey: ['kanban-board-lists', boardId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['sprints', workspaceId],
-      });
-      toast({
-        title: 'Success',
-        description: 'Column deleted successfully',
-      });
-    },
-    onError: () => {
-      toast({
-        title: 'Error',
-        description: 'Failed to delete column',
-        variant: 'destructive',
-      });
-    },
-  });
+  // No direct Kanban column deletion in Scrumboard; columns managed via SprintApiService.
 
   // Filter work items that belong to this sprint
-  const sprintWorkItems = allWorkItems.filter((item: any) =>
+  const sprintWorkItems = allWorkItems.filter((item: TaskType) =>
     sprint.workItems.includes(item._id)
   );
 
@@ -146,15 +129,37 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const stats: SprintStats = {
     totalWorkItems: sprintWorkItems.length,
     completedWorkItems: sprintWorkItems.filter(item => item.status?.toLowerCase() === 'done').length,
-    inProgressWorkItems: sprintWorkItems.filter(item =>
+    inProgressWorkItems: sprintWorkItems.filter((item: TaskType) =>
       ['in progress', 'in review', 'inprogress'].includes(item.status?.toLowerCase())
     ).length,
-    todoWorkItems: sprintWorkItems.filter(item =>
+    todoWorkItems: sprintWorkItems.filter((item: TaskType) =>
       ['backlog', 'todo', 'to do'].includes(item.status?.toLowerCase()) || !item.status
     ).length,
     completionPercentage: sprintWorkItems.length > 0
       ? (sprintWorkItems.filter(item => item.status?.toLowerCase() === 'done').length / sprintWorkItems.length) * 100
       : 0,
+  };
+
+  const handleCardClick = (card: KanbanCard | Issue) => {
+    if ('type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type))) {
+      setSelectedCard(card);
+      setIsCardDialogOpen(true);
+    }
+  };
+
+  const handleDeleteColumn = (columnId: string) => {
+    const newOrder = columnOrder.filter((c) => c !== columnId);
+    setColumnOrder(newOrder);
+    updateColumnsMutation.mutate(newOrder);
+    const affected = sprintWorkItems.filter((item: TaskType) =>
+      item.status === columnId || (item.status?.toLowerCase() === columnId.toLowerCase())
+    );
+    affected.forEach((item: TaskType) => {
+      updateWorkItemMutation.mutate({
+        itemId: String(item._id),
+        data: { status: 'To Do' },
+      });
+    });
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -403,6 +408,8 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                               workItems={workItems}
                               columnId={columnId}
                               sprintId={sprint._id}
+                              onCardClick={handleCardClick}
+                              onDelete={handleDeleteColumn}
                             />
                           </div>
                         )}
@@ -416,6 +423,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
           </div>
         </div>
       </DragDropContext>
+      <BoardCardDialog />
     </div>
   );
 };

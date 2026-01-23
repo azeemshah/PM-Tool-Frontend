@@ -55,7 +55,9 @@ const BoardPage = () => {
       <div className="w-full h-full">
         <ErrorBoundary>
           <Suspense fallback={<LoadingFallback />}>
-            <ScrumBoardView />
+            <KanbanAppContextProvider>
+              <ScrumBoardView />
+            </KanbanAppContextProvider>
           </Suspense>
         </ErrorBoundary>
       </div>
