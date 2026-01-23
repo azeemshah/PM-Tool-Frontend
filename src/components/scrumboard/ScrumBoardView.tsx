@@ -42,7 +42,7 @@ const ScrumBoardView = () => {
 
   return (
     <ScrumboardProvider>
-      <div className="flex h-full bg-gray-50">
+      <div className="flex h-full bg-gray-50 dark:bg-background">
         {/* Sprint List Sidebar */}
         <SprintList
           sprints={sprints || []}

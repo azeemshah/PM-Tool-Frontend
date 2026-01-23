@@ -60,17 +60,17 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
           parentType === 'story'
             ? 'Story'
             : parentType === 'task'
-            ? 'Task'
-            : parentType === 'bug'
-            ? 'Bug'
-            : 'Parent';
+              ? 'Task'
+              : parentType === 'bug'
+                ? 'Bug'
+                : 'Parent';
         hierarchyLabel = `${prefix}: ${meta.parentTitle}`;
       }
     }
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={onClick}>
+    <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={onClick}>
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -104,7 +104,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
             );
           })()}
         </div>
-        
+
       </div>
 
       {/* Labels */}
@@ -127,18 +127,18 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
       )}
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-3 mb-3">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
         {cardTitle}
       </h4>
 
       {hierarchyLabel && (
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
           {hierarchyLabel}
         </p>
       )}
 
       {/* Footer with icons, priority and assignee */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
         <div className="flex items-center gap-3">
           {/* Priority badge */}
           {cardPriority && (() => {
@@ -193,44 +193,38 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
           )}
         </div>
 
-        {/* Assignee Avatar */}
+        {/* Reporter Avatar */}
         {(() => {
           // For Issue type
-          if (issue?.assignee) {
+          if (issue?.reporter) {
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={(issue.assignee as any)?.profilePicture || ''} alt={issue.assignee?.name} />
-                  <AvatarFallback className={getAvatarColor(issue.assignee?.name || '')}>
-                    {getAvatarFallbackText(issue.assignee?.name || '')}
+                  <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+                  <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                    {getAvatarFallbackText(issue.reporter?.name || '')}
                   </AvatarFallback>
                 </Avatar>
               </div>
             );
           }
 
-          // Resolve assignee when backend returns id only or wrapped object (for KanbanCard)
-          const a = (card as any).assignee;
+          // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
+          const r = (card as any).reporter;
           let resolved: any = null;
-          if (!a) return null;
-          if (typeof a === 'string') {
-            const m = members.find((mem: any) => String(mem.userId?._id) === String(a));
+          if (!r) return null;
+          if (typeof r === 'string') {
+            const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
             resolved = m?.userId || null;
-          } else if (a.userId) {
-            resolved = a.userId;
+          } else if (r.userId) {
+            resolved = r.userId;
           } else {
-            resolved = a;
+            resolved = r;
           }
 
           if (!resolved) {
-            // render empty avatar circle to match styling
-            return (
-              <div className="flex items-center">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className={getAvatarColor('')}>{''}</AvatarFallback>
-                </Avatar>
-              </div>
-            );
+            // render empty avatar circle to match styling if needed, or just null
+            return null;
           }
 
           return (

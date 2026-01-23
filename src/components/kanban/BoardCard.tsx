@@ -35,10 +35,10 @@ export function BoardCard({ card }: BoardCardProps) {
   const hasComments = (cardComments?.length || 0) > 0;
   const hasAttachments = (cardAttachments?.length || 0) > 0;
   const hasChecklists = (cardChecklists?.length || 0) > 0;
-  const completedChecklistItems = cardChecklists?.reduce((count, checklist) => 
+  const completedChecklistItems = cardChecklists?.reduce((count, checklist) =>
     count + (checklist.checkItems?.filter(item => item.checked).length || 0), 0
   ) || 0;
-  const totalChecklistItems = cardChecklists?.reduce((count, checklist) => 
+  const totalChecklistItems = cardChecklists?.reduce((count, checklist) =>
     count + (checklist.checkItems?.length || 0), 0
   ) || 0;
 
@@ -58,17 +58,17 @@ export function BoardCard({ card }: BoardCardProps) {
           parentType === 'story'
             ? 'Story'
             : parentType === 'task'
-            ? 'Task'
-            : parentType === 'bug'
-            ? 'Bug'
-            : 'Parent';
+              ? 'Task'
+              : parentType === 'bug'
+                ? 'Bug'
+                : 'Parent';
         hierarchyLabel = `${prefix}: ${meta.parentTitle}`;
       }
     }
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
+    <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
         <div>
@@ -124,49 +124,42 @@ export function BoardCard({ card }: BoardCardProps) {
       )}
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-gray-900 line-clamp-3 mb-3">
+      <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
         {cardTitle}
       </h4>
 
       {hierarchyLabel && (
-        <p className="text-xs text-gray-500 mb-2">
+        <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
           {hierarchyLabel}
         </p>
       )}
 
       {/* Footer with icons, priority and assignee */}
-      <div className="flex items-center justify-between text-xs text-gray-500">
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
         <div className="flex items-center gap-3">
           {/* Priority badge */}
-          {cardPriority && (() => {
-            const cardPriorityRaw = String(cardPriority || "").trim();
-            const p = priorities.find((pr: any) => {
-              if (!pr) return false;
-              const prVal = String(pr.value || "");
-              const prLabel = String(pr.label || "");
-              if (prVal === cardPriorityRaw) return true;
-              if (prLabel === cardPriorityRaw) return true;
-              if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-              if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-              return false;
-            });
+          {cardPriority && (
+            <div className="flex items-center">
+              {(() => {
+                const p = String(cardPriority).toLowerCase();
+                const Icon =
+                  p === 'high' || p === 'urgent'
+                    ? priorities.find(x => x.value === 'high')?.icon
+                    : p === 'medium'
+                      ? priorities.find(x => x.value === 'medium')?.icon
+                      : priorities.find(x => x.value === 'low')?.icon;
 
-            if (!p) return (
-              <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{cardPriority}</span>
-            );
-
-            const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
-            const Icon = p.icon;
-            return (
-              <Badge
-                variant={TaskPriorityEnum[statusKey]}
-                className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
-              >
-                {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
-                <span>{p.label}</span>
-              </Badge>
-            );
-          })()}
+                return Icon ? (
+                  <Icon className={`h-3.5 w-3.5 ${p === 'high' || p === 'urgent' ? 'text-red-500' :
+                    p === 'medium' ? 'text-orange-500' : 'text-blue-500'
+                    }`} />
+                ) : null;
+              })()}
+            </div>
+          )}
+          <span className="text-xs text-gray-500 dark:text-muted-foreground">
+            {issue && issue.issueId ? issue.issueId : ''}
+          </span>
 
           {hasComments && (
             <div className="flex items-center gap-1">
@@ -190,44 +183,38 @@ export function BoardCard({ card }: BoardCardProps) {
           )}
         </div>
 
-        {/* Assignee Avatar */}
+        {/* Reporter Avatar */}
         {(() => {
           // For Issue type
-          if (issue?.assignee) {
+          if (issue?.reporter) {
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={issue.assignee?.email || ''} alt={issue.assignee?.name} />
-                  <AvatarFallback className={getAvatarColor(issue.assignee?.name || '')}>
-                    {getAvatarFallbackText(issue.assignee?.name || '')}
+                  <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+                  <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                    {getAvatarFallbackText(issue.reporter?.name || '')}
                   </AvatarFallback>
                 </Avatar>
               </div>
             );
           }
 
-          // Resolve assignee when backend returns id only or wrapped object (for KanbanCard)
-          const a = (card as any).assignee;
+          // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
+          const r = (card as any).reporter;
           let resolved: any = null;
-          if (!a) return null;
-          if (typeof a === 'string') {
-            const m = members.find((mem: any) => String(mem.userId?._id) === String(a));
+          if (!r) return null;
+          if (typeof r === 'string') {
+            const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
             resolved = m?.userId || null;
-          } else if (a.userId) {
-            resolved = a.userId;
+          } else if (r.userId) {
+            resolved = r.userId;
           } else {
-            resolved = a;
+            resolved = r;
           }
 
           if (!resolved) {
-            // render empty avatar circle to match styling
-            return (
-              <div className="flex items-center">
-                <Avatar className="h-7 w-7">
-                  <AvatarFallback className={getAvatarColor('')}>{''}</AvatarFallback>
-                </Avatar>
-              </div>
-            );
+            // render empty avatar circle to match styling if needed, or just null
+            return null;
           }
 
           return (

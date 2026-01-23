@@ -50,7 +50,7 @@ export function BoardHeader({ board }: BoardHeaderProps) {
   };
 
   return (
-    <div className="border-b bg-white">
+    <div className="border-b bg-white dark:bg-card dark:border-border">
       <div className="flex items-center justify-between p-4">
         <div className="flex items-center gap-4 flex-1">
           <Button
@@ -59,12 +59,12 @@ export function BoardHeader({ board }: BoardHeaderProps) {
             onClick={handleBack}
             className="p-0"
           >
-            <ArrowLeft size={20} />
+            <ArrowLeft size={20} className="dark:text-foreground" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">{board.name}</h1>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">{board.name}</h1>
             {board.description && (
-              <p className="mt-1 text-sm text-gray-500">{board.description}</p>
+              <p className="mt-1 text-sm text-gray-500 dark:text-muted-foreground">{board.description}</p>
             )}
           </div>
         </div>

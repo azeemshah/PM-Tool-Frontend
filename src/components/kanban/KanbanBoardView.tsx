@@ -73,9 +73,11 @@ export function KanbanBoardView() {
         priority: item.priority,
         status: item.status,
         column: item.column,
-        assignee: item.assignedTo
+        assignedTo: item.assignedTo,
+        reporter: item.reporter,
+        assignee: (item.assignedTo && typeof item.assignedTo === 'object' && (item.assignedTo._id || item.assignedTo.id))
           ? {
-            _id: item.assignedTo._id,
+            _id: item.assignedTo._id || item.assignedTo.id,
             name: item.assignedTo.name,
           }
           : undefined,
@@ -200,7 +202,7 @@ export function KanbanBoardView() {
       // Handle list reordering
       if (type === 'list') {
         if (!boardId) return;
-        
+
         // Get current column order from columnsToRender
         const currentColumnIds = columnsToRender.map((col: any) => {
           if (typeof col === 'string') return col;
@@ -381,12 +383,12 @@ export function KanbanBoardView() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-background">
       <BoardHeader board={board} />
 
       {/* Error notification */}
       {dragError && (
-        <div className="bg-red-50 border-l-4 border-red-500 p-4 mx-4 mt-4">
+        <div className="bg-red-50 dark:bg-red-900/20 border-l-4 border-red-500 p-4 mx-4 mt-4">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -394,12 +396,12 @@ export function KanbanBoardView() {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-red-700">{dragError}</p>
+              <p className="text-sm text-red-700 dark:text-red-400">{dragError}</p>
             </div>
             <div className="ml-auto">
               <button
                 onClick={() => setDragError(null)}
-                className="text-red-500 hover:text-red-700"
+                className="text-red-500 hover:text-red-700 dark:hover:text-red-400"
               >
                 <span className="sr-only">Close</span>
                 <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -413,7 +415,7 @@ export function KanbanBoardView() {
 
       {/* Loading indicator for drag operations */}
       {(isMovingCard || isReorderingCard || isReorderingColumn) && (
-        <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mx-4 mt-4">
+        <div className="bg-blue-50 dark:bg-blue-900/20 border-l-4 border-blue-500 p-4 mx-4 mt-4">
           <div className="flex">
             <div className="flex-shrink-0">
               <svg className="h-5 w-5 text-blue-500 animate-spin" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
@@ -421,18 +423,18 @@ export function KanbanBoardView() {
               </svg>
             </div>
             <div className="ml-3">
-              <p className="text-sm text-blue-700">{isReorderingColumn ? 'Moving column...' : 'Moving card...'}</p>
+              <p className="text-sm text-blue-700 dark:text-blue-400">{isReorderingColumn ? 'Moving column...' : 'Moving card...'}</p>
             </div>
           </div>
         </div>
       )}
 
-      <DragDropContext 
+      <DragDropContext
         onDragEnd={handleDragEnd}
         onBeforeDragStart={() => setDragging(true)}
       >
         <div className="flex-1 overflow-hidden">
-          <div 
+          <div
             ref={scrollableRef}
             className="h-full overflow-x-auto"
           >

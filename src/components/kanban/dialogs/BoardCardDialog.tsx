@@ -9,7 +9,7 @@ import { KanbanCard } from '@/api/kanban/types';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
-import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl } from '@/lib/api';
+import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -48,6 +48,79 @@ export function BoardCardDialog() {
 
   const issue = isIssue ? (selectedCard as Issue) : null;
 
+  // Helper to get assignee info safely from either issue.assignee or issue.assignedTo
+  const getAssigneeInfo = (i: any) => {
+    if (!i) return { id: '', name: '' };
+
+    // Check assignee field
+    if (i.assignee) {
+      // If it's a valid object with ID
+      if (typeof i.assignee === 'object') {
+        const id = i.assignee._id || i.assignee.id;
+        const name = i.assignee.name;
+
+        // If we have both ID and Name, return them
+        if (id && name) return { id, name };
+
+        // If we only have ID (or name is missing/undefined), try to look up in members
+        if (id) {
+          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          // If member not found, return ID as fallback or empty name
+          return { id, name: name || 'Unknown' };
+        }
+      }
+
+      // If it's a string ID
+      if (typeof i.assignee === 'string') {
+        const id = i.assignee;
+        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        return { id, name: 'Unknown' };
+      }
+    }
+
+    // Check assignedTo field
+    if (i.assignedTo) {
+      if (typeof i.assignedTo === 'object') {
+        const id = i.assignedTo._id || i.assignedTo.id;
+        const name = i.assignedTo.name;
+        if (id && name) return { id, name };
+        if (id) {
+          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          return { id, name: name || 'Unknown' };
+        }
+      }
+      if (typeof i.assignedTo === 'string') {
+        const id = i.assignedTo;
+        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        return { id, name: 'Unknown' };
+      }
+    }
+
+    return { id: '', name: '' };
+  };
+
+  // Helper to get reporter info
+  const getReporterInfo = (i: any) => {
+    if (!i) return { id: '', name: '' };
+    if (i.reporter) {
+      if (typeof i.reporter === 'object') {
+        return { id: i.reporter._id || i.reporter.id || '', name: i.reporter.name || '' };
+      }
+      if (typeof i.reporter === 'string') {
+        const member = members.find((m: any) => (m.userId?._id === i.reporter || m.userId === i.reporter));
+        return { id: i.reporter, name: member?.userId?.name || member?.name || 'Unknown' };
+      }
+    }
+    return { id: '', name: '' };
+  };
+
+  const initialAssignee = getAssigneeInfo(issue);
+  const initialReporter = getReporterInfo(issue);
+
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(issue?.title || (selectedCard as KanbanCard)?.title || '');
   const [description, setDescription] = useState(
@@ -55,7 +128,8 @@ export function BoardCardDialog() {
   );
   const [priority, setPriority] = useState<IssuePriority>(issue?.priority || 'medium');
   const [status, setStatus] = useState<IssueStatus>(issue?.status || 'to-do');
-  const [assigneeId, setAssigneeId] = useState(issue?.assignee?._id || '');
+  const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
+  const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
@@ -94,7 +168,8 @@ export function BoardCardDialog() {
       setDescription(issue.description || '');
       setPriority(issue.priority || 'medium');
       setStatus(issue.status || 'to-do');
-      setAssigneeId(issue.assignee?._id || '');
+      setAssigneeId(getAssigneeInfo(issue).id);
+      setReporterId(getReporterInfo(issue).id);
       setDueDate(issue.dueDate || null);
     }
   }, [issue]);
@@ -116,6 +191,20 @@ export function BoardCardDialog() {
         const data = resp.data?.data || resp.data || [];
         return Array.isArray(data) ? data : [];
       } catch (e) {
+        return [];
+      }
+    },
+    enabled: !!issueIdStr && !!isCardDialogOpen,
+    staleTime: 60 * 1000,
+  });
+  const { data: workItemAttachmentsFallback = [] } = useQuery({
+    queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'],
+    queryFn: async () => {
+      if (!issueIdStr) return [];
+      try {
+        const data = await getWorkItemAttachments(issueIdStr);
+        return Array.isArray(data) ? data : [];
+      } catch {
         return [];
       }
     },
@@ -146,7 +235,7 @@ export function BoardCardDialog() {
   const fromIssue = normalize(((detailedIssue as any)?.attachments || []));
   const ownAttachments = (() => {
     const seen = new Set<string>();
-    const arr = [...normalize(workItemAttachments), ...fromIssue].filter((a) => {
+    const arr = [...normalize(workItemAttachments), ...normalize(workItemAttachmentsFallback), ...fromIssue].filter((a) => {
       const key = a._id || a.url || a.name;
       if (seen.has(String(key))) return false;
       seen.add(String(key));
@@ -161,6 +250,25 @@ export function BoardCardDialog() {
       return !!(a.url || a.name) && !ownKeys.has(key);
     });
   })();
+
+  const buildFullUrl = (url: string) => {
+    const base = (API as any)?.defaults?.baseURL || '';
+    try {
+      return new URL(url, base).toString();
+    } catch {
+      return `${base}${url}`;
+    }
+  };
+  const toOpenUrl = (fullUrl: string, fileName?: string) => {
+    const source = String(fileName || fullUrl).toLowerCase();
+    const match = source.match(/\.([a-z0-9]+)(?:$|\?|\#)/);
+    const ext = match ? match[1] : '';
+    const office = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+    if (office.includes(ext)) {
+      return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fullUrl)}`;
+    }
+    return fullUrl;
+  };
 
   if (!isCardDialogOpen || !issue) {
     return null;
@@ -251,6 +359,7 @@ export function BoardCardDialog() {
           status: mapStatusForApi(status),
           priority: mapPriorityForApi(priority),
           assignedTo: assigneeId || null,
+          reporter: reporterId || null,
           dueDate,
         },
       },
@@ -283,10 +392,17 @@ export function BoardCardDialog() {
                     status: mappedSprintStatus ?? item.status,
                     assignedTo: updatedIssue.assignee
                       ? {
-                          _id: (updatedIssue.assignee as any)._id,
-                          name: (updatedIssue.assignee as any).name,
-                          profilePicture: (updatedIssue.assignee as any).profilePicture ?? null,
-                        }
+                        _id: (updatedIssue.assignee as any)._id,
+                        name: (updatedIssue.assignee as any).name,
+                        profilePicture: (updatedIssue.assignee as any).profilePicture ?? null,
+                      }
+                      : null,
+                    reporter: updatedIssue.reporter
+                      ? {
+                        _id: (updatedIssue.reporter as any)._id,
+                        name: (updatedIssue.reporter as any).name,
+                        profilePicture: (updatedIssue.reporter as any).profilePicture ?? null,
+                      }
                       : null,
                     dueDate: updatedIssue.dueDate || item.dueDate || null,
                   };
@@ -364,12 +480,12 @@ export function BoardCardDialog() {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-card dark:border-border dark:text-foreground rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b dark:border-border">
           <div>
-            <h2 className="text-xl font-bold">Issue Details</h2>
-            <p className="text-sm text-gray-500 mt-1">{issue.key || `${issue.type} #${issue._id.slice(-6)}`}</p>
+            <h2 className="text-xl font-bold dark:text-foreground">Issue Details</h2>
+            <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1">{issue.key || `${issue.type} #${issue._id.slice(-6)}`}</p>
           </div>
           <div className="flex items-center gap-2">
             {!isEditing && (
@@ -397,7 +513,7 @@ export function BoardCardDialog() {
                 setIsCardDialogOpen(false);
                 setSelectedCard(null);
               }}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:text-muted-foreground dark:hover:text-foreground"
             >
               <X size={24} />
             </button>
@@ -408,7 +524,7 @@ export function BoardCardDialog() {
         <div className="p-6 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Title
             </label>
             {isEditing ? (
@@ -416,16 +532,16 @@ export function BoardCardDialog() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             ) : (
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">{title}</h3>
             )}
           </div>
 
           {/* Issue Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Type
             </label>
             <Badge className="inline-block p-1 px-2 gap-1 font-medium shadow-sm capitalize">
@@ -435,7 +551,7 @@ export function BoardCardDialog() {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Status
             </label>
             {isEditing ? (
@@ -470,7 +586,7 @@ export function BoardCardDialog() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Description
             </label>
             {isEditing ? (
@@ -479,19 +595,19 @@ export function BoardCardDialog() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add a description..."
                 rows={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             ) : (
-              <p className="text-gray-600 whitespace-pre-wrap">
-                {description || 'No description'}
-              </p>
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-muted/50 rounded-md text-sm text-gray-700 dark:text-foreground min-h-[100px] whitespace-pre-wrap">
+                {description || 'No description provided.'}
+              </div>
             )}
           </div>
 
           {/* Priority and Due Date */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Priority
               </label>
               {isEditing ? (
@@ -514,7 +630,7 @@ export function BoardCardDialog() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Due Date
               </label>
               {isEditing ? (
@@ -522,29 +638,28 @@ export function BoardCardDialog() {
                   type="date"
                   value={dueDate ? new Date(dueDate).toISOString().split('T')[0] : ''}
                   onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value).toISOString() : null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-muted-foreground">
                   {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
                 </p>
               )}
             </div>
           </div>
 
-          {/* Assignee */}
+          {/* Reporter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Assignee
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Reporter *
             </label>
             {isEditing ? (
-              <Select value={assigneeId || 'unassigned'} onValueChange={(value) => setAssigneeId(value === 'unassigned' ? '' : value)}>
+              <Select value={reporterId || ''} onValueChange={(value) => setReporterId(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an assignee" />
+                  <SelectValue placeholder="Select a reporter" />
                 </SelectTrigger>
                 <SelectContent>
                   <div className="w-full max-h-[200px] overflow-y-auto">
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members && members.length > 0 ? (
                       members.map((member: any) => {
                         const userId = member.userId;
@@ -553,25 +668,45 @@ export function BoardCardDialog() {
                         return (
                           <SelectItem key={userId._id} value={userId._id}>
                             <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={userId.profilePicture || ''} />
+                                <AvatarFallback className={getAvatarColor(name)}>
+                                  {getAvatarFallbackText(name)}
+                                </AvatarFallback>
+                              </Avatar>
                               <span>{name}</span>
                             </div>
                           </SelectItem>
                         );
                       })
                     ) : (
-                      <div className="p-2 text-sm text-gray-500">No members available</div>
+                      <div className="p-2 text-sm text-gray-500">No members found</div>
                     )}
                   </div>
                 </SelectContent>
               </Select>
             ) : (
-              <div className="text-gray-600">
-                {assigneeId && members?.length > 0
-                  ? members
-                    .filter((member: any) => member.userId?._id === assigneeId)
-                    .map((member: any) => member.userId?.name || 'Unknown')
-                    .join(', ')
-                  : 'Unassigned'}
+              <div className="flex items-center gap-2">
+                {reporterId ? (() => {
+                  const reporterName = getReporterInfo(issue).name;
+                  const member = members.find((m: any) => m.userId?._id === reporterId || m.userId === reporterId);
+                  const name = member?.userId?.name || reporterName || 'Unknown';
+                  const profilePicture = member?.userId?.profilePicture;
+
+                  return (
+                    <>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={profilePicture || ''} />
+                        <AvatarFallback className={getAvatarColor(name)}>
+                          {getAvatarFallbackText(name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-gray-900 dark:text-foreground">{name}</span>
+                    </>
+                  );
+                })() : (
+                  <span className="text-gray-500 dark:text-muted-foreground">No reporter</span>
+                )}
               </div>
             )}
           </div>
@@ -595,6 +730,7 @@ export function BoardCardDialog() {
                       const ok = resp?.success || resp?.url;
                       if (ok) {
                         queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
+                        queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'] });
                         toast({ title: 'Success', description: 'Attachment uploaded' });
                       } else {
                         toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' });
@@ -619,103 +755,89 @@ export function BoardCardDialog() {
                 </Button>
               </div>
             )}
-            {(ownAttachments.length > 0 || parentOnlyAttachments.length > 0) ? (
-              <div className="space-y-4">
-                {ownAttachments.length > 0 && (
-                  <div className="space-y-2">
-                    {ownAttachments.map((att: any, idx: number) => {
-                      const name = att.name || att.fileName || `Attachment ${idx + 1}`;
-                      const url = att.url || att.fileUrl || '';
-                      const base = (API as any)?.defaults?.baseURL || '';
-                      const fullUrl = (() => {
-                        try {
-                          return new URL(url, base).toString();
-                        } catch {
-                          return `${base}${url}`;
-                        }
-                      })();
-                      return (
-                        <div key={`own-${idx}`} className="flex items-center gap-2">
-                          <a
-                            href={fullUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 hover:underline break-all"
-                          >
-                            {name}
-                          </a>
-                          {isEditing && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="text-red-600 hover:text-red-700"
-                              disabled={!!deletingAttachmentId}
-                              onClick={async () => {
-                                const id = att._id || att.id;
-                                const delKey = id ? String(id) : (att.url || att.fileUrl || '');
-                                if (!delKey) return;
-                                setDeletingAttachmentId(delKey);
-                                try {
-                                  if (id) {
-                                    await deleteAttachmentById(String(id));
-                                  } else if (att.url || att.fileUrl) {
-                                    await deleteAttachmentByUrl(String(att.url || att.fileUrl));
-                                  }
-                                  queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
-                                  toast({ title: 'Deleted', description: 'Attachment removed' });
-                                } catch (err) {
-                                  toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' });
-                                } finally {
-                                  setDeletingAttachmentId(null);
+            <div className="space-y-4">
+              {parentOnlyAttachments.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-500">Parent attachments</div>
+                  {parentOnlyAttachments.map((att: any, idx: number) => {
+                    const name = att.name || att.fileName || `Attachment ${idx + 1}`;
+                    const url = att.url || att.fileUrl || '';
+                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    return (
+                      <div key={`parent-${idx}`} className="flex items-center gap-2">
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {name}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">Subtask attachments</div>
+                {ownAttachments.length > 0 ? (
+                  ownAttachments.map((att: any, idx: number) => {
+                    const name = att.name || att.fileName || `Attachment ${idx + 1}`;
+                    const url = att.url || att.fileUrl || '';
+                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    return (
+                      <div key={`own-${idx}`} className="flex items-center gap-2">
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {name}
+                        </a>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            disabled={!!deletingAttachmentId}
+                            onClick={async () => {
+                              const id = att._id || att.id;
+                              const delKey = id ? String(id) : (att.url || att.fileUrl || '');
+                              if (!delKey) return;
+                              setDeletingAttachmentId(delKey);
+                              try {
+                                if (id) {
+                                  await deleteAttachmentById(String(id));
+                                } else if (att.url || att.fileUrl) {
+                                  await deleteAttachmentByUrl(String(att.url || att.fileUrl));
                                 }
-                              }}
-                            >
-                              <Trash2 size={16} />
-                            </Button>
-                          )}
-                        </div>
-                      );
-                    })}
-                  </div>
-                )}
-                {parentOnlyAttachments.length > 0 && (
-                  <div className="space-y-2">
-                    <div className="text-xs text-gray-500">Parent attachments</div>
-                    {parentOnlyAttachments.map((att: any, idx: number) => {
-                      const name = att.name || att.fileName || `Attachment ${idx + 1}`;
-                      const url = att.url || att.fileUrl || '';
-                      const base = (API as any)?.defaults?.baseURL || '';
-                      const fullUrl = (() => {
-                        try {
-                          return new URL(url, base).toString();
-                        } catch {
-                          return `${base}${url}`;
-                        }
-                      })();
-                      return (
-                        <div key={`parent-${idx}`} className="flex items-center gap-2">
-                          <a
-                            href={fullUrl}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="text-blue-600 hover:underline break-all"
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'] });
+                                toast({ title: 'Deleted', description: 'Attachment removed' });
+                              } catch (err) {
+                                toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' });
+                              } finally {
+                                setDeletingAttachmentId(null);
+                              }
+                            }}
                           >
-                            {name}
-                          </a>
-                        </div>
-                      );
-                    })}
-                  </div>
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-500">No subtask attachments</div>
                 )}
               </div>
-            ) : (
-              <p className="text-gray-600">No attachments</p>
-            )}
+            </div>
           </div>
 
           {/* Action Buttons */}
           {isEditing && (
-            <div className="flex justify-end gap-2 pt-6 border-t">
+            <div className="flex justify-end gap-2 pt-6 border-t dark:border-border">
               <Button
                 variant="outline"
                 onClick={() => {

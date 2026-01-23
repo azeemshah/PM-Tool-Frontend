@@ -191,7 +191,7 @@ const InviteMember = () => {
             <Button
               onClick={handleInvite}
               disabled={loading}
-              className="w-full md:w-auto h-[40px] px-6 text-white font-semibold"
+              className="w-full md:w-auto h-[40px] px-6 font-semibold"
             >
               {loading ? (
                 <>

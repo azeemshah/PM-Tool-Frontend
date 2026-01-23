@@ -67,11 +67,11 @@ const SprintList: React.FC<SprintListProps> = ({
   };
 
   return (
-    <div className="w-80 bg-white border-r border-gray-200 flex flex-col">
+    <div className="w-80 bg-white dark:bg-card border-r border-gray-200 dark:border-border flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-gray-200">
+      <div className="p-4 border-b border-gray-200 dark:border-border">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-gray-900">Sprints</h2>
+          <h2 className="text-lg font-semibold text-gray-900 dark:text-foreground">Sprints</h2>
           <Button
             size="sm"
             onClick={() => setShowCreateDialog(true)}
@@ -87,17 +87,16 @@ const SprintList: React.FC<SprintListProps> = ({
       <div className="flex-1 overflow-y-auto">
         {/* Backlog Option */}
         <div
-          className={`p-3 border-b border-gray-100 cursor-pointer hover:bg-gray-50 ${
-            activeSprintId === null ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
-          }`}
+          className={`p-3 border-b border-gray-100 dark:border-border/50 cursor-pointer hover:bg-gray-50 dark:hover:bg-muted/50 ${activeSprintId === null ? 'bg-blue-50 dark:bg-blue-900/20 border-l-4 border-l-blue-500' : ''
+            }`}
           onClick={() => onSprintSelect(null)}
         >
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-gray-200 rounded flex items-center justify-center">
+            <div className="w-8 h-8 bg-gray-200 dark:bg-muted rounded flex items-center justify-center">
               📋
             </div>
             <div className="flex-1">
-              <h3 className="font-medium text-gray-900">Backlog</h3>
+              <h3 className="font-medium text-gray-900 dark:text-foreground">Backlog</h3>
               <p className="text-sm text-gray-500">Work items not in sprints</p>
             </div>
           </div>
@@ -107,18 +106,17 @@ const SprintList: React.FC<SprintListProps> = ({
         {sprints.map((sprint) => (
           <Card
             key={sprint._id}
-            className={`m-2 cursor-pointer transition-colors ${
-              activeSprintId === sprint._id
-                ? 'bg-blue-50 border-blue-200 border-l-4 border-l-blue-500'
-                : 'hover:bg-gray-50'
-            }`}
+            className={`m-2 cursor-pointer transition-colors dark:bg-card dark:border-border ${activeSprintId === sprint._id
+                ? 'bg-blue-50 dark:bg-blue-900/20 border-blue-200 dark:border-blue-900 border-l-4 border-l-blue-500 dark:border-l-blue-500'
+                : 'hover:bg-gray-50 dark:hover:bg-muted/50'
+              }`}
             onClick={() => onSprintSelect(sprint._id)}
           >
             <div className="p-3">
               <div className="flex items-start justify-between mb-2">
                 <div className="flex items-center gap-2">
                   {getStatusIcon(sprint.status)}
-                  <h3 className="font-medium text-gray-900 truncate">
+                  <h3 className="font-medium text-gray-900 dark:text-foreground truncate">
                     {sprint.name}
                   </h3>
                 </div>
@@ -128,12 +126,12 @@ const SprintList: React.FC<SprintListProps> = ({
               </div>
 
               {sprint.goal && (
-                <p className="text-sm text-gray-600 mb-2 line-clamp-2">
+                <p className="text-sm text-gray-600 dark:text-muted-foreground mb-2 line-clamp-2">
                   {sprint.goal}
                 </p>
               )}
 
-              <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+              <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground mb-3">
                 <span>
                   {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
                 </span>

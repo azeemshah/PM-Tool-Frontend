@@ -25,12 +25,12 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
   onCardClick,
 }) => {
   return (
-    <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col max-h-full">
+    <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
-      <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+      <div className="p-3 border-b bg-gray-50 dark:bg-muted/50 dark:border-border flex items-center justify-between">
         <div className="flex-1">
-          <h3 className="font-semibold text-sm text-gray-900">{title}</h3>
-          <p className="text-xs text-gray-500 mt-1">{workItems.length || 0} items</p>
+          <h3 className="font-semibold text-sm text-gray-900 dark:text-foreground">{title}</h3>
+          <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{workItems.length || 0} items</p>
         </div>
         <button
           className="text-red-500 hover:text-red-700"
@@ -57,7 +57,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
               ref={provided.innerRef}
               {...provided.droppableProps}
               className={`p-3 space-y-2 min-h-[100px] transition-colors ${
-                snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-white'
+                snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-transparent'
               }`}
             >
               {workItems.length > 0 ? (
