@@ -86,6 +86,7 @@ export interface KanbanCard {
 	labels?: string[]; // label IDs
 	dueDate?: string | null;
 	assignee?: { _id: string; name: string };
+	reporter?: { _id: string; name: string } | string;
 	attachmentCoverId?: string;
 	attachments?: KanbanAttachment[];
 	checklists?: KanbanChecklist[];

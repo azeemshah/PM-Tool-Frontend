@@ -73,9 +73,11 @@ export function KanbanBoardView() {
         priority: item.priority,
         status: item.status,
         column: item.column,
-        assignee: item.assignedTo
+        assignedTo: item.assignedTo,
+        reporter: item.reporter,
+        assignee: (item.assignedTo && typeof item.assignedTo === 'object' && (item.assignedTo._id || item.assignedTo.id))
           ? {
-            _id: item.assignedTo._id,
+            _id: item.assignedTo._id || item.assignedTo.id,
             name: item.assignedTo.name,
           }
           : undefined,
@@ -200,7 +202,7 @@ export function KanbanBoardView() {
       // Handle list reordering
       if (type === 'list') {
         if (!boardId) return;
-        
+
         // Get current column order from columnsToRender
         const currentColumnIds = columnsToRender.map((col: any) => {
           if (typeof col === 'string') return col;
@@ -427,12 +429,12 @@ export function KanbanBoardView() {
         </div>
       )}
 
-      <DragDropContext 
+      <DragDropContext
         onDragEnd={handleDragEnd}
         onBeforeDragStart={() => setDragging(true)}
       >
         <div className="flex-1 overflow-hidden">
-          <div 
+          <div
             ref={scrollableRef}
             className="h-full overflow-x-auto"
           >

@@ -46,6 +46,79 @@ export function BoardCardDialog() {
 
   const issue = isIssue ? (selectedCard as Issue) : null;
 
+  // Helper to get assignee info safely from either issue.assignee or issue.assignedTo
+  const getAssigneeInfo = (i: any) => {
+    if (!i) return { id: '', name: '' };
+
+    // Check assignee field
+    if (i.assignee) {
+      // If it's a valid object with ID
+      if (typeof i.assignee === 'object') {
+        const id = i.assignee._id || i.assignee.id;
+        const name = i.assignee.name;
+
+        // If we have both ID and Name, return them
+        if (id && name) return { id, name };
+
+        // If we only have ID (or name is missing/undefined), try to look up in members
+        if (id) {
+          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          // If member not found, return ID as fallback or empty name
+          return { id, name: name || 'Unknown' };
+        }
+      }
+
+      // If it's a string ID
+      if (typeof i.assignee === 'string') {
+        const id = i.assignee;
+        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        return { id, name: 'Unknown' };
+      }
+    }
+
+    // Check assignedTo field
+    if (i.assignedTo) {
+      if (typeof i.assignedTo === 'object') {
+        const id = i.assignedTo._id || i.assignedTo.id;
+        const name = i.assignedTo.name;
+        if (id && name) return { id, name };
+        if (id) {
+          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          return { id, name: name || 'Unknown' };
+        }
+      }
+      if (typeof i.assignedTo === 'string') {
+        const id = i.assignedTo;
+        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
+        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        return { id, name: 'Unknown' };
+      }
+    }
+
+    return { id: '', name: '' };
+  };
+
+  // Helper to get reporter info
+  const getReporterInfo = (i: any) => {
+    if (!i) return { id: '', name: '' };
+    if (i.reporter) {
+      if (typeof i.reporter === 'object') {
+        return { id: i.reporter._id || i.reporter.id || '', name: i.reporter.name || '' };
+      }
+      if (typeof i.reporter === 'string') {
+        const member = members.find((m: any) => (m.userId?._id === i.reporter || m.userId === i.reporter));
+        return { id: i.reporter, name: member?.userId?.name || member?.name || 'Unknown' };
+      }
+    }
+    return { id: '', name: '' };
+  };
+
+  const initialAssignee = getAssigneeInfo(issue);
+  const initialReporter = getReporterInfo(issue);
+
   const [isEditing, setIsEditing] = useState(false);
   const [title, setTitle] = useState(issue?.title || (selectedCard as KanbanCard)?.title || '');
   const [description, setDescription] = useState(
@@ -53,7 +126,8 @@ export function BoardCardDialog() {
   );
   const [priority, setPriority] = useState<IssuePriority>(issue?.priority || 'medium');
   const [status, setStatus] = useState<IssueStatus>(issue?.status || 'to-do');
-  const [assigneeId, setAssigneeId] = useState(issue?.assignee?._id || '');
+  const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
+  const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
 
   const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
@@ -89,7 +163,8 @@ export function BoardCardDialog() {
       setDescription(issue.description || '');
       setPriority(issue.priority || 'medium');
       setStatus(issue.status || 'to-do');
-      setAssigneeId(issue.assignee?._id || '');
+      setAssigneeId(getAssigneeInfo(issue).id);
+      setReporterId(getReporterInfo(issue).id);
       setDueDate(issue.dueDate || null);
     }
   }, [issue]);
@@ -183,6 +258,7 @@ export function BoardCardDialog() {
           status: mapStatusForApi(status),
           priority: mapPriorityForApi(priority),
           assignedTo: assigneeId || null,
+          reporter: reporterId || null,
           dueDate,
         },
       },
@@ -215,10 +291,17 @@ export function BoardCardDialog() {
                     status: mappedSprintStatus ?? item.status,
                     assignedTo: updatedIssue.assignee
                       ? {
-                          _id: (updatedIssue.assignee as any)._id,
-                          name: (updatedIssue.assignee as any).name,
-                          profilePicture: (updatedIssue.assignee as any).profilePicture ?? null,
-                        }
+                        _id: (updatedIssue.assignee as any)._id,
+                        name: (updatedIssue.assignee as any).name,
+                        profilePicture: (updatedIssue.assignee as any).profilePicture ?? null,
+                      }
+                      : null,
+                    reporter: updatedIssue.reporter
+                      ? {
+                        _id: (updatedIssue.reporter as any)._id,
+                        name: (updatedIssue.reporter as any).name,
+                        profilePicture: (updatedIssue.reporter as any).profilePicture ?? null,
+                      }
                       : null,
                     dueDate: updatedIssue.dueDate || item.dueDate || null,
                   };
@@ -464,19 +547,18 @@ export function BoardCardDialog() {
             </div>
           </div>
 
-          {/* Assignee */}
+          {/* Reporter */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              Assignee
+              Reporter *
             </label>
             {isEditing ? (
-              <Select value={assigneeId || 'unassigned'} onValueChange={(value) => setAssigneeId(value === 'unassigned' ? '' : value)}>
+              <Select value={reporterId || ''} onValueChange={(value) => setReporterId(value)}>
                 <SelectTrigger>
-                  <SelectValue placeholder="Select an assignee" />
+                  <SelectValue placeholder="Select a reporter" />
                 </SelectTrigger>
                 <SelectContent>
                   <div className="w-full max-h-[200px] overflow-y-auto">
-                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members && members.length > 0 ? (
                       members.map((member: any) => {
                         const userId = member.userId;
@@ -485,25 +567,45 @@ export function BoardCardDialog() {
                         return (
                           <SelectItem key={userId._id} value={userId._id}>
                             <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarImage src={userId.profilePicture || ''} />
+                                <AvatarFallback className={getAvatarColor(name)}>
+                                  {getAvatarFallbackText(name)}
+                                </AvatarFallback>
+                              </Avatar>
                               <span>{name}</span>
                             </div>
                           </SelectItem>
                         );
                       })
                     ) : (
-                      <div className="p-2 text-sm text-gray-500">No members available</div>
+                      <div className="p-2 text-sm text-gray-500">No members found</div>
                     )}
                   </div>
                 </SelectContent>
               </Select>
             ) : (
-              <div className="text-gray-600">
-                {assigneeId && members?.length > 0
-                  ? members
-                    .filter((member: any) => member.userId?._id === assigneeId)
-                    .map((member: any) => member.userId?.name || 'Unknown')
-                    .join(', ')
-                  : 'Unassigned'}
+              <div className="flex items-center gap-2">
+                {reporterId ? (() => {
+                  const reporterName = getReporterInfo(issue).name;
+                  const member = members.find((m: any) => m.userId?._id === reporterId || m.userId === reporterId);
+                  const name = member?.userId?.name || reporterName || 'Unknown';
+                  const profilePicture = member?.userId?.profilePicture;
+
+                  return (
+                    <>
+                      <Avatar className="h-6 w-6">
+                        <AvatarImage src={profilePicture || ''} />
+                        <AvatarFallback className={getAvatarColor(name)}>
+                          {getAvatarFallbackText(name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <span className="text-gray-900">{name}</span>
+                    </>
+                  );
+                })() : (
+                  <span className="text-gray-500">No reporter</span>
+                )}
               </div>
             )}
           </div>
