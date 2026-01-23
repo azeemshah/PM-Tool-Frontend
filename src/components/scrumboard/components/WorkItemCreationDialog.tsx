@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -30,13 +30,22 @@ import { Button } from '@/components/ui/button';
 import { toast } from '@/hooks/use-toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '@/api/issue/services/issueApiService';
-import { CreateItemDto, ItemPriority, ItemType } from '@/api/issue/types';
+import { CreateItemDto, ItemPriority, ItemStatus, ItemType } from '@/api/issue/types';
+import { ISSUE_TYPES_LIST } from '@/components/issue/constants';
+import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
+import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { Download, Trash2 } from 'lucide-react';
+import { uploadWorkItemAttachment } from '@/lib/api';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
   type: z.enum(['Task', 'Bug', 'Story', 'Epic']).default('Task'),
   priority: z.enum(['Low', 'Medium', 'High']).default('Medium'),
+  status: z.string().min(1, 'Status is required'),
+  reporterId: z.string().min(1, 'Reporter is required'),
+  dueDate: z.string().optional(),
 });
 
 type WorkItemFormData = z.infer<typeof workItemSchema>;
@@ -57,6 +66,15 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
   listId,
 }) => {
   const queryClient = useQueryClient();
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [attachments, setAttachments] = useState<{ file: File; url: string; name: string }[]>([]);
+  const { statuses } = useGetWorkspaceStatuses(workspaceId);
+  const { data: memberData } = useGetWorkspaceMembers(workspaceId);
+  const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
+  const statusOptions = [
+    { label: 'Backlog', value: 'Backlog' },
+    ...((statuses || []).filter((s) => String(s.value).toLowerCase() !== 'backlog'))
+  ];
   const form = useForm<WorkItemFormData>({
     resolver: zodResolver(workItemSchema),
     defaultValues: {
@@ -64,12 +82,30 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       description: '',
       type: 'Task',
       priority: 'Medium',
+      status: 'Backlog',
+      reporterId: members?.[0]?.userId?._id || '',
+      dueDate: '',
     },
   });
 
   const createWorkItemMutation = useMutation({
     mutationFn: (data: CreateItemDto) => issueApiService.createItem(data),
-    onSuccess: () => {
+    onSuccess: async (created: any) => {
+      if (attachments.length > 0 && created?._id) {
+        for (const att of attachments) {
+          try {
+            await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+          } catch (e: any) {
+            toast({
+              title: 'Error',
+              description: e?.response?.data?.message || 'Failed to upload attachment',
+              variant: 'destructive',
+            });
+          }
+        }
+        attachments.forEach(att => URL.revokeObjectURL(att.url));
+        setAttachments([]);
+      }
       queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['all-tasks', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban', workspaceId] });
@@ -102,7 +138,9 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
         type: data.type.toLowerCase() as ItemType,
         priority: data.priority.toLowerCase() as ItemPriority,
         workspace: workspaceId,
-        status: 'Backlog',
+        status: (data.status as ItemStatus),
+        reporter: data.reporterId,
+        dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
         column: listId || undefined, // Pass the column ID (listId) so it gets assigned to the correct column/status
       };
 
@@ -170,10 +208,14 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="Task">Task</SelectItem>
-                        <SelectItem value="Bug">Bug</SelectItem>
-                        <SelectItem value="Story">Story</SelectItem>
-                        <SelectItem value="Epic">Epic</SelectItem>
+                        {ISSUE_TYPES_LIST.filter(t => t.value !== 'subtask').map((type) => (
+                          <SelectItem key={type.value} value={type.label}>
+                            <div className="flex items-center gap-2">
+                              <IssueTypeIcon type={type.value} />
+                              <span>{type.label}</span>
+                            </div>
+                          </SelectItem>
+                        ))}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -203,6 +245,152 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                   </FormItem>
                 )}
               />
+            </div>
+
+            <FormField
+              control={form.control}
+              name="dueDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Due Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={field.value || ''}
+                      onChange={(e) => field.onChange(e.target.value)}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Status</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {statusOptions.map((s) => (
+                        <SelectItem key={s.value} value={s.value}>
+                          {s.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="reporterId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reporter</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select reporter" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <div className="w-full max-h-[250px] overflow-y-auto">
+                        {members.map((member: any) => (
+                          <SelectItem key={member.userId?._id || member._id} value={member.userId?._id || ''}>
+                            {member.userId?.name || 'Unknown'}
+                          </SelectItem>
+                        ))}
+                      </div>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="space-y-2">
+              <FormLabel>Attachments</FormLabel>
+              <input
+                ref={fileInputRef}
+                type="file"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const files = Array.from(e.target.files || []);
+                  if (files.length > 0) {
+                    const entries = files.map((f) => ({
+                      file: f,
+                      url: URL.createObjectURL(f),
+                      name: f.name
+                    }));
+                    setAttachments((prev) => [...prev, ...entries]);
+                  }
+                  if (e.target) e.target.value = '';
+                }}
+                accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+              />
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Upload
+                </Button>
+                {attachments.length > 0 && (
+                  <span className="text-xs text-gray-600">
+                    {attachments.length} file{attachments.length > 1 ? 's' : ''} selected
+                  </span>
+                )}
+              </div>
+              {attachments.length > 0 ? (
+                <div className="text-xs text-gray-500">
+                  {attachments.map((att, idx) => {
+                    const fileName = att.name || `Attachment ${idx + 1}`;
+                    return (
+                      <div
+                        key={`${att.name}-${idx}`}
+                        className="flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer"
+                        onClick={() => window.open(att.url, '_blank', 'noopener')}
+                      >
+                        <a
+                          href={att.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Download className="h-4 w-4 flex-shrink-0" />
+                          <span className="truncate text-sm">{fileName}</span>
+                        </a>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setAttachments((prev) => prev.filter((x) => x !== att));
+                            URL.revokeObjectURL(att.url);
+                          }}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <p className="text-xs text-gray-500">No attachments yet</p>
+              )}
             </div>
 
             <div className="flex justify-end gap-3 pt-4">

@@ -34,7 +34,9 @@ import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { TaskType } from "@/api/issue/types";
 import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards";
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
+
 // ---- Define TaskType ----
 
 // ---- Main TaskTable Component ----
@@ -54,6 +56,7 @@ const TaskTable: FC = () => {
   const defaultBoardId =
     kanbanBoards && kanbanBoards.length > 0 ? (kanbanBoards[0] as any)._id : null;
   const { data: boardLists = [] } = useGetKanbanBoardLists(defaultBoardId || null);
+  const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId!);
 
   const findColumnIdForStatus = (status: string): string | null => {
     const lists = boardLists || [];
@@ -146,13 +149,20 @@ const TaskTable: FC = () => {
   const bulkDeleteMutation = useMutation({
     mutationFn: bulkDeleteTasksMutationFn,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-      queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-      toast({ title: "Success", description: `${selectedTaskIds.length} task(s) deleted successfully`, variant: "success" });
-      setSelectedTaskIds([]);
       setIsDeleteAlertOpen(false);
+      setSelectedTaskIds([]);
+
+      setTimeout(() => {
+        // Manual cleanup to prevent UI freeze
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
+
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+        toast({ title: "Success", description: "Tasks deleted successfully", variant: "success" });
+      }, 300);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to delete tasks", variant: "destructive" });
@@ -166,51 +176,57 @@ const TaskTable: FC = () => {
       _,
       variables: { ids: string[]; data: { status?: string } }
     ) => {
-      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-      queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-      queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+      setTimeout(async () => {
+        // Manual cleanup to prevent UI freeze
+        document.body.style.pointerEvents = "";
+        document.body.style.overflow = "";
 
-      const ids = variables?.ids || [];
-      const newStatusLabel = variables?.data?.status;
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
 
-      if (workspaceId && ids.length > 0 && newStatusLabel) {
-        const issueStatus = mapColumnToStatus(newStatusLabel);
-        const targetColumnId = findColumnIdForStatus(issueStatus);
-        if (targetColumnId) {
-          try {
-            const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
-            const idSet = new Set(ids.map(String));
-            queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
-              if (!old) return old;
-              return old.map((item: any) => {
-                if (idSet.has(String(item._id))) {
-                  return {
-                    ...item,
-                    column: targetColumnId,
-                    status: newStatusLabel,
-                  };
-                }
-                return item;
+        const ids = variables?.ids || [];
+        const newStatusLabel = variables?.data?.status;
+
+        if (workspaceId && ids.length > 0 && newStatusLabel) {
+          const issueStatus = mapColumnToStatus(newStatusLabel);
+          const targetColumnId = findColumnIdForStatus(issueStatus);
+          if (targetColumnId) {
+            try {
+              const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
+              const idSet = new Set(ids.map(String));
+              queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
+                if (!old) return old;
+                return old.map((item: any) => {
+                  if (idSet.has(String(item._id))) {
+                    return {
+                      ...item,
+                      column: targetColumnId,
+                      status: newStatusLabel,
+                    };
+                  }
+                  return item;
+                });
               });
-            });
-            await Promise.all(
-              ids.map((id) => issueApiService.moveItemToColumn(id, targetColumnId))
-            );
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-          } catch (error) {
-            console.error("Failed to move items to column after bulk update:", error);
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+              await Promise.all(
+                ids.map((id) => issueApiService.moveItemToColumn(id, targetColumnId))
+              );
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            } catch (error) {
+              console.error("Failed to move items to column after bulk update:", error);
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            }
           }
         }
-      }
 
-      toast({
-        title: "Success",
-        description: `${selectedTaskIds.length} task(s) updated successfully`,
-        variant: "success",
-      });
-      setSelectedTaskIds([]);
+        toast({
+          title: "Success",
+          description: `${selectedTaskIds.length} task(s) updated successfully`,
+          variant: "success",
+        });
+        setSelectedTaskIds([]);
+      }, 300);
     },
     onError: (err: any) => {
       toast({ title: "Error", description: err?.message || "Failed to update tasks", variant: "destructive" });
@@ -242,6 +258,7 @@ const TaskTable: FC = () => {
           onDelete={handleBulkDelete}
           onStatusUpdate={handleBulkStatusUpdate}
           isLoading={bulkDeleteMutation.isPending || bulkUpdateMutation.isPending}
+          statuses={dynamicStatuses}
         />
       )}
 
@@ -296,7 +313,9 @@ const DataTableFilterToolbar: FC<{
   setFilters: ReturnType<typeof useTaskTableFilter>[1];
   isLoading?: boolean;
 }> = ({ filters, setFilters, isLoading }) => {
-  const { data: memberData } = useGetWorkspaceMembers(useParams<{ workspaceId: string }>().workspaceId!);
+  const { workspaceId } = useParams<{ workspaceId: string }>();
+  const { data: memberData } = useGetWorkspaceMembers(workspaceId!);
+  const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId!);
   const members = Array.isArray(memberData) ? memberData : memberData?.members || [];
 
   const assigneesOptions = members.map((member) => {
@@ -358,7 +377,7 @@ const DataTableFilterToolbar: FC<{
       <DataTableFacetedFilter
         title="Status"
         multiSelect
-        options={statuses}
+        options={dynamicStatuses}
         disabled={isLoading}
         selectedValues={filters.status?.split(",") || []}
         onFilterChange={(values) => handleFilterChange("status", values)}
@@ -408,7 +427,8 @@ const BulkActionsBar: FC<{
   onDelete: () => void;
   onStatusUpdate: (status: string) => void;
   isLoading?: boolean;
-}> = ({ selectedCount, onClearSelection, onDelete, onStatusUpdate, isLoading }) => (
+  statuses: { label: string; value: string }[];
+}> = ({ selectedCount, onClearSelection, onDelete, onStatusUpdate, isLoading, statuses }) => (
   <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
     <div className="flex items-center gap-3">
       <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -424,12 +444,7 @@ const BulkActionsBar: FC<{
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Change Status</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          {[
-            { value: "To Do", label: "To Do" },
-            { value: "In Progress", label: "In Progress" },
-            { value: "In Review", label: "In Review" },
-            { value: "Done", label: "Done" }
-          ].map((status) => (
+          {statuses.map((status) => (
             <DropdownMenuCheckboxItem key={status.value} onClick={() => onStatusUpdate(status.value)} disabled={isLoading}>
               {status.label}
             </DropdownMenuCheckboxItem>

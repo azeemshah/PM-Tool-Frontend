@@ -17,6 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
@@ -39,6 +40,8 @@ export default function CreateTaskForm(props: {
 
   const queryClient = useQueryClient();
   const workspaceId = propWorkspaceId || useWorkspaceId();
+
+  const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId);
 
   // Mutation for creating task in workspace
   const { mutate: mutateIndependentTask, isPending: isIndependentTaskPending } = useMutation({
@@ -126,34 +129,42 @@ export default function CreateTaskForm(props: {
 
       mutateIndependentTask(payload, {
         onSuccess: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["tasks", "all"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["allTasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["issues", "workspace", workspaceId],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["all-tasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["recent-tasks"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["workspace-analytics"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["project-analytics"],
-          });
-
-          toast({
-            title: "Success",
-            description: "Task created successfully",
-            variant: "success",
-          });
           onClose();
+          
+          // Delay invalidation to allow dialog to close properly and prevent UI freeze
+          setTimeout(() => {
+            // Manual cleanup to prevent UI freeze
+            document.body.style.pointerEvents = "";
+            document.body.style.overflow = "";
+
+            queryClient.invalidateQueries({
+              queryKey: ["tasks", "all"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["allTasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["issues", "workspace", workspaceId],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["all-tasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["recent-tasks"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["workspace-analytics"],
+            });
+            queryClient.invalidateQueries({
+              queryKey: ["project-analytics"],
+            });
+
+            toast({
+              title: "Success",
+              description: "Task created successfully",
+              variant: "success",
+            });
+          }, 300);
         },
         onError: (error) => {
           toast({
@@ -307,9 +318,9 @@ export default function CreateTaskForm(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {STATUSES.map((s) => (
-                          <SelectItem key={s} value={s}>
-                            {s.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                        {dynamicStatuses.map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
                           </SelectItem>
                         ))}
                       </SelectContent>

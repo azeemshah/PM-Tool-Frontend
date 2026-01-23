@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import { useQuery } from "@tanstack/react-query";
+import { getWorkspaceByIdQueryFn } from "@/lib/api";
 
 type ItemType = {
   title: string;
@@ -28,6 +30,15 @@ export function NavMain() {
 
   const pathname = location.pathname;
 
+  const { data: workspaceData } = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+    enabled: !!workspaceId,
+  });
+
+  const workspace = workspaceData?.workspace;
+  const boardLabel = workspace?.boardType === "scrumboard" ? "Scrum Board" : "Kanban";
+
   const items: ItemType[] = [
     {
       title: "Dashboard",
@@ -40,7 +51,7 @@ export function NavMain() {
       icon: CheckCircle,
     },
     {
-      title: "Kanban",
+      title: boardLabel,
       url: `/workspace/${workspaceId}/board`,
       icon: LayoutDashboard,
     },

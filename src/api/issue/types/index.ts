@@ -5,11 +5,11 @@
 
 export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
-export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked';
+export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked' | string;
 
 export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type ItemPriority = 'low' | 'medium' | 'high';
-export type ItemStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog';
+export type ItemStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog' | string;
 
 type IssueFormValues = {
 	title: string;

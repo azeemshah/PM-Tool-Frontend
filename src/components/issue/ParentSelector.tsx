@@ -24,6 +24,7 @@ interface ParentSelectorProps {
 	optional?: boolean; // For Story/Task/Bug, Epic is optional
 	epicChildren?: (Story | Task | Bug)[]; // For subtask parent selection
 }
+import { IssueTypeIcon } from './IssueTypeIcon';
 
 type ParentIssue = Epic | Story | Task | Bug;
 
@@ -71,11 +72,11 @@ export function ParentSelector({
 				{!optional && issueType !== 'subtask' && ' *'}
 				{optional && issueType !== 'subtask' && <span className="text-xs font-extralight ml-2">Optional</span>}
 			</label>
-			
+
 			{epicsLoading ? (
 				<Skeleton className="w-full h-10" />
 			) : (
-			<Select value={parentId} onValueChange={onChange} disabled={disabled || (parentOptions.length === 0 && !optional)}>
+				<Select value={parentId} onValueChange={onChange} disabled={disabled || (parentOptions.length === 0 && !optional)}>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder={`Select ${parentLabel.toLowerCase()}...`} />
 					</SelectTrigger>
@@ -88,7 +89,7 @@ export function ParentSelector({
 							parentOptions.map((parent) => (
 								<SelectItem key={parent._id} value={parent._id}>
 									<div className="flex items-center gap-2">
-										<TypeIcon type={parent.type} />
+										<IssueTypeIcon type={parent.type} />
 										<span>{parent.title}</span>
 									</div>
 								</SelectItem>
@@ -103,26 +104,12 @@ export function ParentSelector({
 					{issueType === 'subtask'
 						? 'Select an Epic first to see available parent issues'
 						: optional
-						? 'No Epics available. You can create this without Epic and add it later.'
-						: 'No Epics available. Create an Epic first.'}
+							? 'No Epics available. You can create this without Epic and add it later.'
+							: 'No Epics available. Create an Epic first.'}
 				</div>
 			)}
 		</div>
 	);
-}
-
-/**
- * Type icon helper
- */
-function TypeIcon({ type }: { type: IssueType }) {
-	const icons: Record<IssueType, string> = {
-		epic: '🎯',
-		story: '📖',
-		task: '✓',
-		bug: '🐛',
-		subtask: '→',
-	};
-	return <span>{icons[type]}</span>;
 }
 
 

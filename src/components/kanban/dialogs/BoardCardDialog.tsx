@@ -326,11 +326,21 @@ export function BoardCardDialog() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="backlog">Backlog</SelectItem>
-                  <SelectItem value="todo">Todo</SelectItem>
-                  <SelectItem value="in_progress">In Progress</SelectItem>
-                  <SelectItem value="in_review">In Review</SelectItem>
-                  <SelectItem value="done">Done</SelectItem>
+                  {boardLists && boardLists.length > 0 ? (
+                    boardLists.map((list: any) => (
+                      <SelectItem key={list._id} value={list.name}>
+                        {list.name}
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <>
+                      <SelectItem value="backlog">Backlog</SelectItem>
+                      <SelectItem value="todo">Todo</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="done">Done</SelectItem>
+                    </>
+                  )}
                 </SelectContent>
               </Select>
             ) : (

@@ -2,7 +2,8 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Loader } from "lucide-react";
+import { CalendarIcon, Loader, Download, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Form,
   FormControl,
@@ -37,9 +38,10 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateTaskMutationFn } from "@/lib/api";
+import { updateTaskMutationFn, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import FileUpload from "@/components/ui/file-upload";
 
 interface Task {
   _id: string;
@@ -56,6 +58,8 @@ interface Task {
   storyId?: string;
 }
 
+type AttachmentUI = { _id: string; url: string; name: string };
+
 export default function EditTaskForm(props: {
   task: Task;
   storyId?: string;
@@ -66,6 +70,8 @@ export default function EditTaskForm(props: {
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
+  const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
+  const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
 
   const { mutate, isPending } = useMutation({
     mutationFn: updateTaskMutationFn,
@@ -138,6 +144,18 @@ export default function EditTaskForm(props: {
   const statusOptions = transformOptions(taskStatusList);
   const priorityOptions = transformOptions(taskPriorityList);
 
+  useEffect(() => {
+    const loadAttachments = async () => {
+      try {
+        const items = await getWorkItemAttachments(String(task._id));
+        setAttachments(items);
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadAttachments();
+  }, [task._id]);
+
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
     const payload = {
@@ -176,6 +194,65 @@ export default function EditTaskForm(props: {
         });
       },
     });
+  };
+
+  const handleAttachmentUploaded = async (url: string) => {
+    try {
+      if (url) {
+        const name = url.split('/').pop() || 'attachment';
+        setAttachments((prev) => [...prev, { _id: `temp-${Date.now()}`, url, name }]);
+      }
+      const items = await getWorkItemAttachments(String(task._id));
+      if (Array.isArray(items) && items.length > 0) {
+        setAttachments(items);
+      }
+      toast({
+        title: "Success",
+        description: "Attachment uploaded successfully",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load attachments after upload",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAttachment = async (att: AttachmentUI) => {
+    if (!confirm("Are you sure you want to delete this attachment?")) return;
+
+    setDeletingAttachment(att._id || att.url);
+    try {
+      let targetId = att._id;
+      if (!targetId || targetId.startsWith('temp-')) {
+        const items = await getWorkItemAttachments(String(task._id));
+        const match = items.find((x) => x.url === att.url || x.name === att.name);
+        targetId = match?._id || "";
+      }
+      if (!targetId) {
+        await deleteAttachmentByUrl(att.url);
+        setAttachments((prev) => prev.filter((a) => a.url !== att.url));
+      } else {
+        await deleteAttachmentById(targetId);
+        setAttachments((prev) => prev.filter((a) => a._id !== att._id && a.url !== att.url));
+      }
+      toast({
+        title: "Success",
+        description: "Attachment deleted successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAttachment(null);
+    }
   };
 
   return (
@@ -391,6 +468,79 @@ export default function EditTaskForm(props: {
               />
             </div>
 
+            {/* Attachments Section */}
+            <div className="border-t pt-4 mt-4">
+              <FormLabel className="text-base font-semibold mb-3 block">Attachments</FormLabel>
+
+              {/* Upload Section */}
+              <div className="mb-4">
+                <FileUpload
+                  type="task"
+                  id={task._id}
+                  onUploaded={handleAttachmentUploaded}
+                />
+              </div>
+
+              {/* Attachments List */}
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 mb-2">
+                    {attachments.length} attachment{attachments.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {attachments.map((att, index) => {
+                      const fileNameRaw = att.name || att.url.split("/").pop() || `Attachment ${index + 1}`;
+                      const fileName = (() => {
+                        const parts = String(fileNameRaw).split("-");
+                        return parts.length >= 3 ? parts.slice(2).join("-") : fileNameRaw;
+                      })();
+                      const apiBase: string | undefined = import.meta.env.VITE_API_BASE_URL as any;
+                      const apiOrigin = (() => {
+                        try {
+                          return apiBase ? new URL(apiBase).origin : window.location.origin;
+                        } catch {
+                          return window.location.origin;
+                        }
+                      })();
+                      const absoluteUrl = att.url.startsWith("http") ? att.url : `${apiOrigin}${att.url}`;
+                      return (
+                        <div
+                          key={att._id}
+                          className="flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer"
+                          onClick={() => window.open(absoluteUrl, '_blank', 'noopener')}
+                        >
+                          <a
+                            href={absoluteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
+                          >
+                            <Download className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate text-sm">{fileName}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att); }}
+                            disabled={deletingAttachment === att._id || deletingAttachment === att.url}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Delete attachment"
+                          >
+                            {deletingAttachment === att._id || deletingAttachment === att.url ? (
+                              <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No attachments yet</p>
+              )}
+            </div>
+
             <Button
               className="flex place-self-end  h-[40px] text-white font-semibold"
               type="submit"
@@ -405,8 +555,3 @@ export default function EditTaskForm(props: {
     </div>
   );
 }
-
-
-
-
-

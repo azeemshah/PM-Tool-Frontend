@@ -69,7 +69,7 @@ export const mapColumnToStatus = (columnName: string): IssueStatus => {
   if (name.includes('done')) return 'done';
   if (name.includes('todo')) return 'to-do';
 
-  return 'to-do'; // Default
+  return columnName; // Return original column name for custom columns
 };
 
 

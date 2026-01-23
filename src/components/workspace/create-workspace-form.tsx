@@ -62,7 +62,12 @@ export default function CreateWorkspaceForm({
 
         const workspace = data.workspace;
         onClose();
-        navigate(`/workspace/${workspace._id}`);
+        setTimeout(() => {
+          // Manual cleanup to prevent UI freeze
+          document.body.style.pointerEvents = "";
+          document.body.style.overflow = "";
+          navigate(`/workspace/${workspace._id}`);
+        }, 300);
       },
       onError: (error) => {
         toast({

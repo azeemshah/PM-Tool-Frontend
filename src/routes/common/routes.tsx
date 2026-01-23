@@ -1,4 +1,3 @@
-import GoogleOAuthFailure from "@/page/auth/GoogleOAuthFailure";
 import SignIn from "@/page/auth/Sign-in";
 import SignUp from "@/page/auth/Sign-up";
 import ForgotPassword from "@/page/auth/Forgot-password";
@@ -20,7 +19,6 @@ export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
   { path: AUTH_ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
   { path: AUTH_ROUTES.CHANGE_PASSWORD, element: <ChangePassword /> },
-  { path: AUTH_ROUTES.GOOGLE_OAUTH_CALLBACK, element: <GoogleOAuthFailure /> },
 ];
 
 export const protectedRoutePaths = [

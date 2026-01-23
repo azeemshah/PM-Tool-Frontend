@@ -29,6 +29,10 @@ export const useUpdateSprint = () => {
       queryClient.invalidateQueries({
         queryKey: ['sprints', data.workspaceId]
       });
+      // Also invalidate work items to reflect status changes (e.g. on complete sprint)
+      queryClient.invalidateQueries({
+        queryKey: ['workspace-items']
+      });
     },
   });
 };

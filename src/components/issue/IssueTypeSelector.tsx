@@ -13,6 +13,8 @@ import {
 } from '@/components/ui/select';
 import { IssueType } from '@/api/issue/types';
 import { Badge } from '@/components/ui/badge';
+import { ISSUE_TYPES_LIST } from './constants';
+import { IssueTypeIcon } from './IssueTypeIcon';
 
 interface IssueTypeSelectorProps {
 	value: IssueType | '';
@@ -20,13 +22,18 @@ interface IssueTypeSelectorProps {
 	disabled?: boolean;
 }
 
-const ISSUE_TYPES = [
-	{ value: 'epic' as IssueType, label: '🎯 Epic', description: 'Large initiative' },
-	{ value: 'story' as IssueType, label: '📖 Story', description: 'User story' },
-	{ value: 'task' as IssueType, label: '✓ Task', description: 'Task under Epic' },
-	{ value: 'bug' as IssueType, label: '🐛 Bug', description: 'Bug under Epic' },
-	{ value: 'subtask' as IssueType, label: '→ Subtask', description: 'Subtask under Story/Task/Bug' },
-];
+const ISSUE_DESCRIPTIONS: Record<string, string> = {
+    epic: 'Large initiative',
+    story: 'User story',
+    task: 'Task under Epic',
+    bug: 'Bug under Epic',
+    subtask: 'Subtask under Story/Task/Bug',
+};
+
+const ISSUE_TYPES = ISSUE_TYPES_LIST.map(item => ({
+    ...item,
+    description: ISSUE_DESCRIPTIONS[item.value]
+}));
 
 export function IssueTypeSelector({ value, onChange, disabled = false }: IssueTypeSelectorProps) {
 	return (
@@ -40,6 +47,7 @@ export function IssueTypeSelector({ value, onChange, disabled = false }: IssueTy
 					{ISSUE_TYPES.map((type) => (
 						<SelectItem key={type.value} value={type.value}>
 							<div className="flex items-center gap-2">
+								<IssueTypeIcon type={type.value} />
 								<span>{type.label}</span>
 								<span className="text-xs text-gray-500">({type.description})</span>
 							</div>

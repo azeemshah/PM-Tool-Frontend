@@ -73,10 +73,15 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     value: member.userId?._id || "",
   }));
 
-  const statusOptions = Object.values(TaskStatusEnum).map((value) => ({
-    label: value,
-    value,
-  }));
+  const statusOptions = boardLists && boardLists.length > 0
+    ? boardLists.map((list: any) => ({
+      label: list.name,
+      value: list.name,
+    }))
+    : Object.values(TaskStatusEnum).map((value) => ({
+      label: value,
+      value,
+    }));
 
   const priorityOptions = Object.keys(TaskPriorityEnum).map((key) => ({
     label: key.charAt(0) + key.slice(1).toLowerCase(),
@@ -111,7 +116,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   const formSchema = z.object({
     title: z.string().trim().min(1, { message: "Title is required" }),
     description: z.string().trim(),
-    status: z.enum(Object.values(TaskStatusEnum) as [string, ...string[]]),
+    status: z.string().min(1, { message: "Status is required" }),
     priority: z.enum(Object.values(TaskPriorityEnum) as [string, ...string[]]),
     assignedTo: z.string().trim().optional(),
     dueDate: z.date().optional(),
@@ -159,39 +164,47 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
     mutate({ issueId: taskId, data: payload }, {
       onSuccess: async () => {
-        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-        toast({
-          title: "Success",
-          description: "Task updated successfully",
-          variant: "success",
-        });
-        if (targetColumnId && workspaceId) {
-          try {
-            const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
-            queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
-              if (!old) return old;
-              return old.map((item: any) => {
-                if (String(item._id) === taskId) {
-                  return {
-                    ...item,
-                    column: targetColumnId,
-                    status: values.status,
-                  };
-                }
-                return item;
-              });
-            });
-            await issueApiService.moveItemToColumn(taskId, targetColumnId);
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-          } catch (error) {
-            console.error("Failed to move item column after task update:", error);
-            queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-          }
-        }
         onClose();
+
+        // Delay invalidation to allow dialog to close properly and prevent UI freeze
+        setTimeout(async () => {
+          // Manual cleanup to prevent UI freeze
+          document.body.style.pointerEvents = "";
+          document.body.style.overflow = "";
+
+          queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+          toast({
+            title: "Success",
+            description: "Task updated successfully",
+            variant: "success",
+          });
+          if (targetColumnId && workspaceId) {
+            try {
+              const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
+              queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
+                if (!old) return old;
+                return old.map((item: any) => {
+                  if (String(item._id) === taskId) {
+                    return {
+                      ...item,
+                      column: targetColumnId,
+                      status: values.status,
+                    };
+                  }
+                  return item;
+                });
+              });
+              await issueApiService.moveItemToColumn(taskId, targetColumnId);
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            } catch (error) {
+              console.error("Failed to move item column after task update:", error);
+              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+            }
+          }
+        }, 300);
       },
       onError: (error: any) => {
         console.error("Update error:", error);

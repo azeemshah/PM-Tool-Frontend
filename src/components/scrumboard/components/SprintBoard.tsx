@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { Calendar, Target, Users, TrendingUp, Plus } from 'lucide-react';
-import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -15,6 +14,7 @@ import WorkItemCard from './WorkItemCard';
 import SprintColumn from './SprintColumn';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { toast } from '@/hooks/use-toast';
+import { useAutoScroll } from '@/hooks/use-auto-scroll';
 
 interface SprintBoardProps {
   sprint: Sprint;
@@ -23,42 +23,42 @@ interface SprintBoardProps {
 const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
-  const [columnOrder, setColumnOrder] = useState<string[]>(sprint.columns || ['todo', 'in-progress', 'done']);
+  const [columnOrder, setColumnOrder] = useState<string[]>(sprint.columns || ['To Do', 'In Progress', 'In Review', 'Done']);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
-
-  // Fetch workspace boards to get the board ID
-  const { data: workspaceBoards = [] } = useQuery({
-    queryKey: ['workspace-boards', workspaceId],
-    queryFn: () => KanbanApiService.getKanbanBoards(workspaceId),
-    enabled: !!workspaceId,
+  const { scrollableRef, setDragging } = useAutoScroll({
+    scrollThreshold: 50,
+    scrollSpeed: 8,
   });
 
-  // Get the first board ID from the workspace
-  const boardId = workspaceBoards.length > 0 ? workspaceBoards[0]._id : null;
-
-  // Fetch board columns
-  const { data: boardColumns = [] } = useQuery({
-    queryKey: ['kanban-board-lists', boardId],
-    queryFn: () => boardId ? KanbanApiService.getKanbanBoardLists(boardId) : Promise.resolve([]),
-    enabled: !!boardId,
-  });
-
-  // Update column order when board columns change
-  useEffect(() => {
-    if (boardColumns.length > 0) {
-      setColumnOrder(boardColumns.map((col: any) => col._id));
-    } else {
-      setColumnOrder(sprint.columns || ['todo', 'in-progress', 'done']);
+  const normalizeColumnName = (name: string) => {
+    switch (name.toLowerCase()) {
+      case 'todo': return 'To Do';
+      case 'in-progress': return 'In Progress';
+      case 'done': return 'Done';
+      default: return name;
     }
-  }, [boardColumns, sprint._id]);
+  };
+
+  // Sync columnOrder with sprint.columns when sprint data updates
+  useEffect(() => {
+    const currentCols = sprint.columns || ['To Do', 'In Progress', 'In Review', 'Done'];
+    const normalizedCols = currentCols.map(normalizeColumnName);
+
+    setColumnOrder(normalizedCols);
+
+    // Auto-migrate legacy columns to new format
+    if (JSON.stringify(currentCols) !== JSON.stringify(normalizedCols)) {
+      updateColumnsMutation.mutate(normalizedCols);
+    }
+  }, [sprint.columns]);
 
   // Mutation to update columns in backend
   const updateColumnsMutation = useMutation({
     mutationFn: (columns: string[]) => SprintApiService.updateSprintColumns(sprint._id, columns),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ['workspace-sprints'],
+        queryKey: ['sprints', workspaceId],
       });
       toast({
         title: 'Success',
@@ -121,7 +121,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         queryKey: ['kanban-board-lists', boardId],
       });
       queryClient.invalidateQueries({
-        queryKey: ['workspace-sprints'],
+        queryKey: ['sprints', workspaceId],
       });
       toast({
         title: 'Success',
@@ -150,7 +150,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       ['in progress', 'in review', 'inprogress'].includes(item.status?.toLowerCase())
     ).length,
     todoWorkItems: sprintWorkItems.filter(item =>
-      ['backlog', 'todo'].includes(item.status?.toLowerCase()) || !item.status
+      ['backlog', 'todo', 'to do'].includes(item.status?.toLowerCase()) || !item.status
     ).length,
     completionPercentage: sprintWorkItems.length > 0
       ? (sprintWorkItems.filter(item => item.status?.toLowerCase() === 'done').length / sprintWorkItems.length) * 100
@@ -158,6 +158,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   };
 
   const handleDragEnd = (result: DropResult) => {
+    setDragging(false);
     const { destination, source, draggableId, type } = result;
 
     // If no destination or dropped in same position
@@ -181,27 +182,19 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
     // Handle card movement between columns
     if (type === 'card') {
-      // Get the target column from boardColumns
-      const targetColumn = boardColumns.find((col: any) => col._id === destination.droppableId);
-      
-      if (!targetColumn) {
-        console.warn('Target column not found:', destination.droppableId);
-        return;
-      }
+      // Use the column ID as the status directly since we are using sprint columns now
+      const newStatus = destination.droppableId;
 
-      // Use the column name as the status
-      const newStatus = targetColumn.name;
-      
-      console.log('Moving item to column:', { 
-        itemId: draggableId, 
-        columnId: destination.droppableId, 
-        columnName: newStatus 
+      console.log('Moving item to column:', {
+        itemId: draggableId,
+        columnId: destination.droppableId,
+        columnName: newStatus
       });
 
       // Update work item status and column
       updateWorkItemMutation.mutate({
         itemId: draggableId,
-        data: { 
+        data: {
           status: newStatus,
         },
       });
@@ -218,37 +211,30 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       return;
     }
 
-    if (!boardId) {
-      toast({
-        title: 'Error',
-        description: 'Unable to find workspace board',
-        variant: 'destructive',
-      });
-      return;
-    }
-
     try {
-      // Create column using kanban column API
-      await KanbanApiService.createKanbanBoardList(boardId, {
-        name: newColumnName.trim(),
-        board: boardId,
-      });
+      const newColumn = newColumnName.trim();
+
+      // Check if column already exists
+      if (columnOrder.includes(newColumn)) {
+        toast({
+          title: 'Error',
+          description: 'Column already exists',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const newColumnOrder = [...columnOrder, newColumn];
+      setColumnOrder(newColumnOrder);
+      updateColumnsMutation.mutate(newColumnOrder);
 
       // Reset form
       setNewColumnName('');
       setIsAddingColumn(false);
 
-      // Invalidate queries to refresh columns
-      queryClient.invalidateQueries({
-        queryKey: ['kanban-board-lists', boardId],
-      });
-      queryClient.invalidateQueries({
-        queryKey: ['workspace-sprints'],
-      });
-
       toast({
         title: 'Success',
-        description: `Column "${newColumnName}" added successfully`,
+        description: `Column "${newColumn}" added successfully`,
       });
     } catch (error) {
       console.error('Failed to create column:', error);
@@ -373,9 +359,15 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       </div>
 
       {/* Sprint Board Columns */}
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext
+        onDragEnd={handleDragEnd}
+        onBeforeDragStart={() => setDragging(true)}
+      >
         <div className="flex-1 overflow-hidden">
-          <div className="h-full overflow-x-auto">
+          <div
+            ref={scrollableRef}
+            className="h-full overflow-x-auto"
+          >
             <Droppable
               droppableId="sprint-columns"
               type="column"
@@ -389,13 +381,12 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                   className="inline-flex gap-4 p-4 min-w-min"
                 >
                   {columnOrder.map((columnId, index) => {
-                    // Find the column data from boardColumns
-                    const column = boardColumns.find((col: any) => col._id === columnId);
-                    const title = column?.name || columnId;
+                    // In sprint board, columnId is the column name/title
+                    const title = columnId;
 
                     // Filter work items for this column by matching status to column name
                     const workItems = sprintWorkItems.filter((item: any) =>
-                      item.status === title
+                      item.status === title || (item.status?.toLowerCase() === title?.toLowerCase())
                     );
 
                     return (

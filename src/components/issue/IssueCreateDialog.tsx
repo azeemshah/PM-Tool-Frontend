@@ -31,7 +31,8 @@ import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
-import { uploadWorkItemAttachment } from '@/lib/api';
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { getAllAttachments, uploadWorkItemAttachment } from '@/lib/api';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -66,7 +67,7 @@ export function IssueCreateDialog({
     const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-    const ISSUE_STATUSES = [ 'todo', 'in_progress', 'in_review', 'done'];
+    const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
 
     // Queries and mutations
     const membersQuery = useGetWorkspaceMembers(workspaceId);
@@ -247,7 +248,7 @@ export function IssueCreateDialog({
                     reporter: reporterId,
                     priority: mappedPriority,
                     dueDate: dueDate?.toISOString(),
-                    status: status ? statusMap[status] : undefined,
+                    status: status ? (statusMap[status] || status) : undefined,
                 },
                 {
                     onSuccess: async (created: any) => {
@@ -283,7 +284,7 @@ export function IssueCreateDialog({
                 reporter: reporterId,
                 dueDate: dueDate?.toISOString(),
                 workspace: workspaceId,
-                status: status ? statusMap[status] : undefined,
+                status: status ? (statusMap[status] || status) : undefined,
                 parent: epicId || undefined,
             };
 
@@ -332,7 +333,7 @@ export function IssueCreateDialog({
                 reporter: reporterId,
                 dueDate: dueDate?.toISOString(),
                 workspace: workspaceId,
-                status: status ? statusMap[status] : undefined,
+                status: status ? (statusMap[status] || status) : undefined,
                 parent: parentIssueId,
             };
 
@@ -480,9 +481,9 @@ export function IssueCreateDialog({
                                 <SelectValue placeholder="Select a status" />
                             </SelectTrigger>
                             <SelectContent>
-                                {ISSUE_STATUSES.map((s) => (
-                                    <SelectItem key={s} value={s}>
-                                        {s.replace(/_/g, ' ').split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                                {dynamicStatuses.map((s) => (
+                                    <SelectItem key={s.value} value={s.value}>
+                                        {s.label}
                                     </SelectItem>
                                 ))}
                             </SelectContent>

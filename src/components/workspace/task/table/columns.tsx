@@ -153,7 +153,18 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
         const statusValue = typeof rawStatus === "string" ? rawStatus : String(rawStatus);
         const status = statuses.find((s) => s.value.toLowerCase() === statusValue.toLowerCase());
 
-        if (!status) return <span className="text-sm text-muted-foreground">Unknown status</span>;
+        if (!status) {
+          return (
+            <div className="flex lg:w-[120px] items-center">
+              <Badge
+                variant="outline"
+                className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 text-gray-700"
+              >
+                <span>{statusValue}</span>
+              </Badge>
+            </div>
+          );
+        }
 
         const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
         const Icon = status.icon;

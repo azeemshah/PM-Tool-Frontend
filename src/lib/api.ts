@@ -744,13 +744,9 @@ export const getAllAttachments = async () => {
 };
 
 export const getWorkItemAttachments = async (workItemId: string) => {
-  const all = await getAllAttachments();
-  return (all as any[]).filter((a) => {
-    const w = (a as any).workItem;
-    if (!w) return false;
-    if (typeof w === 'string') return String(w) === String(workItemId);
-    return String(w?._id) === String(workItemId);
-  }).map((a) => ({
+  const response = await API.get(`/kanban/files/work-item/${workItemId}`);
+  const items = response.data?.data || response.data || [];
+  return (items as any[]).map((a) => ({
     _id: a._id,
     url: a.fileUrl,
     name: a.fileName,
