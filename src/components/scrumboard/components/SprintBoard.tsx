@@ -271,13 +271,13 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const isOverdue = daysRemaining < 0;
 
   return (
-    <div className="flex flex-col h-full bg-gray-50">
+    <div className="flex flex-col h-full bg-gray-50 dark:bg-background">
       {/* Sprint Header */}
-      <div className="bg-white border-b border-gray-200 p-6">
+      <div className="bg-white dark:bg-card border-b border-gray-200 dark:border-border p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
             <div className="flex items-center gap-3 mb-2">
-              <h1 className="text-2xl font-bold text-gray-900">{sprint.name}</h1>
+              <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">{sprint.name}</h1>
               <Badge
                 variant={sprint.status === 'ACTIVE' ? 'default' : 'secondary'}
                 className="text-sm"
@@ -286,7 +286,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
               </Badge>
             </div>
             {sprint.goal && (
-              <p className="text-gray-600 flex items-center gap-2">
+              <p className="text-gray-600 dark:text-muted-foreground flex items-center gap-2">
                 <Target className="w-4 h-4" />
                 {sprint.goal}
               </p>
@@ -295,13 +295,13 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
           <div className="flex items-center gap-4">
             <div className="text-right">
-              <div className="flex items-center gap-2 text-sm text-gray-600">
+              <div className="flex items-center gap-2 text-sm text-gray-600 dark:text-muted-foreground">
                 <Calendar className="w-4 h-4" />
                 <span>
                   {formatDate(sprint.startDate)} - {formatDate(sprint.endDate)}
                 </span>
               </div>
-              <div className={`text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900'}`}>
+              <div className={`text-sm font-medium ${isOverdue ? 'text-red-600' : 'text-gray-900 dark:text-foreground'}`}>
                 {isOverdue ? `${Math.abs(daysRemaining)} days overdue` : `${daysRemaining} days remaining`}
               </div>
             </div>
@@ -319,8 +319,8 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         {/* Progress Bar */}
         <div className="mt-4">
           <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-gray-700">Sprint Progress</span>
-            <span className="text-sm text-gray-600">
+            <span className="text-sm font-medium text-gray-700 dark:text-muted-foreground">Sprint Progress</span>
+            <span className="text-sm text-gray-600 dark:text-muted-foreground">
               {stats.completionPercentage.toFixed(0)}% complete
             </span>
           </div>

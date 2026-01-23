@@ -108,13 +108,13 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
   }
 
   return (
-    <div className="flex-1 flex flex-col bg-gray-50">
+    <div className="flex-1 flex flex-col bg-gray-50 dark:bg-background">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 p-6">
+      <div className="bg-white dark:bg-card border-b border-gray-200 dark:border-border p-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Backlog</h1>
-            <p className="text-gray-600">Plan and prioritize your work items</p>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-foreground">Backlog</h1>
+            <p className="text-gray-600 dark:text-muted-foreground">Plan and prioritize your work items</p>
           </div>
           <Button
             onClick={() => setShowCreateDialog(true)}
@@ -128,7 +128,7 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
         {/* Search and Filters */}
         <div className="flex gap-4">
           <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search work items..."
               value={searchTerm}
@@ -147,13 +147,13 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
       <div className="flex-1 p-6 overflow-y-auto">
         {filteredItems.length === 0 ? (
           <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <div className="w-16 h-16 bg-gray-100 dark:bg-muted rounded-full flex items-center justify-center mx-auto mb-4">
               📋
             </div>
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+            <h3 className="text-lg font-medium text-gray-900 dark:text-foreground mb-2">
               {searchTerm ? 'No work items found' : 'Backlog is empty'}
             </h3>
-            <p className="text-gray-600 mb-4">
+            <p className="text-gray-600 dark:text-muted-foreground mb-4">
               {searchTerm
                 ? 'Try adjusting your search terms'
                 : 'Create work items to start planning your sprints'
@@ -169,26 +169,26 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
         ) : (
           <div className="space-y-4">
             {/* Summary Stats */}
-            <Card className="p-4 bg-white">
+            <Card className="p-4 bg-white dark:bg-card">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   <div className="text-center">
-                    <div className="text-2xl font-bold text-gray-900">
+                    <div className="text-2xl font-bold text-gray-900 dark:text-foreground">
                       {filteredItems.length}
                     </div>
-                    <div className="text-sm text-gray-600">Total Items</div>
+                    <div className="text-sm text-gray-600 dark:text-muted-foreground">Total Items</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-blue-600">
                       {filteredItems.filter((item: any) => item.priority?.toLowerCase() === 'high').length}
                     </div>
-                    <div className="text-sm text-gray-600">High Priority</div>
+                    <div className="text-sm text-gray-600 dark:text-muted-foreground">High Priority</div>
                   </div>
                   <div className="text-center">
                     <div className="text-2xl font-bold text-orange-600">
                       {filteredItems.filter((item: any) => item.priority?.toLowerCase() === 'medium').length}
                     </div>
-                    <div className="text-sm text-gray-600">Medium Priority</div>
+                    <div className="text-sm text-gray-600 dark:text-muted-foreground">Medium Priority</div>
                   </div>
                 </div>
                 <Badge variant="secondary" className="text-sm">
@@ -237,7 +237,7 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
                 </div>
               ))}
               {filteredItems.length === 0 && (
-                <div className="text-center py-10 text-gray-500 bg-white rounded-lg border border-dashed border-gray-300">
+                <div className="text-center py-10 text-gray-500 dark:text-muted-foreground bg-white dark:bg-muted/10 rounded-lg border border-dashed border-gray-300 dark:border-border">
                   <p>No work items found in backlog</p>
                   <Button
                     variant="link"

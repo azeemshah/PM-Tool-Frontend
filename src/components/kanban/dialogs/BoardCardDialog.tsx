@@ -379,12 +379,12 @@ export function BoardCardDialog() {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-card dark:border-border dark:text-foreground rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b">
+        <div className="flex items-center justify-between p-6 border-b dark:border-border">
           <div>
-            <h2 className="text-xl font-bold">Issue Details</h2>
-            <p className="text-sm text-gray-500 mt-1">{issue.key || `${issue.type} #${issue._id.slice(-6)}`}</p>
+            <h2 className="text-xl font-bold dark:text-foreground">Issue Details</h2>
+            <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1">{issue.key || `${issue.type} #${issue._id.slice(-6)}`}</p>
           </div>
           <div className="flex items-center gap-2">
             {!isEditing && (
@@ -412,7 +412,7 @@ export function BoardCardDialog() {
                 setIsCardDialogOpen(false);
                 setSelectedCard(null);
               }}
-              className="text-gray-400 hover:text-gray-600"
+              className="text-gray-400 hover:text-gray-600 dark:text-muted-foreground dark:hover:text-foreground"
             >
               <X size={24} />
             </button>
@@ -423,7 +423,7 @@ export function BoardCardDialog() {
         <div className="p-6 space-y-6">
           {/* Title */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Title
             </label>
             {isEditing ? (
@@ -431,16 +431,16 @@ export function BoardCardDialog() {
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             ) : (
-              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-foreground">{title}</h3>
             )}
           </div>
 
           {/* Issue Type */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Type
             </label>
             <Badge className="inline-block p-1 px-2 gap-1 font-medium shadow-sm capitalize">
@@ -450,7 +450,7 @@ export function BoardCardDialog() {
 
           {/* Status */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Status
             </label>
             {isEditing ? (
@@ -485,7 +485,7 @@ export function BoardCardDialog() {
 
           {/* Description */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Description
             </label>
             {isEditing ? (
@@ -494,19 +494,19 @@ export function BoardCardDialog() {
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Add a description..."
                 rows={5}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             ) : (
-              <p className="text-gray-600 whitespace-pre-wrap">
-                {description || 'No description'}
-              </p>
+              <div className="mt-2 p-3 bg-gray-50 dark:bg-muted/50 rounded-md text-sm text-gray-700 dark:text-foreground min-h-[100px] whitespace-pre-wrap">
+                {description || 'No description provided.'}
+              </div>
             )}
           </div>
 
           {/* Priority and Due Date */}
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Priority
               </label>
               {isEditing ? (
@@ -529,7 +529,7 @@ export function BoardCardDialog() {
               )}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 Due Date
               </label>
               {isEditing ? (
@@ -537,10 +537,10 @@ export function BoardCardDialog() {
                   type="date"
                   value={dueDate ? new Date(dueDate).toISOString().split('T')[0] : ''}
                   onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value).toISOString() : null)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               ) : (
-                <p className="text-gray-600">
+                <p className="text-gray-600 dark:text-muted-foreground">
                   {dueDate ? new Date(dueDate).toLocaleDateString() : 'No due date'}
                 </p>
               )}
@@ -549,7 +549,7 @@ export function BoardCardDialog() {
 
           {/* Reporter */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
               Reporter *
             </label>
             {isEditing ? (
@@ -600,11 +600,11 @@ export function BoardCardDialog() {
                           {getAvatarFallbackText(name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="text-gray-900">{name}</span>
+                      <span className="text-gray-900 dark:text-foreground">{name}</span>
                     </>
                   );
                 })() : (
-                  <span className="text-gray-500">No reporter</span>
+                  <span className="text-gray-500 dark:text-muted-foreground">No reporter</span>
                 )}
               </div>
             )}
@@ -612,7 +612,7 @@ export function BoardCardDialog() {
 
           {/* Action Buttons */}
           {isEditing && (
-            <div className="flex justify-end gap-2 pt-6 border-t">
+            <div className="flex justify-end gap-2 pt-6 border-t dark:border-border">
               <Button
                 variant="outline"
                 onClick={() => {

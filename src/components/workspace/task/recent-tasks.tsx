@@ -93,7 +93,7 @@ const RecentTasks = () => {
       )}
 
       {tasks && tasks.length > 0 && (
-        <ul role="list" className="divide-y divide-gray-200">
+        <ul role="list" className="divide-y divide-gray-200 dark:divide-border">
           {tasks.map((task) => {
             const name = task?.assignedTo?.name || "";
             const initials = getAvatarFallbackText(name);
@@ -101,17 +101,17 @@ const RecentTasks = () => {
             return (
               <li
                 key={task._id}
-                className="p-4 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors"
               >
                 {/* Task Info */}
                 <div className="flex flex-col space-y-1 flex-grow">
-                  <span className="text-sm capitalize text-gray-600 font-medium">
+                  <span className="text-sm capitalize text-gray-600 dark:text-muted-foreground font-medium">
                     {task.project?.name || ""}
                   </span>
-                  <p className="text-md font-semibold text-gray-800 truncate">
+                  <p className="text-md font-semibold text-gray-800 dark:text-foreground truncate">
                     {task.title}
                   </p>
-                  <span className="text-sm text-gray-500">
+                  <span className="text-sm text-gray-500 dark:text-muted-foreground">
                     Due: {task.dueDate ? format(new Date(task.dueDate), "PPP") : "No due date"}
                   </span>
                 </div>
@@ -128,7 +128,7 @@ const RecentTasks = () => {
                       return (
                         <Badge
                           variant="outline"
-                          className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 text-gray-700"
+                          className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 dark:bg-secondary text-gray-700 dark:text-secondary-foreground"
                         >
                           <span>{task.status}</span>
                         </Badge>

@@ -130,7 +130,7 @@ export default function CreateTaskForm(props: {
       mutateIndependentTask(payload, {
         onSuccess: () => {
           onClose();
-          
+
           // Delay invalidation to allow dialog to close properly and prevent UI freeze
           setTimeout(() => {
             // Manual cleanup to prevent UI freeze
@@ -180,7 +180,7 @@ export default function CreateTaskForm(props: {
   return (
     <div className="w-full h-auto max-w-full">
       <div className="h-full">
-        <div className="mb-5 pb-2 border-b">
+        <div className="mb-5 pb-2 border-b dark:border-border">
           <h1
             className="text-xl tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1
            text-center sm:text-left"
@@ -294,7 +294,7 @@ export default function CreateTaskForm(props: {
                         value={field.value ? field.value.toISOString().split('T')[0] : ''}
                         onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
                         disabled={isPending}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                       />
                     </FormControl>
                     <FormMessage />
@@ -390,7 +390,7 @@ export default function CreateTaskForm(props: {
             </div>
 
             <Button
-              className="flex place-self-end  h-[40px] text-white font-semibold"
+              className="flex place-self-end  h-[40px] font-semibold"
               type="submit"
               disabled={isPending}
             >

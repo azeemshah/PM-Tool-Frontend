@@ -429,7 +429,7 @@ const BulkActionsBar: FC<{
   isLoading?: boolean;
   statuses: { label: string; value: string }[];
 }> = ({ selectedCount, onClearSelection, onDelete, onStatusUpdate, isLoading, statuses }) => (
-  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950">
+  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
     <div className="flex items-center gap-3">
       <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
       <span className="text-sm font-medium text-amber-900 dark:text-amber-100">

@@ -35,7 +35,7 @@ export function KanbanLayout() {
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-100 dark:bg-background">
       {/* Sidebar */}
       <div
         className={`${

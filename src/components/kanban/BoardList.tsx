@@ -172,16 +172,16 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
   const cardsForThisList = getCardsForList();
 
   return (
-    <div className="w-80 bg-white rounded-lg shadow-sm border border-gray-200 flex flex-col max-h-full">
+    <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
-      <div className="p-3 border-b bg-gray-50 flex items-center justify-between">
+      <div className="p-3 border-b bg-gray-50 dark:bg-muted/50 dark:border-border flex items-center justify-between">
         <div className="flex-1">
           {(() => {
             const rawName = (list && (list.name || (list as any).label || ''));
             const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
-            return <h3 className="font-semibold text-sm text-gray-900">{displayName}</h3>;
+            return <h3 className="font-semibold text-sm text-gray-900 dark:text-foreground">{displayName}</h3>;
           })()}
-          <p className="text-xs text-gray-500 mt-1">{cardsForThisList.length || 0} items</p>
+          <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{cardsForThisList.length || 0} items</p>
         </div>
         <Button
           variant="ghost"
@@ -204,8 +204,9 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`p-3 space-y-2 min-h-[100px] transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50' : 'bg-white'
-                }`}
+              className={`p-3 space-y-2 min-h-[100px] transition-colors ${
+                snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-transparent'
+              }`}
             >
               {cardsForThisList.length > 0 ? (
                 cardsForThisList.map((card: KanbanCard | Issue, index: number) => {
@@ -247,13 +248,13 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       </div>
 
       {/* Add Card Button */}
-      <div className="border-t p-3">
+      <div className="border-t dark:border-border p-3">
         <Button
           type="button"
           variant="ghost"
           size="sm"
           onClick={handleCreateCard}
-          className="w-full justify-start text-gray-600 hover:bg-gray-50"
+          className="w-full justify-start text-gray-600 dark:text-muted-foreground hover:bg-gray-50 dark:hover:bg-muted"
         >
           <Plus size={14} />
           <span className="ml-2">Add Issue</span>

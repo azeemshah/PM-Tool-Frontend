@@ -414,7 +414,7 @@ export function IssueCreateDialog({
                                 </SelectContent>
                             </Select>
                             {workspaceItems.filter((item) => ['story', 'task', 'bug'].includes(item.type)).length === 0 && (
-                                <div className="text-xs text-amber-600">
+                                <div className="text-xs text-amber-600 dark:text-amber-400">
                                     Create a Story, Task, or Bug first to add subtasks.
                                 </div>
                             )}
@@ -469,7 +469,7 @@ export function IssueCreateDialog({
                             value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
                             onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
                             disabled={isLoading}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
                         />
                     </div>
 
@@ -508,7 +508,7 @@ export function IssueCreateDialog({
                             </SelectContent>
                         </Select>
                     </div>
-                    
+
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Attachments</label>
                         <input
