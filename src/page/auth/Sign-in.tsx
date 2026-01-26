@@ -57,6 +57,16 @@ const SignIn = () => {
 
     mutate({ email: values.email || '', password: values.password || '' }, {
       onSuccess: (data) => {
+        // Check if OTP was sent
+        if ((data as any).message && (data as any).email) {
+          toast({
+            title: "OTP Sent",
+            description: "Please check your email for the verification code.",
+          });
+          navigate('/verify-otp', { state: { email: (data as any).email } });
+          return;
+        }
+
         const user = data.user;
         // set Authorization header for subsequent requests
         const bearer = data.accessToken || data.token || (data as any)?.access_token;

@@ -21,6 +21,9 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: "/reset-password",
   CHANGE_PASSWORD: "/change-password",
   GOOGLE_OAUTH_CALLBACK: "/google/oauth/callback",
+  VERIFY_EMAIL: "/verify-email",
+  CHECK_EMAIL: "/check-email",
+  VERIFY_OTP: "/verify-otp",
 };
 
 export const PROTECTED_ROUTES = {

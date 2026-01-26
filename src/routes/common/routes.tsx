@@ -12,6 +12,9 @@ import WorkflowPage from "@/page/workspace/Workflow";
 import { AUTH_ROUTES, BASE_ROUTE, PROTECTED_ROUTES } from "./routePaths";
 import InviteUser from "@/page/invite/InviteUser";
 import AcceptInvite from "@/page/invite/AcceptInvite";
+import VerifyEmail from "@/page/auth/VerifyEmail";
+import CheckEmail from "@/page/auth/CheckEmail";
+import OtpVerification from "@/page/auth/OtpVerification";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -19,6 +22,9 @@ export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
   { path: AUTH_ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
   { path: AUTH_ROUTES.CHANGE_PASSWORD, element: <ChangePassword /> },
+  { path: AUTH_ROUTES.VERIFY_EMAIL, element: <VerifyEmail /> },
+  { path: AUTH_ROUTES.CHECK_EMAIL, element: <CheckEmail /> },
+  { path: AUTH_ROUTES.VERIFY_OTP, element: <OtpVerification /> },
 ];
 
 export const protectedRoutePaths = [
