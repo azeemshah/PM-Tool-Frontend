@@ -168,4 +168,21 @@ em-emoji-picker {
   button[data-placeholder] {
     @apply text-muted-foreground;
   }
+
+  /* Invert the calendar icon in dark mode for Webkit browsers (Chrome, Edge, Safari) */
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    filter: invert(0); /* default for light mode */
+    transition: filter 0.2s;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(1); /* makes the icon light in dark mode */
+}
+
+/* Optional hover effect */
+input[type="date"]:not(:disabled):hover::-webkit-calendar-picker-indicator {
+    filter: invert(0.6);
+}
+
 }
