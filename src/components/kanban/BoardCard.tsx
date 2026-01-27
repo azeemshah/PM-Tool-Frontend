@@ -1,6 +1,6 @@
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
+import { MessageSquare, Paperclip, ListChecks, Flag } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -9,6 +9,7 @@ import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import React, { useMemo } from 'react';
 
 interface BoardCardProps {
   card: KanbanCard | Issue;
@@ -31,6 +32,18 @@ export function BoardCard({ card }: BoardCardProps) {
   const cardComments = issue?.comments || (card as KanbanCard).comments || [];
   const cardAttachments = issue?.attachments || (card as KanbanCard).attachments || [];
   const cardChecklists = (card as KanbanCard).checklists || [];
+
+  const cardDueDate = issue?.dueDate || (card as any)?.dueDate;
+  const cardStatus = issue?.status || (card as any)?.status;
+
+  const isOverdue = useMemo(() => {
+    if (!cardDueDate) return false;
+    const due = new Date(cardDueDate);
+    const now = new Date();
+    // Assuming status normalization is consistent
+    const statusEnum = formatStatusToEnum(String(cardStatus || ''));
+    return due < now && statusEnum !== 'DONE';
+  }, [cardDueDate, cardStatus]);
 
   const hasComments = (cardComments?.length || 0) > 0;
   const hasAttachments = (cardAttachments?.length || 0) > 0;
@@ -71,7 +84,7 @@ export function BoardCard({ card }: BoardCardProps) {
     <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
-        <div>
+        <div className="flex items-center gap-2">
           {(() => {
             const typeValue = String(cardType || '').trim();
             const normalizedType = typeValue.toLowerCase();
@@ -83,56 +96,69 @@ export function BoardCard({ card }: BoardCardProps) {
 
             if (!issueType) {
               return (
-                <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
-                  {typeValue}
+                <Badge variant="outline" className="uppercase text-[10px] px-2 py-0.5">
+                  {cardType}
                 </Badge>
               );
             }
 
             const Icon = issueType.icon;
-
             return (
               <Badge
                 variant="outline"
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+                className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
               >
-                <Icon className="h-4 w-4 text-inherit" />
+                <Icon className="h-3 w-3 text-inherit" />
                 <span className="capitalize">{issueType.label}</span>
               </Badge>
             );
           })()}
+
+          {isOverdue && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
+            >
+              <Flag className="h-3 w-3 text-inherit" />
+              <span className="capitalize">Overdue</span>
+            </Badge>
+          )}
         </div>
       </div>
 
       {/* Labels */}
-      {(card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
-            <span
-              key={labelId}
-              className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
-            >
-              {labelId}
-            </span>
-          ))}
-          {(card as KanbanCard).labels.length > 3 && (
-            <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
-              +{(card as KanbanCard).labels.length - 3}
-            </span>
-          )}
-        </div>
-      )}
+      {
+        (card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
+              <span
+                key={labelId}
+                className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
+              >
+                {labelId}
+              </span>
+            ))}
+            {(card as KanbanCard).labels.length > 3 && (
+              <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
+                +{(card as KanbanCard).labels.length - 3}
+              </span>
+            )}
+          </div>
+        )
+      }
 
       {/* Title */}
       <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
         {cardTitle}
       </h4>
 
-      {hierarchyLabel && (
-        <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
-          {hierarchyLabel}
-        </p>
-      )}
+      {
+        hierarchyLabel && (
+          <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
+            {hierarchyLabel}
+          </p>
+        )
+      }
 
       {/* Footer with icons, priority and assignee */}
       <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
@@ -229,7 +255,7 @@ export function BoardCard({ card }: BoardCardProps) {
           );
         })()}
       </div>
-    </div>
+    </div >
   );
 }
 

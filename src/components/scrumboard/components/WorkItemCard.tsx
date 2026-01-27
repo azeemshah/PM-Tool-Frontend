@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue, TaskType } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks } from 'lucide-react';
+import { MessageSquare, Paperclip, ListChecks, Flag } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -33,6 +33,18 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
   const cardComments = issue?.comments || (card as KanbanCard).comments || [];
   const cardAttachments = issue?.attachments || (card as KanbanCard).attachments || [];
   const cardChecklists = (card as KanbanCard).checklists || [];
+
+  const cardDueDate = issue?.dueDate || (card as any)?.dueDate;
+  const cardStatus = issue?.status || (card as any)?.status;
+
+  const isOverdue = useMemo(() => {
+    if (!cardDueDate) return false;
+    const due = new Date(cardDueDate);
+    const now = new Date();
+    // Assuming status normalization is consistent
+    const statusEnum = formatStatusToEnum(String(cardStatus || ''));
+    return due < now && statusEnum !== 'DONE';
+  }, [cardDueDate, cardStatus]);
 
   const hasComments = (cardComments?.length || 0) > 0;
   const hasAttachments = (cardAttachments?.length || 0) > 0;
@@ -73,7 +85,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
     <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group" onClick={onClick}>
       {/* Top row: type badge */}
       <div className="flex items-center justify-between mb-2">
-        <div>
+        <div className="flex items-center gap-2">
           {(() => {
             const typeValue = String(cardType || '').trim();
             const normalizedType = typeValue.toLowerCase();
@@ -85,161 +97,173 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
 
             if (!issueType) {
               return (
-                <Badge className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm capitalize">
-                  {typeValue}
+                <Badge variant="outline" className="uppercase text-[10px] px-2 py-0.5">
+                  {cardType}
                 </Badge>
               );
             }
 
             const Icon = issueType.icon;
-
             return (
               <Badge
                 variant="outline"
-                className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+                className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
               >
-                <Icon className="h-4 w-4 text-inherit" />
+                <Icon className="h-3 w-3 text-inherit" />
                 <span className="capitalize">{issueType.label}</span>
               </Badge>
             );
           })()}
-        </div>
 
-      </div>
-
-      {/* Labels */}
-      {(card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
-        <div className="flex flex-wrap gap-2 mb-2">
-          {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
-            <span
-              key={labelId}
-              className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
+          {isOverdue && (
+            <Badge
+              variant="outline"
+              className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
             >
-              {labelId}
-            </span>
-          ))}
-          {(card as KanbanCard).labels.length > 3 && (
-            <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
-              +{(card as KanbanCard).labels.length - 3}
-            </span>
+              <Flag className="h-3 w-3 text-inherit" />
+              <span className="capitalize">Overdue</span>
+            </Badge>
           )}
         </div>
-      )}
-
-      {/* Title */}
-      <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
-        {cardTitle}
-      </h4>
-
-      {hierarchyLabel && (
-        <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
-          {hierarchyLabel}
-        </p>
-      )}
-
-      {/* Footer with icons, priority and assignee */}
-      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
-        <div className="flex items-center gap-3">
-          {/* Priority badge */}
-          {cardPriority && (() => {
-            const cardPriorityRaw = String(cardPriority || "").trim();
-            const p = priorities.find((pr: any) => {
-              if (!pr) return false;
-              const prVal = String(pr.value || "");
-              const prLabel = String(pr.label || "");
-              if (prVal === cardPriorityRaw) return true;
-              if (prLabel === cardPriorityRaw) return true;
-              if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-              if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
-              return false;
-            });
-
-            if (!p) return (
-              <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{cardPriority}</span>
-            );
-
-            const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
-            const Icon = p.icon;
-            return (
-              <Badge
-                variant={TaskPriorityEnum[statusKey]}
-                className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
-              >
-                {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
-                <span>{p.label}</span>
-              </Badge>
-            );
-          })()}
-
-          {hasComments && (
-            <div className="flex items-center gap-1">
-              <MessageSquare size={14} />
-              <span>{cardComments?.length || 0}</span>
-            </div>
-          )}
-          {hasAttachments && (
-            <div className="flex items-center gap-1">
-              <Paperclip size={14} />
-              <span>{cardAttachments?.length || 0}</span>
-            </div>
-          )}
-          {hasChecklists && (
-            <div className="flex items-center gap-1">
-              <ListChecks size={14} />
-              <span>
-                {completedChecklistItems}/{totalChecklistItems}
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Reporter Avatar */}
-        {(() => {
-          // For Issue type
-          if (issue?.reporter) {
-            return (
-              <div className="flex items-center">
-                <Avatar className="h-7 w-7">
-                  <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
-                  <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
-                    {getAvatarFallbackText(issue.reporter?.name || '')}
-                  </AvatarFallback>
-                </Avatar>
-              </div>
-            );
-          }
-
-          // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
-          const r = (card as any).reporter;
-          let resolved: any = null;
-          if (!r) return null;
-          if (typeof r === 'string') {
-            const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
-            resolved = m?.userId || null;
-          } else if (r.userId) {
-            resolved = r.userId;
-          } else {
-            resolved = r;
-          }
-
-          if (!resolved) {
-            // render empty avatar circle to match styling if needed, or just null
-            return null;
-          }
-
-          return (
-            <div className="flex items-center">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
-                <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
-                  {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          );
-        })()}
       </div>
+
+      {/* Labels */ }
+  {
+    (card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
+      <div className="flex flex-wrap gap-2 mb-2">
+        {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
+          <span
+            key={labelId}
+            className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
+          >
+            {labelId}
+          </span>
+        ))}
+        {(card as KanbanCard).labels.length > 3 && (
+          <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
+            +{(card as KanbanCard).labels.length - 3}
+          </span>
+        )}
+      </div>
+    )
+  }
+
+  {/* Title */ }
+  <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
+    {cardTitle}
+  </h4>
+
+  {
+    hierarchyLabel && (
+      <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
+        {hierarchyLabel}
+      </p>
+    )
+  }
+
+  {/* Footer with icons, priority and assignee */ }
+  <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
+    <div className="flex items-center gap-3">
+      {/* Priority badge */}
+      {cardPriority && (() => {
+        const cardPriorityRaw = String(cardPriority || "").trim();
+        const p = priorities.find((pr: any) => {
+          if (!pr) return false;
+          const prVal = String(pr.value || "");
+          const prLabel = String(pr.label || "");
+          if (prVal === cardPriorityRaw) return true;
+          if (prLabel === cardPriorityRaw) return true;
+          if (prVal.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+          if (prLabel.toLowerCase() === cardPriorityRaw.toLowerCase()) return true;
+          return false;
+        });
+
+        if (!p) return (
+          <span className={`inline-block px-3 py-1 rounded text-white text-sm font-medium`}>{cardPriority}</span>
+        );
+
+        const statusKey = formatStatusToEnum(p.value) as keyof typeof TaskPriorityEnum;
+        const Icon = p.icon;
+        return (
+          <Badge
+            variant={TaskPriorityEnum[statusKey]}
+            className="flex lg:w-[110px] p-1 gap-1 !bg-transparent font-medium !shadow-none uppercase border-0"
+          >
+            {Icon && <Icon className="h-4 w-4 rounded-full text-inherit" />}
+            <span>{p.label}</span>
+          </Badge>
+        );
+      })()}
+
+      {hasComments && (
+        <div className="flex items-center gap-1">
+          <MessageSquare size={14} />
+          <span>{cardComments?.length || 0}</span>
+        </div>
+      )}
+      {hasAttachments && (
+        <div className="flex items-center gap-1">
+          <Paperclip size={14} />
+          <span>{cardAttachments?.length || 0}</span>
+        </div>
+      )}
+      {hasChecklists && (
+        <div className="flex items-center gap-1">
+          <ListChecks size={14} />
+          <span>
+            {completedChecklistItems}/{totalChecklistItems}
+          </span>
+        </div>
+      )}
     </div>
+
+    {/* Reporter Avatar */}
+    {(() => {
+      // For Issue type
+      if (issue?.reporter) {
+        return (
+          <div className="flex items-center">
+            <Avatar className="h-7 w-7">
+              <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+              <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                {getAvatarFallbackText(issue.reporter?.name || '')}
+              </AvatarFallback>
+            </Avatar>
+          </div>
+        );
+      }
+
+      // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
+      const r = (card as any).reporter;
+      let resolved: any = null;
+      if (!r) return null;
+      if (typeof r === 'string') {
+        const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
+        resolved = m?.userId || null;
+      } else if (r.userId) {
+        resolved = r.userId;
+      } else {
+        resolved = r;
+      }
+
+      if (!resolved) {
+        // render empty avatar circle to match styling if needed, or just null
+        return null;
+      }
+
+      return (
+        <div className="flex items-center">
+          <Avatar className="h-7 w-7">
+            <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
+            <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
+              {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
+            </AvatarFallback>
+          </Avatar>
+        </div>
+      );
+    })()}
+  </div>
+    </div >
   );
 };
 

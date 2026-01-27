@@ -1,5 +1,6 @@
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
+import { Flag } from "lucide-react";
 
 import { DataTableColumnHeader } from "./table-column-header";
 import { DataTableRowActions } from "./table-row-actions";
@@ -70,32 +71,57 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
       id: "issueType",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Issue" />,
       cell: ({ row }) => {
-        const rawType = (row.original as any).type || (row.original as any).issueType || null;
-        if (!rawType) {
-          return <span className="text-sm text-muted-foreground">No type</span>;
-        }
+        const dueDate = row.original.dueDate;
+        const status = row.original.status;
+        const isOverdue = (() => {
+          if (!dueDate) return false;
+          const due = new Date(dueDate);
+          const now = new Date();
+          const statusEnum = formatStatusToEnum(String(status || ''));
+          return due < now && statusEnum !== 'DONE';
+        })();
 
-        const typeValue = String(rawType);
+        const rawType = (row.original as any).type || (row.original as any).issueType || null;
+        const typeValue = String(rawType || "No type");
         const normalizedType = typeValue.toLowerCase();
         const issueType = issueTypes.find(
           (t) => t.value.toLowerCase() === normalizedType
         );
 
-        if (!issueType) {
-          return <span className="capitalize text-sm font-medium">{typeValue}</span>;
-        }
-
-        const Icon = issueType.icon;
-
         return (
-          <div className="flex items-center">
-            <Badge
-              variant="outline"
-              className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
-            >
-              <Icon className="h-4 w-4 text-inherit" />
-              <span className="capitalize">{issueType.label}</span>
-            </Badge>
+          <div className="flex items-center gap-2">
+            {/* Issue Type Badge */}
+            {(() => {
+              if (!rawType) {
+                return <span className="text-sm text-muted-foreground">No type</span>;
+              }
+
+              if (!issueType) {
+                return <span className="capitalize text-sm font-medium">{typeValue}</span>;
+              }
+
+              const Icon = issueType.icon;
+              return (
+                <Badge
+                  variant="outline"
+                  className={`flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+                >
+                  <Icon className="h-4 w-4 text-inherit" />
+                  <span className="capitalize">{issueType.label}</span>
+                </Badge>
+              );
+            })()}
+
+            {/* Overdue Badge */}
+            {isOverdue && (
+              <Badge
+                variant="outline"
+                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
+              >
+                <Flag className="h-4 w-4 text-inherit" />
+                <span className="capitalize">Overdue</span>
+              </Badge>
+            )}
           </div>
         );
       },
