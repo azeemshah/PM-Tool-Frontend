@@ -41,29 +41,29 @@ export function KanbanBoardView() {
   });
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
-// Fetch workspace items (All Tasks) and treat them as issues for the board
-const { data: workspaceItemsData = [] } = useQuery({
-  queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
-  queryFn: async () => {
-    console.log('[KanbanBoardView] Fetching tasks for workspace:', workspaceId);
-    if (!workspaceId) return [];
+  // Fetch workspace items (All Tasks) and treat them as issues for the board
+  const { data: workspaceItemsData = [] } = useQuery({
+    queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
+    queryFn: async () => {
+      console.log('[KanbanBoardView] Fetching tasks for workspace:', workspaceId);
+      if (!workspaceId) return [];
 
-    try {
-      const response = await issueApiService.getTasksByWorkspace(workspaceId);
-      // Extract array safely
-      const tasks = Array.isArray(response?.data) ? response.data : [];
-      console.log('[KanbanBoardView] Fetched tasks:', tasks.length);
-      return tasks;
-    } catch (e) {
-      console.error('[KanbanBoardView] Failed to fetch tasks:', e);
-      return [];
-    }
-  },
-  enabled: !!workspaceId,
-});
+      try {
+        const response = await issueApiService.getTasksByWorkspace(workspaceId);
+        // Extract array safely
+        const tasks = Array.isArray(response?.data) ? response.data : [];
+        console.log('[KanbanBoardView] Fetched tasks:', tasks.length);
+        return tasks;
+      } catch (e) {
+        console.error('[KanbanBoardView] Failed to fetch tasks:', e);
+        return [];
+      }
+    },
+    enabled: !!workspaceId,
+  });
 
-// Ensure workspaceItems is always an array
-const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? workspaceItemsData : [];
+  // Ensure workspaceItems is always an array
+  const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? workspaceItemsData : [];
 
 
   // Normalize workspace items into Issue-like objects for board usage
@@ -81,6 +81,7 @@ const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? workspace
         description: item.description,
         priority: item.priority,
         status: item.status,
+        dueDate: item.dueDate,
         column: item.column,
         assignedTo: item.assignedTo,
         reporter: item.reporter,
