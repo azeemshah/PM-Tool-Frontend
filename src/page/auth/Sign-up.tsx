@@ -58,16 +58,27 @@ const SignUp = () => {
     if (isPending) return;
     mutate(values as any, {
       onSuccess: () => {
+        // Clear form
+        form.reset();
+        
+        // Show success message and wait for user to verify
+        // Instead of redirecting to login, we show a success page or message
+        // For now, we'll keep the user on the signup page but replace the form content
+        // or redirect to a dedicated "check your email" page.
+        // Let's redirect to a check-email page (which we need to create or just show a toast and disable form)
+        
+        // Simple approach: Toast + disable form + maybe redirect to a "verify-instruction" page
+        // But user asked to "not go to login page".
+        
         toast({
           title: "Account created",
-          description: "Your account has been created successfully. Please sign in.",
+          description: "Please check your email to verify your account.",
         });
 
-        if (returnUrl) {
-          navigate(`/?returnUrl=${encodeURIComponent(returnUrl)}`);
-        } else {
-          navigate('/');
-        }
+        // Redirect to a dedicated verification pending page or just show state here
+        // For simplicity given current structure, let's navigate to a "check-email" route
+        // We will create this route next.
+        navigate('/check-email');
       },
       onError: (error: any) => {
         console.error('Signup error:', error);

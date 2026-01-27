@@ -2,37 +2,16 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { SprintApiService } from '../../services/SprintApiService';
 import { Sprint } from '../../types';
 
-type SprintAction = 'start' | 'complete' | 'reopen';
+type UpdateBody = Partial<{ name: string; goal?: string; startDate: string; endDate: string }>;
 
-export const useUpdateSprint = () => {
+export const useUpdateSprint = (workspaceId?: string) => {
   const queryClient = useQueryClient();
-
-  return useMutation<
-    Sprint,
-    Error,
-    { sprintId: string; action: SprintAction; workspaceId: string }
-  >({
-    mutationFn: ({ sprintId, action }) => {
-      switch (action) {
-        case 'start':
-          return SprintApiService.startSprint(sprintId);
-        case 'complete':
-          return SprintApiService.completeSprint(sprintId);
-        case 'reopen':
-          return SprintApiService.reopenSprint(sprintId);
-        default:
-          throw new Error(`Unknown sprint action: ${action}`);
+  return useMutation<Sprint, Error, { sprintId: string; body: UpdateBody }>({
+    mutationFn: ({ sprintId, body }) => SprintApiService.updateSprintDetails(sprintId, body),
+    onSuccess: () => {
+      if (workspaceId) {
+        queryClient.invalidateQueries({ queryKey: ['sprints', workspaceId] });
       }
-    },
-    onSuccess: (data) => {
-      // Invalidate and refetch sprints for the workspace
-      queryClient.invalidateQueries({
-        queryKey: ['sprints', data.workspaceId]
-      });
-      // Also invalidate work items to reflect status changes (e.g. on complete sprint)
-      queryClient.invalidateQueries({
-        queryKey: ['workspace-items']
-      });
     },
   });
 };

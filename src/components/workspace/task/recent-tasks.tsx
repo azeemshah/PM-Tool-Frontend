@@ -32,44 +32,54 @@ const RecentTasks = () => {
     [TaskPriorityEnum.HIGH]: ArrowUp,
   };
 
-  const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: ["recent-tasks", workspaceId],
-    queryFn: async () => {
-      console.log('[recent-tasks] Query started, workspaceId:', workspaceId);
-      if (!workspaceId) {
-        console.log('[recent-tasks] No workspaceId, returning empty');
-        return { tasks: [] } as any;
-      }
-      try {
-        console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
-        const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
-        console.log('[recent-tasks] Tasks response:', { count: tasks?.length, data: tasks });
+ const { data: recentTasksData = { tasks: [] }, isLoading, isError, error, refetch } = useQuery({
+  queryKey: ["recent-tasks", workspaceId],
+  queryFn: async () => {
+    console.log('[recent-tasks] Query started, workspaceId:', workspaceId);
 
-        if (!tasks || tasks.length === 0) {
-          console.log('[recent-tasks] No tasks found');
-          return { tasks: [] } as any;
-        }
+    if (!workspaceId) {
+      console.log('[recent-tasks] No workspaceId, returning empty');
+      return { tasks: [] };
+    }
 
-        // Sort by createdAt descending and get top 5 recent
-        const recent = tasks.sort((a: any, b: any) => {
-          const dateA = new Date(a.createdAt || 0).getTime();
-          const dateB = new Date(b.createdAt || 0).getTime();
-          return dateB - dateA;
-        }).slice(0, 5);
+    try {
+      console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
 
-        console.log('[recent-tasks] Recent tasks (after sort/slice):', recent.length);
-        return { tasks: recent } as any;
-      } catch (err: any) {
-        console.error('[recent-tasks] Error in queryFn:', err);
-        if (err?.response?.status === 401) throw err;
-        return { tasks: [] } as any;
-      }
-    },
-    staleTime: 0,
-    enabled: !!workspaceId,
-  });
+      const response = await issueApiService.getTasksByWorkspace(workspaceId);
 
-  const tasks: TaskType[] = data?.tasks || [];
+      // Ensure we have an array
+      const tasksArray = Array.isArray(response)
+        ? response
+        : Array.isArray(response?.data)
+        ? response.data
+        : [];
+
+      console.log('[recent-tasks] Tasks fetched:', tasksArray.length);
+
+      if (tasksArray.length === 0) return { tasks: [] };
+
+      // Sort by createdAt descending and pick top 5
+      const recent = [...tasksArray]
+        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+        .slice(0, 5);
+
+      console.log('[recent-tasks] Recent tasks after sort/slice:', recent.length);
+
+      return { tasks: recent };
+    } catch (err: any) {
+      console.error('[recent-tasks] Error fetching tasks:', err);
+      // Return empty array for failures (unless 401)
+      if (err?.response?.status === 401) throw err;
+      return { tasks: [] };
+    }
+  },
+  staleTime: 0,
+  enabled: !!workspaceId,
+});
+
+// Ensure tasks is always an array
+const tasks: TaskType[] = Array.isArray(recentTasksData?.tasks) ? recentTasksData.tasks : [];
+
 
   return (
     <div className="flex flex-col space-y-6">

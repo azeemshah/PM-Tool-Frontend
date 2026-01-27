@@ -36,6 +36,7 @@ import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
+import EditTaskDialog from "./edit-task-dialog";
 
 // ---- Define TaskType ----
 
@@ -48,6 +49,8 @@ const TaskTable: FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editTarget, setEditTarget] = useState<TaskType | null>(null);
 
   const [filters, setFilters] = useTaskTableFilter();
   const columns = getColumns(); // remove projectId logic
@@ -73,77 +76,36 @@ const TaskTable: FC = () => {
 
   // Fetch tasks
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["all-tasks", workspaceId, pageSize, pageNumber, filters],
-    queryFn: async () => {
-      if (!workspaceId) return { tasks: [], pagination: {} };
-
-      const allTasks: TaskType[] = await issueApiService.getTasksByWorkspace(workspaceId);
-      console.log("API RAW TASKS:", allTasks);
-
-      // Client-side filtering
-      let filtered = allTasks;
-      if (filters.keyword) {
-        filtered = filtered.filter(
-          (t) =>
-            (t.title || "").toLowerCase().includes(filters.keyword.toLowerCase()) ||
-            (t.taskCode || "").toLowerCase().includes(filters.keyword.toLowerCase())
-        );
-      }
-      if (filters.assigneeId) {
-        const selectedAssigneeIds = filters.assigneeId
-          .split(",")
-          .map((id) => id.trim())
-          .filter(Boolean);
-
-        filtered = filtered.filter(
-          (t) =>
-            t.assignedTo &&
-            selectedAssigneeIds.includes(t.assignedTo._id)
-        );
-      }
-      if (filters.issueType) {
-        const typeValues = filters.issueType
-          .split(",")
-          .map((v) => v.trim().toLowerCase())
-          .filter(Boolean);
-
-        filtered = filtered.filter((t) =>
-          t.type ? typeValues.includes(String(t.type).toLowerCase()) : false
-        );
-      }
-      if (filters.priority) {
-        filtered = filtered.filter((t) => (t.priority || "").toLowerCase() === filters.priority.toLowerCase());
-      }
-      if (filters.status) {
-        const statusValues = filters.status
-          .split(",")
-          .map((v) => v.trim().toLowerCase().replace(/\s+/g, "_"))
-          .filter(Boolean);
-
-        filtered = filtered.filter((t) => {
-          const taskStatus = (t.status || "").toLowerCase().replace(/\s+/g, "_");
-          return statusValues.includes(taskStatus);
-        });
-      }
-
-      const total = filtered.length;
-      const start = (pageNumber - 1) * pageSize;
-      const paged = filtered.slice(start, start + pageSize);
-
+  queryKey: [
+    "all-tasks",
+    workspaceId,
+    pageNumber,
+    pageSize,
+    filters,
+  ],
+  queryFn: async () => {
+    if (!workspaceId) {
       return {
-        tasks: paged,
-        pagination: {
-          totalCount: total,
-          pageSize,
-          pageNumber,
-          totalPages: Math.ceil(total / pageSize),
-          skip: start,
-          limit: pageSize,
-        },
+        data: [],
+        meta: { total: 0, page: 1, limit: pageSize, totalPages: 0 },
       };
-    },
-    enabled: !!workspaceId,
-  });
+    }
+
+    return issueApiService.getTasksByWorkspace(workspaceId, {
+      page: pageNumber,
+      limit: pageSize,
+      status: filters.status || undefined,
+      priority: filters.priority || undefined,
+      type: filters.issueType || undefined,
+      reporter: filters.assigneeId || undefined,
+      keyword: filters.keyword || undefined,
+    });
+  },
+  enabled: !!workspaceId,
+  placeholderData: (previousData) => previousData,
+
+});
+
 
   // Bulk delete
   const bulkDeleteMutation = useMutation({
@@ -233,8 +195,9 @@ const TaskTable: FC = () => {
     },
   });
 
-  const tasks: TaskType[] = data?.tasks || [];
-  const totalCount = data?.pagination?.totalCount ?? tasks.length;
+const tasks: TaskType[] = data?.data || [];
+const totalCount = data?.meta?.total ?? 0;
+
 
   const handlePageChange = (page: number) => {
     setPageNumber(page);
@@ -280,6 +243,10 @@ const TaskTable: FC = () => {
         filtersToolbar={
           <DataTableFilterToolbar filters={filters} setFilters={setFilters} isLoading={isLoading} />
         }
+        onRowClick={(row: any) => {
+          setEditTarget(row as TaskType);
+          setOpenEditDialog(true);
+        }}
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
@@ -303,6 +270,14 @@ const TaskTable: FC = () => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editTarget && (
+        <EditTaskDialog
+          task={editTarget}
+          isOpen={openEditDialog}
+          onClose={() => setOpenEditDialog(false)}
+        />
+      )}
     </div>
   );
 };

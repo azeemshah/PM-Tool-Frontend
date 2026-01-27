@@ -78,11 +78,26 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     },
   });
 
-  const { data: allWorkItems = [] } = useQuery<TaskType[]>({
-    queryKey: ['workspace-items', workspaceId],
-    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
-    enabled: !!workspaceId,
-  });
+const { data: allWorkItemsData } = useQuery({
+  queryKey: ['workspace-items', workspaceId],
+  queryFn: async () => {
+    if (!workspaceId) return [];
+    const response = await issueApiService.getTasksByWorkspace(workspaceId, {
+      page: 1,
+      limit: 1000,
+    });
+
+    // Always return the array
+    return response?.data ?? [];
+  },
+  enabled: !!workspaceId,
+});
+
+// Make sure this is always an array
+const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsData : [];
+
+
+
 
   const updateWorkItemMutation = useMutation({
     mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status'> }) =>

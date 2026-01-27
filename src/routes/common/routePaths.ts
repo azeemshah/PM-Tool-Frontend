@@ -21,12 +21,16 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: "/reset-password",
   CHANGE_PASSWORD: "/change-password",
   GOOGLE_OAUTH_CALLBACK: "/google/oauth/callback",
+  VERIFY_EMAIL: "/verify-email",
+  CHECK_EMAIL: "/check-email",
+  VERIFY_OTP: "/verify-otp",
 };
 
 export const PROTECTED_ROUTES = {
   WORKSPACE: "/workspace/:workspaceId",
   BOARD: "/workspace/:workspaceId/board",
   BOARD_DETAIL: "/workspace/:workspaceId/boards/:boardId",
+  SPRINT_EDIT: "/workspace/:workspaceId/sprints/:sprintId/edit",
   TASKS: "/workspace/:workspaceId/tasks",
   MEMBERS: "/workspace/:workspaceId/members",
   SETTINGS: "/workspace/:workspaceId/settings",
@@ -36,7 +40,6 @@ export const PROTECTED_ROUTES = {
 export const BASE_ROUTE = {
   INVITE_URL: "/invite/workspace/:inviteCode/join",
 };
-
 
 
 

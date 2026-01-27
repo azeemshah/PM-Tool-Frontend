@@ -25,6 +25,27 @@ import type {
 
 const ISSUES_ENDPOINT = '/issues';
 
+export type GetTasksByWorkspaceParams = {
+	page?: number;
+	limit?: number;
+	status?: string;
+	priority?: string;
+	type?: string;
+	reporter?: string;
+	keyword?: string;
+};
+
+export type PaginatedTasksResponse = {
+	data: TaskType[];
+	meta: {
+		total: number;
+		page: number;
+		limit: number;
+		totalPages: number;
+	};
+};
+
+
 export const issueApiService = {
 	// ==================== EPICS ====================
 
@@ -155,7 +176,11 @@ export const issueApiService = {
 	/**
 	 * Create Task under Epic (NOT under Story)
 	 * POST /issues/epic/:epicId/task
+	 * 
+	 * 
 	 */
+
+
 	async createTask(epicId: string, data: CreateTaskDTO): Promise<Task> {
 		const response = await API.post(`${ISSUES_ENDPOINT}/epic/${epicId}/task`, data);
 		return response.data.data || response.data;
@@ -189,41 +214,33 @@ export const issueApiService = {
 		await API.delete(`${ISSUES_ENDPOINT}/${taskId}`);
 	},
 
-	async getTasksByWorkspace(workspaceId: string): Promise<TaskType[]> {
-		const resp = await API.get(`items/workspace/${workspaceId}`);
+	async getTasksByWorkspace(
+		workspaceId: string,
+		params?: {
+			page?: number;
+			limit?: number;
+			status?: string;
+			priority?: string;
+			type?: string;
+			reporter?: string;
+			keyword?: string;
+		}
+	): Promise<{
+		data: TaskType[];
+		meta: {
+			total: number;
+			page: number;
+			limit: number;
+			totalPages: number;
+		};
+	}> {
+		const resp = await API.get(`items/workspace/${workspaceId}`, {
+			params,
+		});
 
-		return (resp.data?.data || resp.data || []).map((task: any) => ({
-			_id: task._id,
-			title: task.title,
-			description: task.description,
-			type: task.type,
-			status: task.status,
-			priority: task.priority,
-			assignedTo: task.assignedTo
-				? {
-					_id: task.assignedTo._id,
-					name: task.assignedTo.name,
-					profilePicture: task.assignedTo.profilePicture ?? null,
-				}
-				: null,
-			reporter: task.reporter
-				? {
-					_id: task.reporter._id,
-					name: task.reporter.name,
-					profilePicture: task.reporter.profilePicture ?? null,
-				}
-				: null,
-			createdBy: task.createdBy || null,
-			dueDate: task.dueDate || '',
-			taskCode: task.taskCode || '',
-			createdAt: task.createdAt,
-			updatedAt: task.updatedAt,
-			column: task.column || null,
-			parent: task.parent || null,
-			path: task.path || '',
-			workspace: task.workspace,
-		}));
+		return resp.data;
 	},
+
 
 	async moveItemToColumn(itemId: string, columnId: string): Promise<any> {
 		const response = await API.patch(`/items/${itemId}/move/column/${columnId}`);

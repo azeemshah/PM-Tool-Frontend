@@ -18,6 +18,7 @@ import { IssueCreateDialog } from '@/components/issue';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
 
+
 export function KanbanBoardView() {
   const { boardId } = useParams<{ boardId: string }>();
   const workspaceIdParam = useWorkspaceId();
@@ -40,22 +41,30 @@ export function KanbanBoardView() {
   });
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
-  const { data: workspaceItems = [] } = useQuery({
-    queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
-    queryFn: async () => {
-      console.log('[KanbanBoardView] Fetching tasks for workspace:', workspaceId);
-      if (!workspaceId) return [];
-      try {
-        const tasks = await issueApiService.getTasksByWorkspace(workspaceId);
-        console.log('[KanbanBoardView] Fetched tasks:', tasks.length);
-        return tasks;
-      } catch (e) {
-        console.error('[KanbanBoardView] Failed to fetch tasks:', e);
-        return [];
-      }
-    },
-    enabled: !!workspaceId,
-  });
+// Fetch workspace items (All Tasks) and treat them as issues for the board
+const { data: workspaceItemsData = [] } = useQuery({
+  queryKey: ['all-tasks', 'kanban', workspaceId || 'unknown'],
+  queryFn: async () => {
+    console.log('[KanbanBoardView] Fetching tasks for workspace:', workspaceId);
+    if (!workspaceId) return [];
+
+    try {
+      const response = await issueApiService.getTasksByWorkspace(workspaceId);
+      // Extract array safely
+      const tasks = Array.isArray(response?.data) ? response.data : [];
+      console.log('[KanbanBoardView] Fetched tasks:', tasks.length);
+      return tasks;
+    } catch (e) {
+      console.error('[KanbanBoardView] Failed to fetch tasks:', e);
+      return [];
+    }
+  },
+  enabled: !!workspaceId,
+});
+
+// Ensure workspaceItems is always an array
+const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? workspaceItemsData : [];
+
 
   // Normalize workspace items into Issue-like objects for board usage
   const issues = useMemo(() => {

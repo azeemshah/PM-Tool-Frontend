@@ -76,17 +76,30 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
   });
 
   // Get all work items using issueApiService to match All Tasks page
-  const { data: allWorkItems = [], isLoading } = useQuery({
-    queryKey: ['workspace-items', workspaceId],
-    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
-    enabled: !!workspaceId,
-  });
+// Get all work items using issueApiService to match All Tasks page
+const { data: allWorkItems = [], isLoading } = useQuery({
+  queryKey: ['workspace-items', workspaceId, 'backlog'], // keep key unique per workspace & filter
+  queryFn: async () => {
+    if (!workspaceId) return [];
 
-  // Filter work items that are in BACKLOG status and not assigned to any sprint
-  // Note: Check case-insensitive for status
-  const backlogItems = allWorkItems.filter((item: any) =>
-    (item.status?.toLowerCase() === 'backlog' || !item.status)
-  );
+    // Call updated backend API
+    const response = await issueApiService.getTasksByWorkspace(workspaceId, {
+      page: 1,           // server-side pagination, first page
+      limit: 1000,       // adjust if you expect more items
+      status: 'Backlog', // server-side filter
+    });
+
+    // Extract only the array of tasks, ignoring meta
+    return response.data || [];
+  },
+  enabled: !!workspaceId,
+});
+
+
+
+// data.data contains the tasks
+const backlogItems = allWorkItems || [];
+
 
   // Filter by search term
   const filteredItems = backlogItems.filter((item: any) =>

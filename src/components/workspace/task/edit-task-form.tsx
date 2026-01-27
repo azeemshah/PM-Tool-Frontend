@@ -35,7 +35,7 @@ import { issueApiService } from "@/api/issue/services/issueApiService";
 import { deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/api/issue/types";
 import FileUpload from "@/components/ui/file-upload";
 import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards";
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
