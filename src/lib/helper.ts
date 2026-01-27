@@ -8,10 +8,11 @@ export const transformOptions = (
     label: value
       .replace(/_/g, " ")
       .toLowerCase()
-      .replace(/\b\w/g, (c) => c.toUpperCase()),
-    value: value,
+      .replace(/\b\w/g, (c) => c.toUpperCase()), // display-friendly
+    value: value.toLowerCase(), // send lowercase to backend
     icon: iconMap ? iconMap[value] : undefined,
   }));
+
 
 export const transformStatusEnum = (status: string): string => {
   return status.replace(/_/g, " ");
