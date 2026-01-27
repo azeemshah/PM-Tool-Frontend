@@ -30,6 +30,7 @@ export const PROTECTED_ROUTES = {
   WORKSPACE: "/workspace/:workspaceId",
   BOARD: "/workspace/:workspaceId/board",
   BOARD_DETAIL: "/workspace/:workspaceId/boards/:boardId",
+  SPRINT_EDIT: "/workspace/:workspaceId/sprints/:sprintId/edit",
   TASKS: "/workspace/:workspaceId/tasks",
   MEMBERS: "/workspace/:workspaceId/members",
   SETTINGS: "/workspace/:workspaceId/settings",
@@ -39,7 +40,6 @@ export const PROTECTED_ROUTES = {
 export const BASE_ROUTE = {
   INVITE_URL: "/invite/workspace/:inviteCode/join",
 };
-
 
 
 

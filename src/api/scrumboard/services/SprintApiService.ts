@@ -49,4 +49,19 @@ export const SprintApiService = {
     });
     return response.data.data || response.data;
   },
+
+  // Update sprint details
+  async updateSprintDetails(
+    sprintId: string,
+    body: Partial<{ name: string; goal?: string; startDate: string; endDate: string }>
+  ): Promise<Sprint> {
+    const response = await API.patch(`${SPRINT_ENDPOINT}/${sprintId}`, body);
+    return response.data.data || response.data;
+  },
+
+  // Delete sprint
+  async deleteSprint(sprintId: string): Promise<{ message: string; sprintId: string }> {
+    const response = await API.delete(`${SPRINT_ENDPOINT}/${sprintId}`);
+    return response.data.data || response.data;
+  },
 };

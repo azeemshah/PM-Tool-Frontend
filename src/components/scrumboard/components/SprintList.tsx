@@ -1,11 +1,15 @@
 import React, { useState } from 'react';
-import { Plus, Play, CheckCircle, RotateCcw, Clock } from 'lucide-react';
+import { Plus, Play, CheckCircle, RotateCcw, Clock, Pencil, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Sprint } from '@/api/scrumboard/types';
-import { useUpdateSprint } from '@/api/scrumboard/hooks/sprints/useUpdateSprint';
+import { useUpdateSprintStatus } from '@/api/scrumboard/hooks/sprints/useUpdateSprintStatus';
 import SprintCreationDialog from './SprintCreationDialog';
+import SprintEditDialog from './SprintEditDialog';
+import { useDeleteSprint } from '@/api/scrumboard/hooks/sprints/useDeleteSprint';
+import useWorkspaceId from '@/hooks/use-workspace-id';
+import { toast } from '@/hooks/use-toast';
 
 interface SprintListProps {
   sprints: Sprint[];
@@ -19,7 +23,10 @@ const SprintList: React.FC<SprintListProps> = ({
   onSprintSelect,
 }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const updateSprintMutation = useUpdateSprint();
+  const updateSprintMutation = useUpdateSprintStatus();
+  const deleteSprintMutation = useDeleteSprint();
+  const workspaceId = useWorkspaceId();
+  const [editTarget, setEditTarget] = useState<Sprint | null>(null);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -187,6 +194,45 @@ const SprintList: React.FC<SprintListProps> = ({
                     Reopen
                   </Button>
                 )}
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="text-xs h-7"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setEditTarget(sprint);
+                  }}
+                >
+                  <Pencil className="w-3 h-3 mr-1" />
+                  Edit
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  className="text-xs h-7"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    if (confirm('Do you want to delete the Sprint')) {
+                      deleteSprintMutation.mutate(
+                        { sprintId: sprint._id, workspaceId },
+                        {
+                          onSuccess: () => {
+                            toast({ title: 'Deleted', description: 'Sprint deleted Succusfully' });
+                          },
+                          onError: () => {
+                            toast({ title: 'Error', description: 'Sprint not deleted', variant: 'destructive' });
+                          },
+                        }
+                      );
+                    }
+                  }}
+                  disabled={deleteSprintMutation.isPending}
+                >
+                  <Trash2 className="w-3 h-3 mr-1" />
+                  Delete
+                </Button>
               </div>
             </div>
           </Card>
@@ -205,6 +251,14 @@ const SprintList: React.FC<SprintListProps> = ({
         open={showCreateDialog}
         onClose={() => setShowCreateDialog(false)}
       />
+
+      {editTarget && (
+        <SprintEditDialog
+          sprint={editTarget}
+          open={!!editTarget}
+          onClose={() => setEditTarget(null)}
+        />
+      )}
     </div>
   );
 };

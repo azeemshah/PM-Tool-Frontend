@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/api/issue/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { issueApiService } from "@/api/issue/services/issueApiService";
@@ -105,7 +105,6 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
     </>
   );
 }
-
 
 
 

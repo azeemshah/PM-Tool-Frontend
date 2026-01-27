@@ -36,6 +36,7 @@ import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
+import EditTaskDialog from "./edit-task-dialog";
 
 // ---- Define TaskType ----
 
@@ -48,6 +49,8 @@ const TaskTable: FC = () => {
   const [pageSize, setPageSize] = useState(10);
   const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([]);
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+  const [openEditDialog, setOpenEditDialog] = useState(false);
+  const [editTarget, setEditTarget] = useState<TaskType | null>(null);
 
   const [filters, setFilters] = useTaskTableFilter();
   const columns = getColumns(); // remove projectId logic
@@ -280,6 +283,10 @@ const TaskTable: FC = () => {
         filtersToolbar={
           <DataTableFilterToolbar filters={filters} setFilters={setFilters} isLoading={isLoading} />
         }
+        onRowClick={(row: any) => {
+          setEditTarget(row as TaskType);
+          setOpenEditDialog(true);
+        }}
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
@@ -303,6 +310,14 @@ const TaskTable: FC = () => {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {editTarget && (
+        <EditTaskDialog
+          task={editTarget}
+          isOpen={openEditDialog}
+          onClose={() => setOpenEditDialog(false)}
+        />
+      )}
     </div>
   );
 };
