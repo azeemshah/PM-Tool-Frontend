@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { X, Edit2, Trash2 } from 'lucide-react';
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 import { useUpdateIssue, useDeleteIssue } from '@/api/issue/hooks';
@@ -8,6 +8,8 @@ import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { KanbanCard } from '@/api/kanban/types';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { issueApiService } from '@/api/issue/services/issueApiService';
+import API from '@/lib/axios-client';
+import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -129,6 +131,9 @@ export function BoardCardDialog() {
   const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
   const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
   const { mutate: deleteIssueApi, isPending: isDeleting } = useDeleteIssue();
@@ -168,6 +173,102 @@ export function BoardCardDialog() {
       setDueDate(issue.dueDate || null);
     }
   }, [issue]);
+
+  const issueIdStr = issue?._id ? String(issue._id) : '';
+  const { data: detailedIssue } = useQuery({
+    queryKey: ['issue', issueIdStr || 'unknown'],
+    queryFn: () => issueApiService.getIssue(issueIdStr),
+    enabled: !!issueIdStr && !!isCardDialogOpen,
+    staleTime: 60 * 1000,
+  });
+  const parentIssueIdStr = issue?.parentIssueId ? String(issue.parentIssueId) : '';
+  const { data: workItemAttachments = [] } = useQuery({
+    queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'],
+    queryFn: async () => {
+      if (!issueIdStr) return [];
+      try {
+        const resp = await API.get(`/kanban/files/work-item/${issueIdStr}`);
+        const data = resp.data?.data || resp.data || [];
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    enabled: !!issueIdStr && !!isCardDialogOpen,
+    staleTime: 60 * 1000,
+  });
+  const { data: workItemAttachmentsFallback = [] } = useQuery({
+    queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'],
+    queryFn: async () => {
+      if (!issueIdStr) return [];
+      try {
+        const data = await getWorkItemAttachments(issueIdStr);
+        return Array.isArray(data) ? data : [];
+      } catch {
+        return [];
+      }
+    },
+    enabled: !!issueIdStr && !!isCardDialogOpen,
+    staleTime: 60 * 1000,
+  });
+  const { data: parentAttachments = [] } = useQuery({
+    queryKey: ['attachments', 'parent-work-item', parentIssueIdStr || 'none'],
+    queryFn: async () => {
+      if (!parentIssueIdStr) return [];
+      try {
+        const resp = await API.get(`/kanban/files/work-item/${parentIssueIdStr}`);
+        const data = resp.data?.data || resp.data || [];
+        return Array.isArray(data) ? data : [];
+      } catch (e) {
+        return [];
+      }
+    },
+    enabled: !!parentIssueIdStr && !!isCardDialogOpen,
+    staleTime: 60 * 1000,
+  });
+  const normalize = (list: any[]) =>
+    (Array.isArray(list) ? list : []).map((a: any) => ({
+      _id: a?._id || a?.id || `${a?.fileUrl || ''}-${a?.fileName || ''}`,
+      name: a?.name || a?.fileName || '',
+      url: a?.url || a?.fileUrl || '',
+    }));
+  const fromIssue = normalize(((detailedIssue as any)?.attachments || []));
+  const ownAttachments = (() => {
+    const seen = new Set<string>();
+    const arr = [...normalize(workItemAttachments), ...normalize(workItemAttachmentsFallback), ...fromIssue].filter((a) => {
+      const key = a._id || a.url || a.name;
+      if (seen.has(String(key))) return false;
+      seen.add(String(key));
+      return !!(a.url || a.name);
+    });
+    return arr;
+  })();
+  const parentOnlyAttachments = (() => {
+    const ownKeys = new Set(ownAttachments.map((a) => String(a._id || a.url || a.name)));
+    return normalize(parentAttachments).filter((a) => {
+      const key = String(a._id || a.url || a.name);
+      return !!(a.url || a.name) && !ownKeys.has(key);
+    });
+  })();
+
+  const buildFullUrl = (url: string) => {
+    const base = (API as any)?.defaults?.baseURL || '';
+    try {
+      return new URL(url, base).toString();
+    } catch {
+      return `${base}${url}`;
+    }
+  };
+  const toOpenUrl = (fullUrl: string, fileName?: string) => {
+    const source = String(fileName || fullUrl).toLowerCase();
+    const match = source.match(/\.([a-z0-9]+)(?:$|\?|\#)/);
+    const ext = match ? match[1] : '';
+    const office = ['doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'];
+    if (office.includes(ext)) {
+      return `https://docs.google.com/gview?embedded=1&url=${encodeURIComponent(fullUrl)}`;
+    }
+    return fullUrl;
+  };
 
   if (!isCardDialogOpen || !issue) {
     return null;
@@ -608,6 +709,130 @@ export function BoardCardDialog() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Attachments */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Attachments
+            </label>
+            {isEditing && (
+              <div className="flex items-center gap-3 mb-3">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  onChange={async (e) => {
+                    const file = e.target.files && e.target.files[0];
+                    if (!file || !issueIdStr) return;
+                    setIsUploadingAttachment(true);
+                    try {
+                      const resp = await uploadWorkItemAttachment({ workItemId: issueIdStr, file });
+                      const ok = resp?.success || resp?.url;
+                      if (ok) {
+                        queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
+                        queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'] });
+                        toast({ title: 'Success', description: 'Attachment uploaded' });
+                      } else {
+                        toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' });
+                      }
+                    } catch (err) {
+                      toast({ title: 'Error', description: 'Upload failed', variant: 'destructive' });
+                    } finally {
+                      setIsUploadingAttachment(false);
+                      if (fileInputRef.current) fileInputRef.current.value = '';
+                    }
+                  }}
+                  disabled={isUploadingAttachment}
+                  className="hidden"
+                />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isUploadingAttachment}
+                >
+                  {isUploadingAttachment ? 'Uploading...' : 'Choose File'}
+                </Button>
+              </div>
+            )}
+            <div className="space-y-4">
+              {parentOnlyAttachments.length > 0 && (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-500">Parent attachments</div>
+                  {parentOnlyAttachments.map((att: any, idx: number) => {
+                    const name = att.name || att.fileName || `Attachment ${idx + 1}`;
+                    const url = att.url || att.fileUrl || '';
+                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    return (
+                      <div key={`parent-${idx}`} className="flex items-center gap-2">
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {name}
+                        </a>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+              <div className="space-y-2">
+                <div className="text-xs text-gray-500">Subtask attachments</div>
+                {ownAttachments.length > 0 ? (
+                  ownAttachments.map((att: any, idx: number) => {
+                    const name = att.name || att.fileName || `Attachment ${idx + 1}`;
+                    const url = att.url || att.fileUrl || '';
+                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    return (
+                      <div key={`own-${idx}`} className="flex items-center gap-2">
+                        <a
+                          href={fullUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-blue-600 hover:underline break-all"
+                        >
+                          {name}
+                        </a>
+                        {isEditing && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-red-600 hover:text-red-700"
+                            disabled={!!deletingAttachmentId}
+                            onClick={async () => {
+                              const id = att._id || att.id;
+                              const delKey = id ? String(id) : (att.url || att.fileUrl || '');
+                              if (!delKey) return;
+                              setDeletingAttachmentId(delKey);
+                              try {
+                                if (id) {
+                                  await deleteAttachmentById(String(id));
+                                } else if (att.url || att.fileUrl) {
+                                  await deleteAttachmentByUrl(String(att.url || att.fileUrl));
+                                }
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'] });
+                                toast({ title: 'Deleted', description: 'Attachment removed' });
+                              } catch (err) {
+                                toast({ title: 'Error', description: 'Delete failed', variant: 'destructive' });
+                              } finally {
+                                setDeletingAttachmentId(null);
+                              }
+                            }}
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })
+                ) : (
+                  <div className="text-xs text-gray-500">No subtask attachments</div>
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Action Buttons */}

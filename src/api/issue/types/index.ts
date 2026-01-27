@@ -3,6 +3,8 @@
  * Unified Issue types for Epic, Story, Task, Bug, Subtask
  */
 
+import type { ReactNode } from 'react';
+
 export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
 export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
 export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked' | string;
@@ -68,6 +70,7 @@ export interface CreateItemDto {
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
+  issueId: ReactNode;
 	_id: string;
 	projectId: string;
 	type: IssueType;

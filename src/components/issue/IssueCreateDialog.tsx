@@ -340,7 +340,27 @@ export function IssueCreateDialog({
             createItem(
                 { data, type: 'subtask' },
                 {
-                    onSuccess: () => {
+                    onSuccess: async (created: any) => {
+                        try {
+                            if (attachments.length > 0 && created?._id) {
+                                for (const att of attachments) {
+                                    try {
+                                        await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                    } catch (e: any) {
+                                        toast({
+                                            title: 'Error',
+                                            description: e?.response?.data?.message || 'Failed to upload attachment',
+                                            variant: 'destructive',
+                                        });
+                                    }
+                                }
+                                attachments.forEach(att => URL.revokeObjectURL(att.url));
+                                setAttachments([]);
+                                // proactively refresh any attachment lists related to this item
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', created._id || 'unknown'] });
+                                queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', created._id || 'unknown'] });
+                            }
+                        } catch (_) { }
                         refetchIssues();
                         onOpenChange(false);
                         onSuccess?.();
