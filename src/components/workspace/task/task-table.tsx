@@ -53,6 +53,11 @@ const TaskTable: FC = () => {
   const [editTarget, setEditTarget] = useState<TaskType | null>(null);
 
   const [filters, setFilters] = useTaskTableFilter();
+  useEffect(() => {
+  // Whenever keyword changes, reset to first page
+  setPageNumber(1);
+}, [filters.keyword]);
+
   const columns = getColumns(); // remove projectId logic
 
   const { data: kanbanBoards = [] } = useGetKanbanBoards(workspaceId);

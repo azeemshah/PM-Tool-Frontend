@@ -961,7 +961,7 @@ export function BoardCardDialog() {
           </div>
 
           {/* Comments */}
-          <CommentSection workItemId={issueIdStr} />
+          {!isEditing && <CommentSection workItemId={issueIdStr} />}
 
           {/* Action Buttons */}
           {isEditing && (
