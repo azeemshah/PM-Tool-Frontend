@@ -363,7 +363,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      {String(task.type).toLowerCase() === 'subtask' ? "Parent Issue" : "Epic"}
+                      {String(task.type).toLowerCase() === 'subtask' ? "Parent Issue" : "Epic (Optional)"}
                     </FormLabel>
                     <FormControl>
                       {String(task.type).toLowerCase() === 'subtask' ? (
@@ -405,6 +405,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                           onChange={field.onChange}
                           projectId={workspaceId}
                           optional={true}
+                          showLabel={false}
                         />
                       )}
                     </FormControl>

@@ -630,6 +630,7 @@ export function BoardCardDialog() {
                     onChange={setParentId}
                     projectId={workspaceId}
                     optional={true}
+                    showLabel={false}
                   />
                 )
               ) : (

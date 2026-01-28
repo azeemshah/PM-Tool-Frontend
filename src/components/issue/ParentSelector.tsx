@@ -23,6 +23,7 @@ interface ParentSelectorProps {
 	disabled?: boolean;
 	optional?: boolean; // For Story/Task/Bug, Epic is optional
 	epicChildren?: (Story | Task | Bug)[]; // For subtask parent selection
+	showLabel?: boolean; // Whether to show the internal label (default: true)
 }
 import { IssueTypeIcon } from './IssueTypeIcon';
 
@@ -36,6 +37,7 @@ export function ParentSelector({
 	disabled = false,
 	optional = false,
 	epicChildren = [],
+	showLabel = true,
 }: ParentSelectorProps) {
 	const { data: epics = [], isLoading: epicsLoading } = useGetEpics(projectId);
 
@@ -67,11 +69,13 @@ export function ParentSelector({
 
 	return (
 		<div className="space-y-2">
-			<label className="text-sm font-medium">
-				{parentLabel}
-				{!optional && issueType !== 'subtask' && ' *'}
-				{optional && issueType !== 'subtask' && <span className="text-xs font-extralight ml-2">Optional</span>}
-			</label>
+			{showLabel && (
+				<label className="text-sm font-medium">
+					{parentLabel}
+					{!optional && issueType !== 'subtask' && ' *'}
+					{optional && issueType !== 'subtask' && <span className="text-xs font-extralight ml-2">Optional</span>}
+				</label>
+			)}
 
 			{epicsLoading ? (
 				<Skeleton className="w-full h-10" />

@@ -42,11 +42,11 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
     mutate(taskId, {
       onSuccess: () => {
         setOpenDialog(false);
-        
+
         setTimeout(() => {
-           // Manual cleanup to prevent UI freeze
-           document.body.style.pointerEvents = "";
-           document.body.style.overflow = "";
+          // Manual cleanup to prevent UI freeze
+          document.body.style.pointerEvents = "";
+          document.body.style.overflow = "";
 
           queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
           queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
@@ -72,15 +72,26 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
           {/* Edit Task Option */}
-          <DropdownMenuItem className="cursor-pointer" onClick={() => setOpenEditDialog(true)}>
+          {/* <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenEditDialog(true);
+            }}
+          >
             <Pencil className="w-4 h-4 mr-2" /> Edit Issue
-          </DropdownMenuItem>
+          </DropdownMenuItem> */}
           <DropdownMenuSeparator />
 
           {/* Delete Task Option */}
           <DropdownMenuItem
             className="!text-destructive cursor-pointer"
-            onClick={() => setOpenDialog(true)}
+            onClick={(e) => e.stopPropagation()}
+            onSelect={() => {
+              setTimeout(() => {
+                setOpenDialog(true);
+              }, 100);
+            }}
           >
             Delete Issue
             <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
@@ -89,8 +100,8 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
       </DropdownMenu>
 
       {/* Edit Task Dialog */}
-      <EditTaskDialog task={task} isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)} 
-        />
+      <EditTaskDialog task={task} isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)}
+      />
 
       {/* Delete Task Confirmation Dialog */}
       <ConfirmDialog
