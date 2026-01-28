@@ -26,6 +26,9 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/helper';
 
+import { ParentSelector } from '@/components/issue/ParentSelector';
+import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
+
 export function BoardCardDialog() {
   const {
     selectedCard,
@@ -131,6 +134,9 @@ export function BoardCardDialog() {
   const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
   const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
+  const [parentId, setParentId] = useState<string>(
+    issue?.type === 'subtask' ? (issue?.parentIssueId || '') : (issue?.epicId || '')
+  );
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -171,6 +177,7 @@ export function BoardCardDialog() {
       setAssigneeId(getAssigneeInfo(issue).id);
       setReporterId(getReporterInfo(issue).id);
       setDueDate(issue.dueDate || null);
+      setParentId(issue.type === 'subtask' ? (issue.parentIssueId || '') : (issue.epicId || ''));
     }
   }, [issue]);
 
@@ -181,6 +188,25 @@ export function BoardCardDialog() {
     enabled: !!issueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  // Sync state with detailedIssue when it loads
+  useEffect(() => {
+    if (detailedIssue) {
+      setTitle(detailedIssue.title);
+      setDescription(detailedIssue.description || '');
+      setPriority(detailedIssue.priority || 'medium');
+      setStatus(detailedIssue.status || 'to-do');
+      setAssigneeId(getAssigneeInfo(detailedIssue).id);
+      setReporterId(getReporterInfo(detailedIssue).id);
+      setDueDate(detailedIssue.dueDate || null);
+      setParentId(
+        (detailedIssue as any).type === 'subtask'
+          ? ((detailedIssue as any).parentIssueId || '')
+          : ((detailedIssue as any).epicId || '')
+      );
+    }
+  }, [detailedIssue]);
+
   const parentIssueIdStr = issue?.parentIssueId ? String(issue.parentIssueId) : '';
   const { data: workItemAttachments = [] } = useQuery({
     queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'],
@@ -226,6 +252,14 @@ export function BoardCardDialog() {
     enabled: !!parentIssueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  const { data: workspaceItems = [] } = useQuery({
+    queryKey: ['workspace-items', workspaceId],
+    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
+    enabled: !!workspaceId && isEditing && issue?.type === 'subtask',
+    staleTime: 5 * 60 * 1000,
+  });
+
   const normalize = (list: any[]) =>
     (Array.isArray(list) ? list : []).map((a: any) => ({
       _id: a?._id || a?.id || `${a?.fileUrl || ''}-${a?.fileName || ''}`,
@@ -361,6 +395,7 @@ export function BoardCardDialog() {
           assignedTo: assigneeId || null,
           reporter: reporterId || null,
           dueDate,
+          parent: parentId || null,
         },
       },
       {
@@ -548,6 +583,73 @@ export function BoardCardDialog() {
               {issue.type}
             </Badge>
           </div>
+
+          {/* Parent / Epic */}
+          {(['story', 'task', 'bug', 'subtask'].includes(issue.type)) && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                {issue.type === 'subtask' ? 'Parent Issue' : 'Epic'}
+              </label>
+              {isEditing ? (
+                issue.type === 'subtask' ? (
+                  <Select
+                    value={parentId}
+                    onValueChange={setParentId}
+                    disabled={
+                      ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                        .filter((item: any) => ['story', 'task', 'bug'].includes(item.type)).length === 0
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select parent issue..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                        .filter((item: any) => ['story', 'task', 'bug'].includes(item.type)).length === 0 ? (
+                        <div className="p-2 text-sm text-gray-500">
+                          No parent issues available.
+                        </div>
+                      ) : (
+                        ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                          .filter((item: any) => ['story', 'task', 'bug'].includes(item.type) && item._id !== issue._id)
+                          .map((item) => (
+                            <SelectItem key={item._id} value={item._id}>
+                              <div className="flex items-center gap-2">
+                                <IssueTypeIcon type={item.type} />
+                                <span>{item.title}</span>
+                              </div>
+                            </SelectItem>
+                          ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <ParentSelector
+                    issueType={issue.type}
+                    parentId={parentId}
+                    onChange={setParentId}
+                    projectId={workspaceId}
+                    optional={true}
+                  />
+                )
+              ) : (
+                <div className="flex items-center gap-2">
+                  {parentId ? (
+                    (detailedIssue as any)?.parent || (detailedIssue as any)?.epic ? (
+                      <div className="flex items-center gap-2 p-1 px-2 border rounded-md bg-gray-50 dark:bg-muted/50">
+                        <IssueTypeIcon type={((detailedIssue as any).parent as any)?.type || ((detailedIssue as any).epic as any)?.type || 'task'} />
+                        <span className="text-sm">{((detailedIssue as any).parent as any)?.title || ((detailedIssue as any).epic as any)?.title || 'Unknown Parent'}</span>
+                      </div>
+                    ) : (
+                      <span className="text-gray-500 text-sm">Loading...</span>
+                    )
+                  ) : (
+                    <span className="text-gray-500 text-sm italic">None</span>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Status */}
           <div>

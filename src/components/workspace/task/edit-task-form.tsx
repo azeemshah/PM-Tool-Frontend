@@ -41,6 +41,9 @@ import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
 import { mapColumnToStatus } from "@/lib/helper";
 import type { IssueStatus } from "@/api/issue/types";
+import { ParentSelector } from "@/components/issue/ParentSelector";
+import { IssueTypeIcon } from "@/components/issue/IssueTypeIcon";
+import { useQuery } from "@tanstack/react-query";
 
 const API_PRIORITY_MAP = {
   LOW: "low",
@@ -120,6 +123,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     priority: z.enum(Object.values(TaskPriorityEnum) as [string, ...string[]]),
     assignedTo: z.string().trim().optional(),
     dueDate: z.date().optional(),
+    parent: z.string().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -131,7 +135,15 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       priority: apiPriorityToFormPriority(task?.priority ?? "medium"),
       assignedTo: task.assignedTo?._id ?? "",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
+      parent: task?.parent || (task as any)?.epic?._id || undefined,
     },
+  });
+
+  const { data: workspaceItems = [] } = useQuery({
+    queryKey: ['workspace-items', workspaceId],
+    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
+    enabled: !!workspaceId && String(task.type).toLowerCase() === 'subtask',
+    staleTime: 5 * 60 * 1000,
   });
 
   useEffect(() => {
@@ -160,6 +172,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       priority: API_PRIORITY_MAP[values.priority as keyof typeof API_PRIORITY_MAP] || "medium",
       assignedTo: values.assignedTo || null, // Send null if not assigned
       dueDate: values.dueDate ? values.dueDate.toISOString() : null, // Send null if no due date
+      parent: values.parent || null,
     };
 
     mutate({ issueId: taskId, data: payload }, {
@@ -341,6 +354,65 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Parent/Epic Selection */}
+            {['story', 'task', 'bug', 'subtask'].includes(String(task.type).toLowerCase()) && (
+              <FormField
+                control={form.control}
+                name="parent"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      {String(task.type).toLowerCase() === 'subtask' ? "Parent Issue" : "Epic"}
+                    </FormLabel>
+                    <FormControl>
+                      {String(task.type).toLowerCase() === 'subtask' ? (
+                        <Select
+                          value={field.value}
+                          onValueChange={field.onChange}
+                          disabled={
+                            ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                              .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase())).length === 0
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select parent issue..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                              .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase())).length === 0 ? (
+                              <div className="p-2 text-sm text-gray-500">
+                                No parent issues available.
+                              </div>
+                            ) : (
+                              ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
+                                .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase()) && item._id !== task._id)
+                                .map((item) => (
+                                  <SelectItem key={item._id} value={item._id}>
+                                    <div className="flex items-center gap-2">
+                                      <IssueTypeIcon type={String(item.type).toLowerCase() as any} />
+                                      <span>{item.title}</span>
+                                    </div>
+                                  </SelectItem>
+                                ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                      ) : (
+                        <ParentSelector
+                          issueType={String(task.type).toLowerCase() as any}
+                          parentId={field.value || ""}
+                          onChange={field.onChange}
+                          projectId={workspaceId}
+                          optional={true}
+                        />
+                      )}
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             {/* Status */}
             <FormField control={form.control} name="status" render={({ field }) => (

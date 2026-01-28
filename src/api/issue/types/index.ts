@@ -70,7 +70,7 @@ export interface CreateItemDto {
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
-  issueId: ReactNode;
+	issueId: ReactNode;
 	_id: string;
 	projectId: string;
 	type: IssueType;
@@ -219,6 +219,8 @@ export interface UpdateIssueDTO {
 	labels?: string[];
 	dueDate?: string | null;
 	reporter?: string;
+	parent?: string | null;
+	epicId?: string | null;
 }
 
 // ==================== QUERY RESPONSE TYPES ====================

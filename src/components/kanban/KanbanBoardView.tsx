@@ -9,6 +9,7 @@ import { useGetKanbanBoardCards } from '@/api/kanban/hooks/cards/useGetKanbanBoa
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
+import type { TaskType } from '@/api/issue/types';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { mapColumnToStatus } from '@/lib/helper';
 import { BoardHeader } from './BoardHeader';
@@ -63,7 +64,7 @@ export function KanbanBoardView() {
   });
 
   // Ensure workspaceItems is always an array
-  const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? workspaceItemsData : [];
+  const workspaceItems: TaskType[] = Array.isArray(workspaceItemsData) ? (workspaceItemsData as TaskType[]) : [];
 
 
   // Normalize workspace items into Issue-like objects for board usage
