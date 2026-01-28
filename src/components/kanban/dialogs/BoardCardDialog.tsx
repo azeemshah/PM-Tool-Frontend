@@ -28,6 +28,7 @@ import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/
 
 import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
+import { CommentSection } from './CommentSection';
 
 export function BoardCardDialog() {
   const {
@@ -307,6 +308,27 @@ export function BoardCardDialog() {
   if (!isCardDialogOpen || !issue) {
     return null;
   }
+
+  const reporterObj = (() => {
+    const r = (detailedIssue as any)?.reporter ?? (issue as any)?.reporter;
+    if (!r) return null;
+    if (typeof r === 'object') {
+      return {
+        _id: String(r._id || r.id || ''),
+        name: r.name || 'Unknown',
+        profilePicture: r.profilePicture ?? null,
+      };
+    }
+    if (typeof r === 'string') {
+      const member = members.find((m: any) => (m.userId?._id === r || m.userId === r));
+      return {
+        _id: r,
+        name: member?.userId?.name || member?.name || 'Unknown',
+        profilePicture: member?.userId?.profilePicture ?? null,
+      };
+    }
+    return null;
+  })();
 
   const mapStatusForSprint = (value: string | null): string | undefined => {
     if (!value) return undefined;
@@ -937,6 +959,9 @@ export function BoardCardDialog() {
               </div>
             </div>
           </div>
+
+          {/* Comments */}
+          <CommentSection workItemId={issueIdStr} />
 
           {/* Action Buttons */}
           {isEditing && (
