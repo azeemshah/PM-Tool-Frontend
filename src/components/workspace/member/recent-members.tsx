@@ -23,7 +23,8 @@ const RecentMembers = () => {
 
       <ul role="list" className="space-y-3">
         {members.map((member, index) => {
-          const name = member?.userName || `${member?.userId?.firstName || ''} ${member?.userId?.lastName || ''}`.trim() || member?.userId?.name || "";
+          const userObj = member.user || member.userId;
+          const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
           const initials = getAvatarFallbackText(name);
           const avatarColor = getAvatarColor(name);
           return (
@@ -36,7 +37,7 @@ const RecentMembers = () => {
               <div className="flex-shrink-0">
                 <Avatar className="h-9 w-9 sm:flex">
                   <AvatarImage
-                    src={member.userId.profilePicture || ""}
+                    src={userObj?.profilePicture || ""}
                     alt={name}
                   />
                   <AvatarFallback className={avatarColor}>

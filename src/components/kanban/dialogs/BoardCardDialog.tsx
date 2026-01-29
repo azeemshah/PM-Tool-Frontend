@@ -68,8 +68,15 @@ export function BoardCardDialog() {
 
         // If we only have ID (or name is missing/undefined), try to look up in members
         if (id) {
-          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
-          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          const member = members.find((m: any) => {
+             const u = m.user || m.userId;
+             return (u?._id === id || u === id);
+          });
+          if (member) {
+              const u = member.user || member.userId;
+              const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+              return { id, name: n };
+          }
           // If member not found, return ID as fallback or empty name
           return { id, name: name || 'Unknown' };
         }
@@ -78,8 +85,15 @@ export function BoardCardDialog() {
       // If it's a string ID
       if (typeof i.assignee === 'string') {
         const id = i.assignee;
-        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
-        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        const member = members.find((m: any) => {
+             const u = m.user || m.userId;
+             return (u?._id === id || u === id);
+        });
+        if (member) {
+            const u = member.user || member.userId;
+            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+            return { id, name: n };
+        }
         return { id, name: 'Unknown' };
       }
     }
@@ -91,15 +105,29 @@ export function BoardCardDialog() {
         const name = i.assignedTo.name;
         if (id && name) return { id, name };
         if (id) {
-          const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
-          if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+          const member = members.find((m: any) => {
+             const u = m.user || m.userId;
+             return (u?._id === id || u === id);
+          });
+          if (member) {
+              const u = member.user || member.userId;
+              const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+              return { id, name: n };
+          }
           return { id, name: name || 'Unknown' };
         }
       }
       if (typeof i.assignedTo === 'string') {
         const id = i.assignedTo;
-        const member = members.find((m: any) => (m.userId?._id === id || m.userId === id));
-        if (member) return { id, name: member.userId?.name || member.name || 'Unknown' };
+        const member = members.find((m: any) => {
+             const u = m.user || m.userId;
+             return (u?._id === id || u === id);
+        });
+        if (member) {
+            const u = member.user || member.userId;
+            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+            return { id, name: n };
+        }
         return { id, name: 'Unknown' };
       }
     }
@@ -115,8 +143,13 @@ export function BoardCardDialog() {
         return { id: i.reporter._id || i.reporter.id || '', name: i.reporter.name || '' };
       }
       if (typeof i.reporter === 'string') {
-        const member = members.find((m: any) => (m.userId?._id === i.reporter || m.userId === i.reporter));
-        return { id: i.reporter, name: member?.userId?.name || member?.name || 'Unknown' };
+        const member = members.find((m: any) => {
+             const u = m.user || m.userId;
+             return (u?._id === i.reporter || u === i.reporter);
+        });
+        const u = member?.user || member?.userId;
+        const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+        return { id: i.reporter, name: n };
       }
     }
     return { id: '', name: '' };
@@ -787,14 +820,17 @@ export function BoardCardDialog() {
                   <div className="w-full max-h-[200px] overflow-y-auto">
                     {members && members.length > 0 ? (
                       members.map((member: any) => {
-                        const userId = member.userId;
-                        if (!userId) return null;
-                        const name = userId.name || 'Unknown';
+                        const userObj = member.user || member.userId;
+                        if (!userObj) return null;
+                        const id = userObj._id || (typeof userObj === 'string' ? userObj : '');
+                        if (!id) return null;
+
+                        const name = userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown');
                         return (
-                          <SelectItem key={userId._id} value={userId._id}>
+                          <SelectItem key={id} value={id}>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
-                                <AvatarImage src={userId.profilePicture || ''} />
+                                <AvatarImage src={userObj.profilePicture || ''} />
                                 <AvatarFallback className={getAvatarColor(name)}>
                                   {getAvatarFallbackText(name)}
                                 </AvatarFallback>
@@ -814,9 +850,13 @@ export function BoardCardDialog() {
               <div className="flex items-center gap-2">
                 {reporterId ? (() => {
                   const reporterName = getReporterInfo(issue).name;
-                  const member = members.find((m: any) => m.userId?._id === reporterId || m.userId === reporterId);
-                  const name = member?.userId?.name || reporterName || 'Unknown';
-                  const profilePicture = member?.userId?.profilePicture;
+                  const member = members.find((m: any) => {
+                      const u = m.user || m.userId;
+                      return (u?._id === reporterId || u === reporterId);
+                  });
+                  const userObj = member?.user || member?.userId;
+                  const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : (reporterName || 'Unknown'));
+                  const profilePicture = userObj?.profilePicture;
 
                   return (
                     <>
@@ -961,7 +1001,7 @@ export function BoardCardDialog() {
           </div>
 
           {/* Comments */}
-          {!isEditing && <CommentSection workItemId={issueIdStr} />}
+          {!isEditing && <CommentSection workItemId={issueIdStr} workspaceId={workspaceId} />}
 
           {/* Action Buttons */}
           {isEditing && (

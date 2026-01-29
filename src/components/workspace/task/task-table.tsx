@@ -299,20 +299,31 @@ const DataTableFilterToolbar: FC<{
   const members = Array.isArray(memberData) ? memberData : memberData?.members || [];
 
   const assigneesOptions = members.map((member) => {
-    const name = member.userId?.name || "Unknown";
+    if (!member) return { label: "Unknown", value: "" };
+    
+    // Handle both new (user object) and old (userId object) structures
+    const userObj = member.user || member.userId;
+    
+    // Safety check if userObj is just an ID string or null
+    if (!userObj || typeof userObj === 'string') {
+         return { label: "Unknown", value: typeof userObj === 'string' ? userObj : "" };
+    }
+
+    const name = userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
     const initials = getAvatarFallbackText(name);
     const avatarColor = getAvatarColor(name);
+    
     return {
       label: (
         <div className="flex items-center space-x-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+            <AvatarImage src={userObj.profilePicture || ""} alt={name} />
             <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
           </Avatar>
           <span>{name}</span>
         </div>
       ),
-      value: member.userId._id,
+      value: userObj._id || "",
     };
   });
 

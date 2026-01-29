@@ -56,7 +56,8 @@ export default function CreateTaskForm(props: {
 
   // Workspace Memebers
   const membersOptions = members?.map((member) => {
-    const name = member.userId?.name || "Unknown";
+    const userObj = member.user || member.userId;
+    const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
     const initials = getAvatarFallbackText(name);
     const avatarColor = getAvatarColor(name);
 
@@ -64,13 +65,13 @@ export default function CreateTaskForm(props: {
       label: (
         <div className="flex items-center space-x-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+            <AvatarImage src={userObj?.profilePicture || ""} alt={name} />
             <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
           </Avatar>
           <span>{name}</span>
         </div>
       ),
-      value: member.userId._id,
+      value: userObj?._id || (typeof userObj === 'string' ? userObj : ""),
     };
   });
 

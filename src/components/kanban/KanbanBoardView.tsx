@@ -50,7 +50,7 @@ export function KanbanBoardView() {
       if (!workspaceId) return [];
 
       try {
-        const response = await issueApiService.getTasksByWorkspace(workspaceId);
+        const response = await issueApiService.getTasksByWorkspace(workspaceId, { limit: 1000 });
         // Extract array safely
         const tasks = Array.isArray(response?.data) ? response.data : [];
         console.log('[KanbanBoardView] Fetched tasks:', tasks.length);

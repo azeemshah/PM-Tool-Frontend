@@ -112,6 +112,7 @@ export type ChangeWorkspaceMemberRoleType = {
 export type AllMembersInWorkspaceResponseType = {
   message: string;
   members: {
+    user: { _id: string; name: string; firstName?: string; lastName?: string; email: string; profilePicture: string | null; };
     _id: string;
     userId: {
       _id: string;

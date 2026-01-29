@@ -104,20 +104,33 @@ export function IssueCreateDialog({
 
     // Format options for reporter display
     const reporterOptions = members.map((member) => {
-        const name = member.userId?.name || 'Unknown';
+        if (!member) return { label: 'Unknown', value: '' };
+
+        // Handle both new (user object) and old (userId object) structures
+        const userObj = member.user || member.userId;
+
+        // Safety check if userObj is just an ID string or null
+        if (!userObj || typeof userObj === 'string') {
+             return { 
+                 label: <span className="text-muted-foreground">Unknown User</span>, 
+                 value: typeof userObj === 'string' ? userObj : "" 
+             };
+        }
+
+        const name = userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
         const initials = getAvatarFallbackText(name);
         const avatarColor = getAvatarColor(name);
         return {
             label: (
                 <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={member.userId?.profilePicture || ''} alt={name} />
+                        <AvatarImage src={userObj.profilePicture || ''} alt={name} />
                         <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
                     </Avatar>
                     <span>{name}</span>
                 </div>
             ),
-            value: member.userId?._id || '',
+            value: userObj._id || '',
         };
     });
 
@@ -194,7 +207,10 @@ export function IssueCreateDialog({
     // Set default reporter
     useEffect(() => {
         if (members.length > 0 && !reporterId) {
-            setReporterId(members[0]?.userId?._id || '');
+            const firstMember = members[0];
+            const userObj = firstMember.user || firstMember.userId;
+            const id = (typeof userObj === 'string' ? userObj : userObj?._id) || '';
+            setReporterId(id);
         }
     }, [members, reporterId]);
 
