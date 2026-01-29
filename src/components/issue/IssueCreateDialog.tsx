@@ -82,7 +82,12 @@ export function IssueCreateDialog({
     // Normalize responses: some hooks return an array directly, others return an object with a `members`/`roles` shape
     const members = Array.isArray(membersQuery.data) ? membersQuery.data : (membersQuery.data?.members ?? []);
     const epics = Array.isArray(epicsQuery.data) ? epicsQuery.data : (epicsQuery.data ?? []);
-    const workspaceItems = Array.isArray(workspaceItemsQuery.data) ? (workspaceItemsQuery.data as TaskType[]) : [];
+    
+    // Handle workspaceItems: could be array or { data: [], meta: ... }
+    const workspaceItemsRaw = workspaceItemsQuery.data as any;
+    const workspaceItems = Array.isArray(workspaceItemsRaw) 
+        ? workspaceItemsRaw 
+        : (workspaceItemsRaw?.data || []);
 
     // Debug logging
     console.log('🔍 IssueCreateDialog Debug:', {
@@ -93,6 +98,8 @@ export function IssueCreateDialog({
         epicsData: epicsQuery.data,
         epics: epics,
         epicCount: epics.length,
+        workspaceItemsRaw,
+        workspaceItemsCount: workspaceItems.length
     });
 
     // Format options for reporter display

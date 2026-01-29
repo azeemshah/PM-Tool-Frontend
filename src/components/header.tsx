@@ -11,10 +11,16 @@ import { Separator } from "./ui/separator";
 import { Link, useLocation } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { ModeToggle } from "./mode-toggle";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
+import { Bell } from "lucide-react";
+import { useNotifications } from "@/contexts/notification-context";
+import { NotificationList } from "./notification/notification-list";
 
 const Header = () => {
   const location = useLocation();
   const workspaceId = useWorkspaceId();
+  const { unreadCount } = useNotifications();
 
   const pathname = location.pathname;
 
@@ -59,7 +65,22 @@ const Header = () => {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <ModeToggle />
+      <div className="flex items-center gap-2">
+        <Popover>
+            <PopoverTrigger asChild>
+                <Button variant="ghost" size="icon" className="relative">
+                    <Bell className="h-[1.2rem] w-[1.2rem]" />
+                    {unreadCount > 0 && (
+                        <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-red-600 border border-background" />
+                    )}
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-auto border-none" align="end">
+                <NotificationList />
+            </PopoverContent>
+        </Popover>
+        <ModeToggle />
+      </div>
     </header>
   );
 };

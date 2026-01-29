@@ -1,7 +1,7 @@
 import { CustomError } from "@/types/custom-error.type";
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api/v1";
 
 // Kanban boards storage in memory
 const sampleBoards: any[] = [];
