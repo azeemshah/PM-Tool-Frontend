@@ -10,6 +10,8 @@ export const useCreateComment = () => {
     onSuccess: (data, variables) => {
       // Invalidate comments query for the specific work item
       queryClient.invalidateQueries({ queryKey: ['comments', variables.workItemId] });
+      // Invalidate history to show the new comment activity
+      queryClient.invalidateQueries({ queryKey: ['history'] });
     },
   });
 };

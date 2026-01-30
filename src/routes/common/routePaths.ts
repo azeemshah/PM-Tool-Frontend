@@ -32,6 +32,7 @@ export const PROTECTED_ROUTES = {
   BOARD_DETAIL: "/workspace/:workspaceId/boards/:boardId",
   SPRINT_EDIT: "/workspace/:workspaceId/sprints/:sprintId/edit",
   TASKS: "/workspace/:workspaceId/tasks",
+  HISTORY: "/workspace/:workspaceId/history",
   MEMBERS: "/workspace/:workspaceId/members",
   SETTINGS: "/workspace/:workspaceId/settings",
   WORKFLOWS: "/workspace/:workspaceId/workflows",

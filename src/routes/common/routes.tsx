@@ -16,6 +16,7 @@ import VerifyEmail from "@/page/auth/VerifyEmail";
 import CheckEmail from "@/page/auth/CheckEmail";
 import OtpVerification from "@/page/auth/OtpVerification";
 import SprintEdit from "@/page/workspace/SprintEdit";
+import History from "@/page/workspace/History";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -35,6 +36,7 @@ export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.BOARD_DETAIL, element: <BoardPage /> },
   { path: PROTECTED_ROUTES.SPRINT_EDIT, element: <SprintEdit /> },
   { path: PROTECTED_ROUTES.TASKS, element: <Tasks /> },
+  { path: PROTECTED_ROUTES.HISTORY, element: <History /> },
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },
 ];

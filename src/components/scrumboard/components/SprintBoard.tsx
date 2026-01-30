@@ -130,6 +130,7 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
     },
   });
 

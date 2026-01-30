@@ -340,6 +340,7 @@ export function KanbanBoardView() {
               try {
                 await issueApiService.moveItemToColumn(draggedId, destinationListId);
                 // Success
+                queryClient.invalidateQueries({ queryKey: ['history'] });
               } catch (error) {
                 console.error('Error moving issue card:', error);
                 setDragError('Failed to move card. Please try again.');

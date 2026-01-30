@@ -93,6 +93,9 @@ export function useKanbanReorder(boardId: string | null) {
 				queryClient.invalidateQueries({
 					queryKey: ['Kanban', 'board', boardId],
 				});
+				queryClient.invalidateQueries({
+					queryKey: ['history'],
+				});
 			}
 		},
 	});
