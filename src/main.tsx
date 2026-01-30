@@ -7,14 +7,17 @@ import App from "./App.tsx";
 import QueryProvider from "./context/query-provider.tsx";
 import { Toaster } from "./components/ui/toaster.tsx";
 import { ThemeProvider } from "./components/theme-provider.tsx";
+import { NotificationProvider } from "./contexts/notification-context.tsx";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
     <QueryProvider>
       <NuqsAdapter>
         <ThemeProvider defaultTheme="dark" storageKey="vite-ui-theme">
-          <App />
-          <Toaster />
+          <NotificationProvider>
+            <App />
+            <Toaster />
+          </NotificationProvider>
         </ThemeProvider>
       </NuqsAdapter>
     </QueryProvider>

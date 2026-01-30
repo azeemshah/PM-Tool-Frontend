@@ -71,10 +71,14 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
   // Members Dropdown Options
-  const membersOptions = members.map((member) => ({
-    label: member.userId?.name || "Unknown",
-    value: member.userId?._id || "",
-  }));
+  const membersOptions = members.map((member) => {
+    const userObj = member.user || member.userId;
+    const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
+    return {
+      label: name,
+      value: userObj?._id || (typeof userObj === 'string' ? userObj : ""),
+    };
+  });
 
   const statusOptions = boardLists && boardLists.length > 0
     ? boardLists.map((list: any) => ({

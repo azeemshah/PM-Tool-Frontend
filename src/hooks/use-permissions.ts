@@ -23,13 +23,15 @@ const usePermissions = (
       });
       
       const member = members.find((m: any) => {
-        // member.userId may be object or id string
-        // Handle both cases: userId as object with _id property or as string
-        const userId = typeof m?.userId === 'object' 
-          ? m?.userId?._id 
-          : m?.userId;
-        const memberEmail = typeof m?.userId === 'object'
-          ? m?.userId?.email
+        // member.user or member.userId may be object or id string
+        const userObj = m?.user || m?.userId;
+        
+        // Handle both cases: userObj as object with _id property or as string
+        const userId = typeof userObj === 'object' 
+          ? userObj?._id 
+          : userObj;
+        const memberEmail = typeof userObj === 'object'
+          ? userObj?.email
           : undefined;
         
         console.log('[usePermissions] Checking member:', {

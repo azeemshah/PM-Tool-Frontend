@@ -49,23 +49,26 @@ export const MemberList: React.FC<MemberListProps> = ({
 
   return (
     <div className="space-y-4">
-      {members.map((member) => (
+      {members.map((member) => {
+        const m = member as any;
+        const userObj = m.user || m.userId;
+        return (
         <div
           key={member._id}
           className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">
-              {member.userId?.profilePicture ? (
-                <img src={member.userId.profilePicture} alt={member.userId.name || ''} className="w-10 h-10 rounded-full" />
+              {userObj?.profilePicture ? (
+                <img src={userObj.profilePicture} alt={userObj.name || ''} className="w-10 h-10 rounded-full" />
               ) : (
-                <span>{initials(member.userId?.name)}</span>
+                <span>{initials(userObj?.name)}</span>
               )}
             </div>
 
             <div>
-              <div className="font-medium text-gray-900">{member.userId?.name || 'Unknown'}</div>
-              <div className="text-sm text-gray-600">{member.userId?.email}</div>
+              <div className="font-medium text-gray-900">{userObj?.name || 'Unknown'}</div>
+              <div className="text-sm text-gray-600">{userObj?.email}</div>
             </div>
           </div>
 
@@ -79,7 +82,7 @@ export const MemberList: React.FC<MemberListProps> = ({
             </button>
           </div>
         </div>
-      ))}
+      )})}
     </div>
   );
 };
