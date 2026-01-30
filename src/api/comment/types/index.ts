@@ -3,6 +3,7 @@ export interface Comment {
   workItem: string;
   parentComment?: string;
   content: string;
+  attachments?: { fileName: string; fileUrl: string; fileType?: string }[];
   userId: {
     _id: string;
     username: string;
@@ -20,8 +21,10 @@ export interface CreateCommentDto {
   content: string;
   parentCommentId?: string;
   userId?: string;
+  attachments?: { fileName: string; fileUrl: string; fileType?: string }[];
 }
 
 export interface UpdateCommentDto {
   content: string;
+  attachments?: { fileName: string; fileUrl: string; fileType?: string }[];
 }

@@ -927,7 +927,9 @@ export function BoardCardDialog() {
                   {parentOnlyAttachments.map((att: any, idx: number) => {
                     const name = att.name || att.fileName || `Attachment ${idx + 1}`;
                     const url = att.url || att.fileUrl || '';
-                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    const fullUrlRaw = buildFullUrl(url);
+                    const fullUrlWithToken = `${fullUrlRaw}?token=${localStorage.getItem('accessToken') || ''}`;
+                    const fullUrl = toOpenUrl(fullUrlWithToken, name);
                     return (
                       <div key={`parent-${idx}`} className="flex items-center gap-2">
                         <a
@@ -949,7 +951,9 @@ export function BoardCardDialog() {
                   ownAttachments.map((att: any, idx: number) => {
                     const name = att.name || att.fileName || `Attachment ${idx + 1}`;
                     const url = att.url || att.fileUrl || '';
-                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    const fullUrlRaw = buildFullUrl(url);
+                    const fullUrlWithToken = `${fullUrlRaw}?token=${localStorage.getItem('accessToken') || ''}`;
+                    const fullUrl = toOpenUrl(fullUrlWithToken, name);
                     return (
                       <div key={`own-${idx}`} className="flex items-center gap-2">
                         <a

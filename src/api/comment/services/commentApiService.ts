@@ -26,4 +26,16 @@ export const commentApiService = {
   deleteComment: async (id: string): Promise<void> => {
     await API.delete(`${COMMENTS_ENDPOINT}/${id}`);
   },
+
+  // Upload attachment
+  uploadAttachment: async (workItemId: string, file: File): Promise<{ success: boolean; url: string; fileName: string }> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const response = await API.post(`/kanban/files/upload/${workItemId}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
 };
