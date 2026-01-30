@@ -1,9 +1,11 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KanbanApiService } from '../../services/KanbanApiService';
 import { CreateListDTO } from '../../types';
+import { useToast } from '@/hooks/use-toast';
 
 export function useCreateKanbanBoardList() {
 	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
 	return useMutation({
 		mutationFn: ({
@@ -32,7 +34,19 @@ export function useCreateKanbanBoardList() {
 				} catch (err) {
 					// ignore
 				}
+				toast({
+					title: 'Success',
+					description: `Column "${newColumn.name}" created successfully`,
+				});
 			},
+		onError: (error: any) => {
+			const message = error?.response?.data?.message || 'Failed to create column';
+			toast({
+				title: 'Error',
+				description: message,
+				variant: 'destructive',
+			});
+		},
 	});
 }
 
