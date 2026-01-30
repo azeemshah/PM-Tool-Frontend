@@ -730,7 +730,9 @@ export function BoardCardDialog() {
                       <SelectItem value="todo">Todo</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="blocked">Blocked</SelectItem>
                       <SelectItem value="done">Done</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -812,12 +814,13 @@ export function BoardCardDialog() {
               Reporter *
             </label>
             {isEditing ? (
-              <Select value={reporterId || ''} onValueChange={(value) => setReporterId(value)}>
+              <Select value={reporterId || 'unassigned'} onValueChange={(value) => setReporterId(value === 'unassigned' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a reporter" />
                 </SelectTrigger>
                 <SelectContent>
                   <div className="w-full max-h-[200px] overflow-y-auto">
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members && members.length > 0 ? (
                       members.map((member: any) => {
                         const userObj = member.user || member.userId;

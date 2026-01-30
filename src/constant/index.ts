@@ -3,7 +3,9 @@ export const TaskStatusEnum = {
   TO_DO: "To Do",
   IN_PROGRESS: "In Progress",
   IN_REVIEW: "In Review",
+  BLOCKED: "Blocked",
   DONE: "Done",
+  CLOSED: "Closed",
 } as const;
 
 export const TaskPriorityEnum = {

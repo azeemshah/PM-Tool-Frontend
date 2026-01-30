@@ -9,6 +9,8 @@ import {
   HelpCircle,
   Timer,
   View,
+  AlertCircle,
+  XCircle,
 } from "lucide-react";
 import { ISSUE_TYPES_LIST } from "@/components/issue/constants";
 
@@ -17,7 +19,9 @@ const statusIcons = {
   [TaskStatusEnum.TO_DO]: Circle,
   [TaskStatusEnum.IN_PROGRESS]: Timer,
   [TaskStatusEnum.IN_REVIEW]: View,
+  [TaskStatusEnum.BLOCKED]: AlertCircle,
   [TaskStatusEnum.DONE]: CheckCircle,
+  [TaskStatusEnum.CLOSED]: XCircle,
 };
 
 const priorityIcons = {

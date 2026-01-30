@@ -73,7 +73,10 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
   const statusOptions = [
     { label: 'Backlog', value: 'Backlog' },
-    ...((statuses || []).filter((s) => String(s.value).toLowerCase() !== 'backlog'))
+    ...((statuses || []).filter((s) => {
+      const sValue = String(s.value || s.label).toLowerCase();
+      return sValue !== 'backlog';
+    }))
   ];
   const form = useForm<WorkItemFormData>({
     resolver: zodResolver(workItemSchema),
@@ -258,7 +261,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                   <FormControl>
                     <Input
                       type="date"
-                      value={field.value || ''}
+                      value={field.value ? (typeof field.value === 'string' ? field.value : field.value.toISOString().split('T')[0]) : ''}
                       onChange={(e) => field.onChange(e.target.value)}
                     />
                   </FormControl>
@@ -273,7 +276,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || 'Backlog'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -298,7 +301,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Reporter</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select reporter" />
@@ -306,11 +309,22 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                     </FormControl>
                     <SelectContent>
                       <div className="w-full max-h-[250px] overflow-y-auto">
-                        {members.map((member: any) => (
-                          <SelectItem key={member.userId?._id || member._id} value={member.userId?._id || ''}>
-                            {member.userId?.name || 'Unknown'}
-                          </SelectItem>
-                        ))}
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
+                        {members.map((member: any) => {
+                          const userObj = member.user || member.userId;
+                          if (!userObj) return null;
+                          
+                          const memberId = typeof userObj === 'object' ? userObj._id : userObj;
+                          if (!memberId) return null;
+                          
+                          const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown');
+                          
+                          return (
+                            <SelectItem key={memberId} value={memberId}>
+                              {name}
+                            </SelectItem>
+                          );
+                        })}
                       </div>
                     </SelectContent>
                   </Select>
