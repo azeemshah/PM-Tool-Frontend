@@ -228,6 +228,22 @@ if (!baseURL) {
     async (error: any) => {
       const { data, status } = error.response || {};
 
+      // Handle 403 Forbidden - Insufficient permissions
+      if (status === 403) {
+        const customError: CustomError = {
+          ...error,
+          errorCode: data?.errorCode || "FORBIDDEN",
+          response: {
+            ...error.response,
+            data: {
+              ...data,
+              message: data?.message || "Insufficient permission",
+            },
+          },
+        };
+        return Promise.reject(customError);
+      }
+
       // Attempt to refresh access token on 401 responses and retry once
       const originalRequest = error.config;
       if (status === 401 && !originalRequest?._retry) {

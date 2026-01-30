@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KanbanApiService } from '../../services/KanbanApiService';
+import { useToast } from '@/hooks/use-toast';
 
 export function useKanbanReorder(boardId: string | null) {
 	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
 	const reorderColumnMutation = useMutation({
 		mutationFn: (columnIds: string[]) => {
@@ -18,6 +20,14 @@ export function useKanbanReorder(boardId: string | null) {
 					queryKey: ['Kanban', 'lists', boardId],
 				});
 			}
+		},
+		onError: (error: any) => {
+			const message = error?.response?.data?.message || 'Failed to reorder columns';
+			toast({
+				title: 'Error',
+				description: message,
+				variant: 'destructive',
+			});
 		},
 	});
 
@@ -60,7 +70,12 @@ export function useKanbanReorder(boardId: string | null) {
 			}
 		},
 		onError: (error) => {
-			console.error('❌ Reorder mutation error:', error);
+			const message = error?.response?.data?.message || 'Failed to reorder cards';
+			toast({
+				title: 'Error',
+				description: message,
+				variant: 'destructive',
+			});
 		},
 	});
 
@@ -97,6 +112,14 @@ export function useKanbanReorder(boardId: string | null) {
 					queryKey: ['history'],
 				});
 			}
+		},
+		onError: (error: any) => {
+			const message = error?.response?.data?.message || 'Failed to move card';
+			toast({
+				title: 'Error',
+				description: message,
+				variant: 'destructive',
+			});
 		},
 	});
 

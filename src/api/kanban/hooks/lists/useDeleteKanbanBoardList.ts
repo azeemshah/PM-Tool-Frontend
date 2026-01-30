@@ -1,8 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { KanbanApiService } from '../../services/KanbanApiService';
+import { useToast } from '@/hooks/use-toast';
 
 export function useDeleteKanbanBoardList() {
 	const queryClient = useQueryClient();
+	const { toast } = useToast();
 
 	return useMutation({
 		mutationFn: ({
@@ -19,6 +21,18 @@ export function useDeleteKanbanBoardList() {
 			// Also refresh the board to remove the deleted column from UI
 			queryClient.invalidateQueries({
 				queryKey: ['Kanban', 'board', variables.boardId],
+			});
+			toast({
+				title: 'Success',
+				description: 'Column deleted successfully',
+			});
+		},
+		onError: (error: any) => {
+			const message = error?.response?.data?.message || 'Failed to delete column';
+			toast({
+				title: 'Error',
+				description: message,
+				variant: 'destructive',
 			});
 		},
 		onSettled: (_, __, variables) => {
