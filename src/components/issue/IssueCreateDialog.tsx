@@ -40,6 +40,7 @@ interface IssueCreateDialogProps {
     workspaceId: string;
     onSuccess?: () => void;
     defaultType?: IssueType;
+    boardType?: 'kanban' | 'scrumboard';
 }
 
 const PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
@@ -50,6 +51,7 @@ export function IssueCreateDialog({
     workspaceId,
     onSuccess,
     defaultType,
+    boardType = 'kanban',
 }: IssueCreateDialogProps) {
     const queryClient = useQueryClient();
 
@@ -519,22 +521,24 @@ export function IssueCreateDialog({
                         />
                     </div>
 
-                    {/* Status */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Status</label>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dynamicStatuses.map((s) => (
-                                    <SelectItem key={s.value} value={s.value}>
-                                        {s.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* Status - Only shown for Kanban boards */}
+                    {boardType === 'kanban' && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Status</label>
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dynamicStatuses.map((s) => (
+                                        <SelectItem key={s.value} value={s.value}>
+                                            {s.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     {/* Reporter */}
                     <div className="space-y-2">

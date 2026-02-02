@@ -23,8 +23,10 @@ export const SprintApiService = {
   },
 
   // Complete sprint
-  async completeSprint(sprintId: string): Promise<Sprint> {
-    const response = await API.patch(`${SPRINT_ENDPOINT}/${sprintId}/complete`);
+  async completeSprint(sprintId: string, targetSprintId?: string): Promise<Sprint> {
+    const response = await API.patch(`${SPRINT_ENDPOINT}/${sprintId}/complete`, {
+      ...(targetSprintId && { targetSprintId })
+    });
     return response.data.data || response.data;
   },
 

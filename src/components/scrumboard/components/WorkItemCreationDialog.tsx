@@ -37,6 +37,8 @@ import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { Download, Trash2 } from 'lucide-react';
 import { uploadWorkItemAttachment } from '@/lib/api';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -73,8 +75,44 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
   const statusOptions = [
     { label: 'Backlog', value: 'Backlog' },
-    ...((statuses || []).filter((s) => String(s.value).toLowerCase() !== 'backlog'))
+    ...((statuses || []).filter((s) => s.value && String(s.value).toLowerCase() !== 'backlog'))
   ];
+
+  // Format options for reporter display
+  const reporterOptions = members
+    .filter((member) => {
+      if (!member) return false;
+      const userObj = member.user || member.userId;
+      return userObj && (typeof userObj === 'string' ? userObj : userObj._id);
+    })
+    .map((member) => {
+      const userObj = member.user || member.userId;
+      const userId = typeof userObj === 'string' ? userObj : userObj?._id;
+      if (!userId) return null;
+
+      const name = typeof userObj === 'string' 
+        ? 'Unknown' 
+        : (userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown'));
+      
+      const initials = getAvatarFallbackText(name);
+      const avatarColor = getAvatarColor(name);
+      const profilePicture = typeof userObj === 'string' ? undefined : userObj.profilePicture;
+
+      return {
+        label: (
+          <div className="flex items-center space-x-2">
+            <Avatar className="h-6 w-6">
+              <AvatarImage src={profilePicture || ''} alt={name} />
+              <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+            </Avatar>
+            <span>{name}</span>
+          </div>
+        ),
+        value: userId,
+        name,
+      };
+    })
+    .filter(Boolean);
   const form = useForm<WorkItemFormData>({
     resolver: zodResolver(workItemSchema),
     defaultValues: {
@@ -83,7 +121,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       type: 'Task',
       priority: 'Medium',
       status: 'Backlog',
-      reporterId: members?.[0]?.userId?._id || '',
+      reporterId: reporterOptions?.[0]?.value || '',
       dueDate: '',
     },
   });
@@ -267,30 +305,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="status"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select status" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {statusOptions.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {/* Status dropdown is hidden in scrum board since status is determined by sprint column */}
 
             <FormField
               control={form.control}
@@ -306,9 +321,9 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                     </FormControl>
                     <SelectContent>
                       <div className="w-full max-h-[250px] overflow-y-auto">
-                        {members.map((member: any) => (
-                          <SelectItem key={member.userId?._id || member._id} value={member.userId?._id || ''}>
-                            {member.userId?.name || 'Unknown'}
+                        {reporterOptions.map((option: any) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
                           </SelectItem>
                         ))}
                       </div>

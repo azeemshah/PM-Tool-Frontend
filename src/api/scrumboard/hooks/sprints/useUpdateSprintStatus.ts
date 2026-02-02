@@ -4,15 +4,22 @@ import { Sprint } from '../../types';
 
 type SprintStatusAction = 'start' | 'complete' | 'reopen';
 
+interface UpdateSprintStatusParams {
+  sprintId: string;
+  workspaceId: string;
+  action: SprintStatusAction;
+  targetSprintId?: string;
+}
+
 export const useUpdateSprintStatus = () => {
   const queryClient = useQueryClient();
-  return useMutation<Sprint, Error, { sprintId: string; workspaceId: string; action: SprintStatusAction }>({
-    mutationFn: async ({ sprintId, action }) => {
+  return useMutation<Sprint, Error, UpdateSprintStatusParams>({
+    mutationFn: async ({ sprintId, action, targetSprintId }) => {
       switch (action) {
         case 'start':
           return SprintApiService.startSprint(sprintId);
         case 'complete':
-          return SprintApiService.completeSprint(sprintId);
+          return SprintApiService.completeSprint(sprintId, targetSprintId);
         case 'reopen':
           return SprintApiService.reopenSprint(sprintId);
         default:
