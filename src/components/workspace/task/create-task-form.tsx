@@ -106,7 +106,7 @@ export default function CreateTaskForm(props: {
   });
 
   const STATUSES = ["todo", "in_progress", "in_review", "done"];
-  const PRIORITIES = ["lowest", "low", "medium", "high", "highest"];
+  const PRIORITIES = ["low", "medium", "high"];
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;

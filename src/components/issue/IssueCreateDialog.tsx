@@ -42,7 +42,7 @@ interface IssueCreateDialogProps {
     defaultType?: IssueType;
 }
 
-const PRIORITIES: IssuePriority[] = ['lowest', 'low', 'medium', 'high', 'highest'];
+const PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 
 export function IssueCreateDialog({
     isOpen,
@@ -253,8 +253,6 @@ export function IssueCreateDialog({
         };
 
         const mapPriorityToItemPriority = (value: IssuePriority): ItemPriority => {
-            if (value === 'lowest') return 'low';
-            if (value === 'highest') return 'high';
             if (value === 'low' || value === 'medium' || value === 'high') return value;
             return 'medium';
         };
