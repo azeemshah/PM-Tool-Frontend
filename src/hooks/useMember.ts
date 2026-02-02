@@ -12,7 +12,7 @@ interface UseMemberReturn {
   error: string | null;
   fetchWorkspaceMembers: (workspaceId: string) => Promise<void>;
   addMember: (data: CreateMemberDTO) => Promise<Member | null>;
-  inviteMember: (data: { email: string; role: "ADMIN" | "MEMBER" | "VIEWER"; workspaceId: string }) => Promise<Member | null>;
+  inviteMember: (data: { email: string; role: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER"; workspaceId: string }) => Promise<Member | null>;
   getMember: (memberId: string) => Promise<Member | null>;
   updateMember: (memberId: string, data: UpdateMemberDTO) => Promise<Member | null>;
   removeMember: (memberId: string) => Promise<boolean>;
@@ -129,7 +129,7 @@ export const useMember = (): UseMemberReturn => {
   }, []);
 
   const inviteMemberCall = useCallback(
-    async (data: { email: string; role: "ADMIN" | "MEMBER" | "VIEWER"; workspaceId: string }): Promise<Member | null> => {
+    async (data: { email: string; role: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER"; workspaceId: string }): Promise<Member | null> => {
       setLoading(true);
       setError(null);
       try {
