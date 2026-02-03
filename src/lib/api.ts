@@ -956,10 +956,10 @@ export const updateIssueMutationFn = async ({
 
 /**
  * Delete an Issue
- * DELETE /issues/:id
+ * DELETE /items/delete/:id
  */
 export const deleteIssueMutationFn = async (issueId: string) => {
-  const response = await API.delete(`/issues/${issueId}`);
+  const response = await API.delete(`/items/delete/${issueId}`);
   return response.data;
 };
 

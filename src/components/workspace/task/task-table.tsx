@@ -35,7 +35,7 @@ import { TaskType } from "@/api/issue/types";
 import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards";
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
-import { bulkDeleteTasksMutationFn, bulkUpdateTasksMutationFn } from "@/lib/api";
+import { bulkDeleteTasksMutationFn } from "@/lib/api";
 import EditTaskDialog from "./edit-task-dialog";
 
 // ---- Define TaskType ----
@@ -136,69 +136,7 @@ const TaskTable: FC = () => {
     },
   });
 
-  // Bulk status update
-  const bulkUpdateMutation = useMutation({
-    mutationFn: bulkUpdateTasksMutationFn,
-    onSuccess: async (
-      _,
-      variables: { ids: string[]; data: { status?: string } }
-    ) => {
-      setTimeout(async () => {
-        // Manual cleanup to prevent UI freeze
-        document.body.style.pointerEvents = "";
-        document.body.style.overflow = "";
 
-        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
-        queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
-        queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-
-        const ids = variables?.ids || [];
-        const newStatusLabel = variables?.data?.status;
-
-        if (workspaceId && ids.length > 0 && newStatusLabel) {
-          const issueStatus = mapColumnToStatus(newStatusLabel);
-          const targetColumnId = findColumnIdForStatus(issueStatus);
-          if (targetColumnId) {
-            try {
-              const kanbanQueryKey = ["all-tasks", "kanban", workspaceId || "unknown"];
-              const idSet = new Set(ids.map(String));
-              queryClient.setQueryData(kanbanQueryKey, (old: any[] | undefined) => {
-                if (!old) return old;
-                return old.map((item: any) => {
-                  if (idSet.has(String(item._id))) {
-                    return {
-                      ...item,
-                      column: targetColumnId,
-                      status: newStatusLabel,
-                    };
-                  }
-                  return item;
-                });
-              });
-              await Promise.all(
-                ids.map((id) => issueApiService.moveItemToColumn(id, targetColumnId))
-              );
-              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-            } catch (error) {
-              console.error("Failed to move items to column after bulk update:", error);
-              queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-            }
-          }
-        }
-
-        toast({
-          title: "Success",
-          description: `${selectedTaskIds.length} task(s) updated successfully`,
-          variant: "success",
-        });
-        setSelectedTaskIds([]);
-      }, 300);
-    },
-    onError: (err: any) => {
-      toast({ title: "Error", description: err?.message || "Failed to update tasks", variant: "destructive" });
-    },
-  });
 
 const tasks: TaskType[] = data?.data || [];
 const totalCount = data?.meta?.total ?? 0;
@@ -215,7 +153,6 @@ const totalCount = data?.meta?.total ?? 0;
   };
 
   const handleBulkDelete = () => bulkDeleteMutation.mutate({ ids: selectedTaskIds });
-  const handleBulkStatusUpdate = (status: string) => bulkUpdateMutation.mutate({ ids: selectedTaskIds, data: { status } });
 
   return (
     <div className="w-full relative">
@@ -224,9 +161,7 @@ const totalCount = data?.meta?.total ?? 0;
           selectedCount={selectedTaskIds.length}
           onClearSelection={() => setSelectedTaskIds([])}
           onDelete={handleBulkDelete}
-          onStatusUpdate={handleBulkStatusUpdate}
-          isLoading={bulkDeleteMutation.isPending || bulkUpdateMutation.isPending}
-          statuses={dynamicStatuses}
+          isLoading={bulkDeleteMutation.isPending}
         />
       )}
 
@@ -252,6 +187,10 @@ const totalCount = data?.meta?.total ?? 0;
           setEditTarget(row as TaskType);
           setOpenEditDialog(true);
         }}
+        onRowSelectionChange={(selectedRows) => {
+          setSelectedTaskIds(selectedRows.map(row => (row as any)._id));
+        }}
+        resetRowSelection={selectedTaskIds.length === 0}
       />
 
       <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
@@ -416,10 +355,8 @@ const BulkActionsBar: FC<{
   selectedCount: number;
   onClearSelection: () => void;
   onDelete: () => void;
-  onStatusUpdate: (status: string) => void;
   isLoading?: boolean;
-  statuses: { label: string; value: string }[];
-}> = ({ selectedCount, onClearSelection, onDelete, onStatusUpdate, isLoading, statuses }) => (
+}> = ({ selectedCount, onClearSelection, onDelete, isLoading }) => (
   <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
     <div className="flex items-center gap-3">
       <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
@@ -428,21 +365,6 @@ const BulkActionsBar: FC<{
       </span>
     </div>
     <div className="flex items-center gap-2">
-      <DropdownMenu>
-        <Button size="sm" variant="outline" className="bg-white dark:bg-slate-800" disabled={isLoading}>
-          Update Status
-        </Button>
-        <DropdownMenuContent align="end">
-          <DropdownMenuLabel>Change Status</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {statuses.map((status) => (
-            <DropdownMenuCheckboxItem key={status.value} onClick={() => onStatusUpdate(status.value)} disabled={isLoading}>
-              {status.label}
-            </DropdownMenuCheckboxItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
       <Button size="sm" variant="destructive" onClick={onDelete} disabled={isLoading} className="gap-2">
         <Trash2 className="h-4 w-4" /> Delete
       </Button>
