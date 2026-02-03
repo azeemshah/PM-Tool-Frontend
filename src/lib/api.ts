@@ -462,11 +462,14 @@ export const createTaskWithoutEpicMutationFn = async ({
     status?: string;
     assignedTo?: string;
     dueDate?: string;
+    labels?: string[];
+    tags?: string[];
   };
 }) => {
-  const response = await API.post(`/issues/task`, {
+  const response = await API.post(`/items/create`, {
     ...data,
-    workspaceId,
+    workspace: workspaceId,
+    type: 'task',
   });
   return response.data;
 };

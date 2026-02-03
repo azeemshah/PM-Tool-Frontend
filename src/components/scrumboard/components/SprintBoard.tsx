@@ -26,7 +26,7 @@ interface SprintBoardProps {
 const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const workspaceId = useWorkspaceId();
   const queryClient = useQueryClient();
-  const [columnOrder, setColumnOrder] = useState<string[]>(sprint.columns || ['To Do', 'In Progress', 'In Review', 'Done']);
+  const [columnOrder, setColumnOrder] = useState<string[]>(sprint.columns || ['To Do', 'In Progress', 'In Review', 'Blocked', 'Done', 'Closed']);
   const [isAddingColumn, setIsAddingColumn] = useState(false);
   const [newColumnName, setNewColumnName] = useState('');
   const { scrollableRef, setDragging } = useAutoScroll({
@@ -46,7 +46,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
 
   // Sync columnOrder with sprint.columns when sprint data updates
   useEffect(() => {
-    const currentCols = sprint.columns || ['To Do', 'In Progress', 'In Review', 'Done'];
+    const currentCols = sprint.columns || ['To Do', 'In Progress', 'In Review', 'Blocked', 'Done', 'Closed'];
     const normalizedCols = currentCols.map(normalizeColumnName);
 
     setColumnOrder(normalizedCols);

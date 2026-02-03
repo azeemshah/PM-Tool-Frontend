@@ -73,7 +73,10 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
   const statusOptions = [
     { label: 'Backlog', value: 'Backlog' },
-    ...((statuses || []).filter((s) => String(s.value).toLowerCase() !== 'backlog'))
+    ...((statuses || []).filter((s) => {
+      const sValue = String(s.value || s.label).toLowerCase();
+      return sValue !== 'backlog';
+    }))
   ];
   const form = useForm<WorkItemFormData>({
     resolver: zodResolver(workItemSchema),
@@ -273,7 +276,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Status</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value || 'Backlog'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select status" />
@@ -300,7 +303,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Reporter</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={(value) => field.onChange(value === 'unassigned' ? '' : value)} value={field.value || 'unassigned'}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select reporter" />
@@ -308,13 +311,17 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                     </FormControl>
                     <SelectContent>
                       <div className="w-full max-h-[250px] overflow-y-auto">
+                        <SelectItem value="unassigned">Unassigned</SelectItem>
                         {members
-                          .filter((member: any) => member.userId?._id)
-                          .map((member: any) => (
-                            <SelectItem key={member.userId._id} value={member.userId._id}>
-                              {member.userId.name || 'Unknown'}
-                            </SelectItem>
-                          ))}
+                          .filter((member: any) => (member.user && member.user._id) || (member.userId && member.userId._id))
+                          .map((member: any) => {
+                            const user = member.user || member.userId;
+                            return (
+                              <SelectItem key={user._id} value={user._id}>
+                                {user.name || 'Unknown'}
+                              </SelectItem>
+                            );
+                          })}
                       </div>
                     </SelectContent>
                   </Select>
@@ -332,8 +339,14 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                 className="hidden"
                 onChange={(e) => {
                   const files = Array.from(e.target.files || []);
-                  if (files.length > 0) {
-                    const entries = files.map((f) => ({
+                  const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
+                  
+                  if (files.length !== validFiles.length) {
+                      alert('Some files were skipped because they exceed the 2MB limit.');
+                  }
+
+                  if (validFiles.length > 0) {
+                    const entries = validFiles.map((f) => ({
                       file: f,
                       url: URL.createObjectURL(f),
                       name: f.name
@@ -357,6 +370,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                     {attachments.length} file{attachments.length > 1 ? 's' : ''} selected
                   </span>
                 )}
+                <span className="text-xs text-gray-500">Max size: 2MB</span>
               </div>
               {attachments.length > 0 ? (
                 <div className="text-xs text-gray-500">

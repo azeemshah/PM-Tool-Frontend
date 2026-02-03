@@ -338,10 +338,11 @@ export const issueApiService = {
 
 	/**
 	 * Get single issue by ID
-	 * GET /issues/:id
+	 * GET /kanban/items/:id
 	 */
 	async getIssue(issueId: string): Promise<Issue> {
-		const response = await API.get(`${ISSUES_ENDPOINT}/${issueId}`);
+		// Use kanban/items endpoint which matches WorkItemController
+		const response = await API.get(`/kanban/items/${issueId}`);
 		return response.data.data || response.data;
 	},
 
@@ -359,10 +360,21 @@ export const issueApiService = {
 
 	/**
 	 * Update any issue (works for all types)
-	 * POST /items/update/:id
+	 * PUT /kanban/items/:id (Unified with Kanban WorkItemController)
 	 */
 	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
-		const response = await API.post(`/items/update/${issueId}`, data);
+		const payload: any = { ...data };
+		// Map frontend DTO to backend DTO
+		if (data.assignedTo) {
+			payload.assigneeId = data.assignedTo;
+			delete payload.assignedTo;
+		}
+		if (data.assignee) {
+			payload.assigneeId = data.assignee;
+			delete payload.assignee;
+		}
+		
+		const response = await API.put(`/kanban/items/${issueId}`, payload);
 		return response.data.data || response.data;
 	},
 

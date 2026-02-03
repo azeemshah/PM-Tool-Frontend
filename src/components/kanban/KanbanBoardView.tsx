@@ -312,7 +312,9 @@ export function KanbanBoardView() {
                   if (mappedStatus === 'to-do') newStatus = 'To Do';
                   else if (mappedStatus === 'in-progress') newStatus = 'In Progress';
                   else if (mappedStatus === 'in-review') newStatus = 'In Review';
+                  else if (mappedStatus === 'blocked') newStatus = 'Blocked';
                   else if (mappedStatus === 'done') newStatus = 'Done';
+                  else if (mappedStatus === 'closed') newStatus = 'Closed';
                   else newStatus = mappedStatus;
                 }
               }
@@ -551,6 +553,7 @@ export function KanbanBoardView() {
         isOpen={isIssueCreateDialogOpen}
         onOpenChange={(open) => setIsIssueCreateDialogOpen(open)}
         workspaceId={workspaceId}
+        boardId={board?._id}
         onSuccess={() => {
           // Optionally close the card dialog after successful issue creation
           setIsCardDialogOpen(false);

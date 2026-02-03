@@ -26,6 +26,7 @@ import {
     useCreateEpic,
     useGetEpics,
 } from '@/api/issue/hooks';
+import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import { useToast } from '@/hooks/use-toast';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -34,10 +35,14 @@ import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { getAllAttachments, uploadWorkItemAttachment } from '@/lib/api';
 
+import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
+import { TagInput } from '@/components/tag/TagInput';
+
 interface IssueCreateDialogProps {
     isOpen: boolean;
     onOpenChange: (open: boolean) => void;
     workspaceId: string;
+    boardId?: string;
     onSuccess?: () => void;
     defaultType?: IssueType;
 }
@@ -48,6 +53,7 @@ export function IssueCreateDialog({
     isOpen,
     onOpenChange,
     workspaceId,
+    boardId,
     onSuccess,
     defaultType,
 }: IssueCreateDialogProps) {
@@ -58,6 +64,8 @@ export function IssueCreateDialog({
     const [title, setTitle] = useState('');
     const [description, setDescription] = useState('');
     const [priority, setPriority] = useState<IssuePriority>('medium');
+    const [labels, setLabels] = useState<string[]>([]);
+    const [tags, setTags] = useState<string[]>([]);
     const [epicId, setEpicId] = useState('');
     const [parentIssueId, setParentIssueId] = useState('');
     const [reporterId, setReporterId] = useState('');
@@ -68,6 +76,11 @@ export function IssueCreateDialog({
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
+
+    // Fetch boards to support label selection when boardId is not provided
+    const { data: boards = [] } = useGetKanbanBoards(workspaceId);
+    // Use provided boardId or fall back to the first board in the workspace
+    const effectiveBoardId = boardId || (Array.isArray(boards) && boards.length > 0 ? boards[0]._id : undefined);
 
     // Queries and mutations
     const membersQuery = useGetWorkspaceMembers(workspaceId);
@@ -188,6 +201,8 @@ export function IssueCreateDialog({
             setTitle('');
             setDescription('');
             setPriority('medium');
+            setLabels([]);
+            setTags([]);
             setEpicId('');
             setParentIssueId('');
             setReporterId('');
@@ -272,6 +287,8 @@ export function IssueCreateDialog({
                     priority: mappedPriority,
                     dueDate: dueDate?.toISOString(),
                     status: status ? (statusMap[status] || status) : undefined,
+                    labels: labels.length > 0 ? labels : undefined,
+                    tags: tags.length > 0 ? tags : undefined,
                 },
                 {
                     onSuccess: async (created: any) => {
@@ -289,6 +306,7 @@ export function IssueCreateDialog({
                             }
                             attachments.forEach(att => URL.revokeObjectURL(att.url));
                             setAttachments([]);
+                            setLabels([]);
                         }
                         refetchIssues();
                         onOpenChange(false);
@@ -309,6 +327,8 @@ export function IssueCreateDialog({
                 workspace: workspaceId,
                 status: status ? (statusMap[status] || status) : undefined,
                 parent: epicId || undefined,
+                labels: labels.length > 0 ? labels : undefined,
+                tags: tags.length > 0 ? tags : undefined,
             };
 
             createItem(
@@ -329,6 +349,7 @@ export function IssueCreateDialog({
                             }
                             attachments.forEach(att => URL.revokeObjectURL(att.url));
                             setAttachments([]);
+                            setLabels([]);
                         }
                         refetchIssues();
                         onOpenChange(false);
@@ -358,6 +379,8 @@ export function IssueCreateDialog({
                 workspace: workspaceId,
                 status: status ? (statusMap[status] || status) : undefined,
                 parent: parentIssueId,
+                labels: labels.length > 0 ? labels : undefined,
+                tags: tags.length > 0 ? tags : undefined,
             };
 
             createItem(
@@ -379,6 +402,7 @@ export function IssueCreateDialog({
                                 }
                                 attachments.forEach(att => URL.revokeObjectURL(att.url));
                                 setAttachments([]);
+                                setLabels([]);
                                 // proactively refresh any attachment lists related to this item
                                 queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', created._id || 'unknown'] });
                                 queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', created._id || 'unknown'] });
@@ -538,6 +562,29 @@ export function IssueCreateDialog({
                         </Select>
                     </div>
 
+                    {/* Labels - Only show if we have a board ID (either prop or inferred) */}
+                    {effectiveBoardId && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Labels</label>
+                            <LabelsSelector
+                                boardId={effectiveBoardId}
+                                selectedLabelIds={labels}
+                                onChange={setLabels}
+                            />
+                        </div>
+                    )}
+
+                    {/* Tags */}
+                    <div className="space-y-2">
+                        <label className="text-sm font-medium">Tags</label>
+                        <TagInput
+                            workspaceId={workspaceId}
+                            selectedTags={tags}
+                            onTagsChange={setTags}
+                            placeholder="Add tags to organize this issue..."
+                        />
+                    </div>
+
                     {/* Reporter */}
                     <div className="space-y-2">
                         <label className="text-sm font-medium">Reporter *</label>
@@ -566,8 +613,23 @@ export function IssueCreateDialog({
                             className="hidden"
                             onChange={(e) => {
                                 const files = Array.from(e.target.files || []);
-                                if (files.length > 0) {
-                                    const entries = files.map((f) => ({
+                                const validFiles = files.filter(f => {
+                                    if (f.size > 2 * 1024 * 1024) {
+                                        // You might want to show a toast/alert here.
+                                        // For now, we'll just skip the file and maybe alert once if any files were skipped?
+                                        // But this is inside a map/filter.
+                                        // Let's just filter them out.
+                                        return false;
+                                    }
+                                    return true;
+                                });
+                                
+                                if (files.length !== validFiles.length) {
+                                    alert('Some files were skipped because they exceed the 2MB limit.');
+                                }
+
+                                if (validFiles.length > 0) {
+                                    const entries = validFiles.map((f) => ({
                                         file: f,
                                         url: URL.createObjectURL(f),
                                         name: f.name
@@ -592,6 +654,7 @@ export function IssueCreateDialog({
                                     {attachments.length} file{attachments.length > 1 ? 's' : ''} selected
                                 </span>
                             )}
+                            <span className="text-xs text-gray-500">Max size: 2MB</span>
                         </div>
                         {attachments.length > 0 ? (
                             <div className="text-xs text-gray-500">

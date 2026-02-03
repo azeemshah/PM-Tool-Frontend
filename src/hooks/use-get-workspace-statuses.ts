@@ -21,7 +21,9 @@ export function useGetWorkspaceStatuses(workspaceId: string) {
                 { label: 'Todo', value: 'todo' },
                 { label: 'In Progress', value: 'in_progress' },
                 { label: 'In Review', value: 'in_review' },
-                { label: 'Done', value: 'done' }
+                { label: 'Blocked', value: 'blocked' },
+                { label: 'Done', value: 'done' },
+                { label: 'Closed', value: 'closed' }
             ];
         }
 

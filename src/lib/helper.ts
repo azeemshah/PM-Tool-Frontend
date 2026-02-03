@@ -60,15 +60,18 @@ export const mapColumnToStatus = (columnName: string): IssueStatus => {
   if (name === 'todo' || name === 'open' || name === 'new') return 'to-do';
   if (name === 'inprogress' || name === 'progress') return 'in-progress';
   if (name === 'inreview' || name === 'review') return 'in-review';
-  if (name === 'done' || name === 'completed') return 'done';
-  if (name === 'backlog') return 'to-do';
   if (name === 'blocked') return 'blocked';
+  if (name === 'done' || name === 'completed') return 'done';
+  if (name === 'closed') return 'closed';
+  if (name === 'backlog') return 'to-do';
 
   // Fallbacks based on inclusion
   if (name.includes('review')) return 'in-review';
   if (name.includes('progress')) return 'in-progress';
   if (name.includes('done')) return 'done';
   if (name.includes('todo')) return 'to-do';
+  if (name.includes('blocked')) return 'blocked';
+  if (name.includes('closed')) return 'closed';
 
   return columnName; // Return original column name for custom columns
 };

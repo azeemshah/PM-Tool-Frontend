@@ -485,7 +485,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                           return window.location.origin;
                         }
                       })();
-                      const absoluteUrl = att.url.startsWith("http") ? att.url : `${apiOrigin}${att.url}`;
+                      const absoluteUrl = (att.url && att.url.startsWith("http")) ? att.url : `${apiOrigin}${att.url}`;
                       return (
                         <div
                           key={att._id}

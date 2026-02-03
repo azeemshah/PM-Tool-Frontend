@@ -7,6 +7,7 @@ import { useUpdateIssue, useDeleteIssue } from '@/api/issue/hooks';
 import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { KanbanCard } from '@/api/kanban/types';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
+import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
 import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
@@ -29,6 +30,7 @@ import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/
 import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from './CommentSection';
+import { LabelsSelector } from './LabelsSelector';
 
 export function BoardCardDialog() {
   const {
@@ -38,8 +40,15 @@ export function BoardCardDialog() {
     setSelectedCard,
   } = useKanbanAppContext();
   const workspaceId = useWorkspaceId();
-  const { boardId } = useParams<{ boardId: string }>();
+  const { boardId: routeBoardId } = useParams<{ boardId: string }>();
+
+  // Determine boardId from route or selected card
+  const boardId = routeBoardId || (selectedCard && 'board' in selectedCard ? 
+    (typeof (selectedCard as any).board === 'object' ? (selectedCard as any).board?._id : (selectedCard as any).board) 
+    : '') || '';
+
   const { data: boardLists } = useGetKanbanBoardLists(boardId || null);
+  const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || '');
   const queryClient = useQueryClient();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
@@ -168,9 +177,33 @@ export function BoardCardDialog() {
   const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
   const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
-  const [parentId, setParentId] = useState<string>(
-    issue?.type === 'subtask' ? (issue?.parentIssueId || '') : (issue?.epicId || '')
-  );
+  const getParentId = (item: any) => {
+    if (!item) return '';
+    if (item.parentIssueId) return item.parentIssueId;
+    if (item.epicId) return item.epicId;
+    if (item.parent) {
+      if (typeof item.parent === 'string') return item.parent;
+      if (typeof item.parent === 'object') return item.parent._id || item.parent.id || '';
+    }
+    return '';
+  };
+
+  const getLabelIds = (list: any) => {
+    if (!Array.isArray(list)) return [];
+    return list.map((l: any) => {
+      if (!l) return null;
+      if (typeof l === 'string') return l;
+      // Handle object with _id or id, ensuring it's a string
+      if (typeof l === 'object') {
+        const id = l._id || l.id;
+        return id ? String(id) : null;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  const [parentId, setParentId] = useState<string>(getParentId(issue));
+  const [labels, setLabels] = useState<string[]>(getLabelIds(issue?.labels));
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -211,7 +244,8 @@ export function BoardCardDialog() {
       setAssigneeId(getAssigneeInfo(issue).id);
       setReporterId(getReporterInfo(issue).id);
       setDueDate(issue.dueDate || null);
-      setParentId(issue.type === 'subtask' ? (issue.parentIssueId || '') : (issue.epicId || ''));
+      setParentId(getParentId(issue));
+      setLabels(getLabelIds(issue.labels));
     }
   }, [issue]);
 
@@ -233,15 +267,12 @@ export function BoardCardDialog() {
       setAssigneeId(getAssigneeInfo(detailedIssue).id);
       setReporterId(getReporterInfo(detailedIssue).id);
       setDueDate(detailedIssue.dueDate || null);
-      setParentId(
-        (detailedIssue as any).type === 'subtask'
-          ? ((detailedIssue as any).parentIssueId || '')
-          : ((detailedIssue as any).epicId || '')
-      );
+      setParentId(getParentId(detailedIssue));
+      setLabels(getLabelIds(detailedIssue.labels));
     }
   }, [detailedIssue]);
 
-  const parentIssueIdStr = issue?.parentIssueId ? String(issue.parentIssueId) : '';
+  const parentIssueIdStr = getParentId(issue);
   const { data: workItemAttachments = [] } = useQuery({
     queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'],
     queryFn: async () => {
@@ -271,6 +302,14 @@ export function BoardCardDialog() {
     enabled: !!issueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  const { data: fetchedParent, isLoading: isParentLoading } = useQuery({
+    queryKey: ['issue-parent', parentId],
+    queryFn: () => issueApiService.getIssue(parentId),
+    enabled: !!parentId && !!isCardDialogOpen,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: parentAttachments = [] } = useQuery({
     queryKey: ['attachments', 'parent-work-item', parentIssueIdStr || 'none'],
     queryFn: async () => {
@@ -286,6 +325,18 @@ export function BoardCardDialog() {
     enabled: !!parentIssueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  // Determine the parent object to display (prefer populated data from detailedIssue)
+  const parentObject = (() => {
+    if (detailedIssue) {
+      const p = (detailedIssue as any).parent || (detailedIssue as any).epic;
+      // Check if it's a populated object (has title or name)
+      if (p && typeof p === 'object' && (p.title || p.name)) {
+        return p;
+      }
+    }
+    return fetchedParent;
+  })();
 
   const { data: workspaceItems = [] } = useQuery({
     queryKey: ['workspace-items', workspaceId],
@@ -451,6 +502,7 @@ export function BoardCardDialog() {
           reporter: reporterId || null,
           dueDate,
           parent: parentId || null,
+          labels,
         },
       },
       {
@@ -460,8 +512,10 @@ export function BoardCardDialog() {
           setDescription(updatedIssue.description || '');
           setPriority(updatedIssue.priority || 'medium');
           setStatus(updatedIssue.status || 'to-do');
-          setAssigneeId(updatedIssue.assignee?._id || '');
+          const assignee = updatedIssue.assignee as any;
+          setAssigneeId(assignee?._id || assignee || '');
           setDueDate(updatedIssue.dueDate || null);
+          setLabels(getLabelIds(updatedIssue.labels || []));
           setIsEditing(false);
           toast({
             title: 'Success',
@@ -629,6 +683,36 @@ export function BoardCardDialog() {
             )}
           </div>
 
+          {/* Labels */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Labels
+            </label>
+            {isEditing ? (
+              <LabelsSelector
+                boardId={boardId || ''}
+                selectedLabelIds={labels}
+                onChange={setLabels}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {labels && labels.length > 0 ? (
+                  labels.map((labelId) => {
+                    const label = boardLabels.find(l => l._id === labelId);
+                    if (!label) return null;
+                    return (
+                      <Badge key={labelId} style={{ backgroundColor: label.color }} className="text-white hover:opacity-80">
+                        {label.name}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <span className="text-sm text-gray-500 italic">No labels</span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Issue Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -691,13 +775,13 @@ export function BoardCardDialog() {
               ) : (
                 <div className="flex items-center gap-2">
                   {parentId ? (
-                    (detailedIssue as any)?.parent || (detailedIssue as any)?.epic ? (
+                    parentObject ? (
                       <div className="flex items-center gap-2 p-1 px-2 border rounded-md bg-gray-50 dark:bg-muted/50">
-                        <IssueTypeIcon type={((detailedIssue as any).parent as any)?.type || ((detailedIssue as any).epic as any)?.type || 'task'} />
-                        <span className="text-sm">{((detailedIssue as any).parent as any)?.title || ((detailedIssue as any).epic as any)?.title || 'Unknown Parent'}</span>
+                        <IssueTypeIcon type={parentObject.type || 'task'} />
+                        <span className="text-sm">{parentObject.title || parentObject.name || 'Unknown Parent'}</span>
                       </div>
                     ) : (
-                      <span className="text-gray-500 text-sm">Loading...</span>
+                      <span className="text-gray-500 text-sm">{isParentLoading ? 'Loading...' : 'Parent not found'}</span>
                     )
                   ) : (
                     <span className="text-gray-500 text-sm italic">None</span>
@@ -730,7 +814,9 @@ export function BoardCardDialog() {
                       <SelectItem value="todo">Todo</SelectItem>
                       <SelectItem value="in_progress">In Progress</SelectItem>
                       <SelectItem value="in_review">In Review</SelectItem>
+                      <SelectItem value="blocked">Blocked</SelectItem>
                       <SelectItem value="done">Done</SelectItem>
+                      <SelectItem value="closed">Closed</SelectItem>
                     </>
                   )}
                 </SelectContent>
@@ -812,12 +898,13 @@ export function BoardCardDialog() {
               Reporter *
             </label>
             {isEditing ? (
-              <Select value={reporterId || ''} onValueChange={(value) => setReporterId(value)}>
+              <Select value={reporterId || 'unassigned'} onValueChange={(value) => setReporterId(value === 'unassigned' ? '' : value)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select a reporter" />
                 </SelectTrigger>
                 <SelectContent>
                   <div className="w-full max-h-[200px] overflow-y-auto">
+                    <SelectItem value="unassigned">Unassigned</SelectItem>
                     {members && members.length > 0 ? (
                       members.map((member: any) => {
                         const userObj = member.user || member.userId;
@@ -889,6 +976,13 @@ export function BoardCardDialog() {
                   onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file || !issueIdStr) return;
+                    
+                    if (file.size > 2 * 1024 * 1024) {
+                        toast({ title: 'Error', description: 'File size must be less than 2MB', variant: 'destructive' });
+                        if (e.target) e.target.value = '';
+                        return;
+                    }
+
                     setIsUploadingAttachment(true);
                     try {
                       const resp = await uploadWorkItemAttachment({ workItemId: issueIdStr, file });
