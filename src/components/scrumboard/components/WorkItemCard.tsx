@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue, TaskType } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks, Flag } from 'lucide-react';
+import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -10,6 +10,12 @@ import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+
+const minutesToHours = (minutes: number): string => {
+  if (!minutes) return '0h';
+  const hours = minutes / 60;
+  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
+};
 
 interface WorkItemCardProps {
   card: KanbanCard | Issue | TaskType;
@@ -122,6 +128,22 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
             >
               <Flag className="h-3 w-3 text-inherit" />
               <span className="capitalize">Overdue</span>
+            </Badge>
+          )}
+        </div>
+
+        {/* Story points and time tracking badges */}
+        <div className="flex items-center gap-1">
+          {(card as any)?.storyPoints && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+              <Zap className="h-3 w-3" />
+              {(card as any).storyPoints}
+            </Badge>
+          )}
+          {(card as any)?.timeSpent > 0 && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 border-0">
+              <Clock className="h-3 w-3" />
+              {minutesToHours((card as any).timeSpent)}
             </Badge>
           )}
         </div>

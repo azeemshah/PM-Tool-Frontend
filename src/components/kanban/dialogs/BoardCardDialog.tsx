@@ -10,6 +10,7 @@ import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoa
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
 import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
+import { getCurrentUserQueryFn } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -29,6 +30,9 @@ import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/
 import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from './CommentSection';
+import { TimerButton } from '@/components/time-tracking/TimerButton';
+import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
+import { TimeTrackingSummary } from '@/components/time-tracking/TimeTrackingSummary';
 
 export function BoardCardDialog() {
   const {
@@ -43,6 +47,12 @@ export function BoardCardDialog() {
   const queryClient = useQueryClient();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
+  const { data: currentUserData } = useQuery({
+    queryKey: ['currentUser'],
+    queryFn: getCurrentUserQueryFn,
+  });
+
+  const currentUserId = currentUserData?.user?._id || '';
 
   const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
 
@@ -173,6 +183,8 @@ export function BoardCardDialog() {
   );
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
+  const [timeLogs, setTimeLogs] = useState<any[]>([]);
+  const [loadingTimeLogs, setLoadingTimeLogs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const { mutate: updateIssue, isPending: isUpdating } = useUpdateIssue();
@@ -240,6 +252,23 @@ export function BoardCardDialog() {
       );
     }
   }, [detailedIssue]);
+
+  // Load time logs
+  useEffect(() => {
+    const loadTimeLogs = async () => {
+      if (!issueIdStr) return;
+      try {
+        setLoadingTimeLogs(true);
+        const logs = await issueApiService.getIssueLogs(issueIdStr);
+        setTimeLogs(logs || []);
+      } catch (e) {
+        // Ignore errors
+      } finally {
+        setLoadingTimeLogs(false);
+      }
+    };
+    loadTimeLogs();
+  }, [issueIdStr]);
 
   const parentIssueIdStr = issue?.parentIssueId ? String(issue.parentIssueId) : '';
   const { data: workItemAttachments = [] } = useQuery({
@@ -570,7 +599,7 @@ export function BoardCardDialog() {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white dark:bg-card dark:border-border dark:text-foreground rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-card dark:border-border dark:text-foreground rounded-lg shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b dark:border-border">
           <div>
@@ -930,7 +959,9 @@ export function BoardCardDialog() {
                   {parentOnlyAttachments.map((att: any, idx: number) => {
                     const name = att.name || att.fileName || `Attachment ${idx + 1}`;
                     const url = att.url || att.fileUrl || '';
-                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    const fullUrlRaw = buildFullUrl(url);
+                    const fullUrlWithToken = `${fullUrlRaw}?token=${localStorage.getItem('accessToken') || ''}`;
+                    const fullUrl = toOpenUrl(fullUrlWithToken, name);
                     return (
                       <div key={`parent-${idx}`} className="flex items-center gap-2">
                         <a
@@ -952,7 +983,9 @@ export function BoardCardDialog() {
                   ownAttachments.map((att: any, idx: number) => {
                     const name = att.name || att.fileName || `Attachment ${idx + 1}`;
                     const url = att.url || att.fileUrl || '';
-                    const fullUrl = toOpenUrl(buildFullUrl(url), name);
+                    const fullUrlRaw = buildFullUrl(url);
+                    const fullUrlWithToken = `${fullUrlRaw}?token=${localStorage.getItem('accessToken') || ''}`;
+                    const fullUrl = toOpenUrl(fullUrlWithToken, name);
                     return (
                       <div key={`own-${idx}`} className="flex items-center gap-2">
                         <a
@@ -1002,6 +1035,53 @@ export function BoardCardDialog() {
               </div>
             </div>
           </div>
+
+          {/* Time Tracking Section */}
+          {!isEditing && issueIdStr && currentUserId && (
+            <div className="space-y-4">
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
+                ⏱️ Time Tracking
+              </label>
+              
+              <div className="space-y-3">
+                {/* Time Tracking Summary */}
+                {issue && (
+                  <TimeTrackingSummary 
+                    issue={issue}
+                  />
+                )}
+
+                {/* Timer Button */}
+                <TimerButton 
+                  issueId={issueIdStr}
+                  userId={currentUserId}
+                  onTimerStop={() => {
+                    queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                  }}
+                />
+
+                {/* Log Work / Time Logs */}
+                {timeLogs.length > 0 && (
+                  <div className="pt-2">
+                    <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
+                      Recent Time Logs ({timeLogs.length})
+                    </div>
+                    <TimeLogsList 
+                      logs={timeLogs}
+                      isLoading={loadingTimeLogs}
+                      currentUserId={currentUserId}
+                      onLogDeleted={() => {
+                        queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                      }}
+                      onLogUpdated={() => {
+                        queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Comments */}
           {!isEditing && <CommentSection workItemId={issueIdStr} workspaceId={workspaceId} />}

@@ -50,6 +50,12 @@ export interface TaskType {
 	column?: string | null;
 	parent?: string | null;
 	path?: string;
+
+  // Time tracking & estimation (minutes)
+  originalEstimate?: number;
+  remainingEstimate?: number;
+  timeSpent?: number;
+  storyPoints?: number | null;
 }
 
 
@@ -67,6 +73,9 @@ export interface CreateItemDto {
 	workspace: string;     // MongoDB ObjectId
 	column?: string;       // MongoDB ObjectId
 	parent?: string;       // MongoDB ObjectId
+  originalEstimate?: number; // minutes
+  remainingEstimate?: number; // minutes
+  storyPoints?: number;
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {

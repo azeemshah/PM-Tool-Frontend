@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import WorkspaceAnalytics from "@/components/workspace/workspace-analytics";
+import { TimeTrackingDashboard } from "@/components/time-tracking";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentTasks from "@/components/workspace/task/recent-tasks";
 import RecentMembers from "@/components/workspace/member/recent-members";
@@ -25,6 +26,9 @@ const WorkspaceDashboard = () => {
         </div>
       </div>
       <WorkspaceAnalytics />
+      <div className="mt-6">
+        <TimeTrackingDashboard workspaceId={workspace?._id || ''} />
+      </div>
       <div className="mt-4">
         <Tabs defaultValue="tasks" className="w-full border rounded-lg p-2 bg-card">
           <TabsList className="w-full justify-between border-0 bg-muted px-1 h-12">

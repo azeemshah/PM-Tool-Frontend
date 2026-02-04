@@ -65,6 +65,8 @@ export function IssueCreateDialog({
     const [status, setStatus] = useState('');
     type LocalAttachment = { file: File; url: string; name: string };
     const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
+    const [originalEstimateHours, setOriginalEstimateHours] = useState<number | ''>('');
+    const [storyPoints, setStoryPoints] = useState<number | ''>('');
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
@@ -311,6 +313,16 @@ export function IssueCreateDialog({
                 parent: epicId || undefined,
             };
 
+            // attach estimates (frontend uses hours input; backend expects minutes)
+            if (originalEstimateHours && Number(originalEstimateHours) > 0) {
+                (data as any).originalEstimate = Math.round(Number(originalEstimateHours) * 60);
+                // remainingEstimate will be calculated server-side from original - timeSpent
+            }
+
+            if (storyPoints && Number(storyPoints) > 0) {
+                (data as any).storyPoints = Number(storyPoints);
+            }
+
             createItem(
                 { data, type: issueType as ItemType },
                 {
@@ -360,6 +372,14 @@ export function IssueCreateDialog({
                 parent: parentIssueId,
             };
 
+            if (originalEstimateHours && Number(originalEstimateHours) > 0) {
+                (data as any).originalEstimate = Math.round(Number(originalEstimateHours) * 60);
+            }
+
+            if (storyPoints && Number(storyPoints) > 0) {
+                (data as any).storyPoints = Number(storyPoints);
+            }
+
             createItem(
                 { data, type: 'subtask' },
                 {
@@ -396,7 +416,7 @@ export function IssueCreateDialog({
     return (
         <Dialog open={isOpen} onOpenChange={onOpenChange}>
             <DialogContent
-                className="max-w-2xl max-h-[90vh] overflow-y-auto"
+                className="max-w-2xl max-h-[90vh] overflow-y-auto scrollbar"
                 onPointerDownOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
@@ -537,6 +557,36 @@ export function IssueCreateDialog({
                             </SelectContent>
                         </Select>
                     </div>
+
+                        {/* Estimates & Story Points */}
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Original Estimate (hours)</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    step={0.25}
+                                    value={originalEstimateHours as any}
+                                    onChange={(e) => setOriginalEstimateHours(e.target.value === '' ? '' : Number(e.target.value))}
+                                    disabled={isLoading}
+                                    className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium">Story Points</label>
+                                <Select value={storyPoints === '' ? '' : String(storyPoints)} onValueChange={(v) => setStoryPoints(v ? Number(v) : '') as any}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select story points" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {[1,2,3,5,8,13].map((sp) => (
+                                            <SelectItem key={sp} value={String(sp)}>{sp}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        </div>
 
                     {/* Reporter */}
                     <div className="space-y-2">

@@ -283,11 +283,13 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {statusOptions.map((s) => (
-                        <SelectItem key={s.value} value={s.value}>
-                          {s.label}
-                        </SelectItem>
-                      ))}
+                      {statusOptions
+                        .filter(s => s.value && s.value.trim() !== '')
+                        .map((s) => (
+                          <SelectItem key={s.value} value={s.value}>
+                            {s.label}
+                          </SelectItem>
+                        ))}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -308,7 +310,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <div className="w-full max-h-[250px] overflow-y-auto">
+                      <div className="w-full max-h-[250px] overflow-y-auto scrollbar">
                         <SelectItem value="unassigned">Unassigned</SelectItem>
                         {members.map((member: any) => {
                           const userObj = member.user || member.userId;

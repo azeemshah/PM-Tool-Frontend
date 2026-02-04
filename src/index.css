@@ -18,36 +18,27 @@ em-emoji-picker {
 
 /* Custom scrollbar styles */
 .scrollbar {
-  overflow-y: auto;
   scrollbar-width: thin;
-  /* Firefox */
-  scrollbar-color: rgba(176, 174, 174, 0.7) #ddd;
-  /* Firefox */
-  transition: scrollbar-color 0.3s ease, scrollbar-width 0.3s ease;
+  scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+  transition: scrollbar-color 0.3s ease;
 }
 
 .scrollbar::-webkit-scrollbar {
-  width: 8px;
-  /* Scrollbar width */
+  width: 6px;
+  height: 6px;
 }
 
 .scrollbar::-webkit-scrollbar-track {
-  background: #ddd;
-  /* Track color */
+  background: transparent;
 }
 
 .scrollbar::-webkit-scrollbar-thumb {
-  background-color: gray;
-  /* Thumb color */
-  border-radius: 100%;
-  /* Rounded edges */
-  transition: background-color 0.3s ease;
-  /* Smooth color change */
+  background-color: rgba(156, 163, 175, 0.5);
+  border-radius: 20px;
 }
 
 .scrollbar:hover::-webkit-scrollbar-thumb {
-  background-color: darkgray;
-  /* Hover effect */
+  background-color: rgba(156, 163, 175, 0.8);
 }
 
 @layer base {

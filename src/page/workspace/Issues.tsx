@@ -2,7 +2,7 @@ import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, ArrowUpDown } from "lucide-react";
+import { Plus, ArrowUpDown, Clock, Zap } from "lucide-react";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { IssueCreateDialog } from "@/components/issue";
 import { useIssueCreateDialog } from "@/hooks/useIssueCreateDialog";
@@ -43,7 +43,17 @@ interface Issue {
   epicId?: string;
   createdAt?: string;
   updatedAt?: string;
+  originalEstimate?: number;
+  remainingEstimate?: number;
+  timeSpent?: number;
+  storyPoints?: number | null;
 }
+
+const minutesToHours = (minutes?: number): string => {
+  if (!minutes) return '-';
+  const hours = minutes / 60;
+  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(1)}h`;
+};
 
 // No local mock fallback; prefer live backend issues
 
@@ -291,6 +301,7 @@ export default function Issues() {
                     </div>
                   </TableHead>
                   <TableHead>Assigned To</TableHead>
+                  <TableHead className="text-right">Time & Points</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -324,11 +335,30 @@ export default function Issues() {
                           <span className="text-gray-400">Unassigned</span>
                         )}
                       </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          {issue.storyPoints && (
+                            <div className="flex items-center gap-1 bg-purple-100 text-purple-700 px-2 py-1 rounded text-xs font-semibold">
+                              <Zap size={12} />
+                              {issue.storyPoints}
+                            </div>
+                          )}
+                          {issue.timeSpent !== undefined && issue.timeSpent > 0 && (
+                            <div className="flex items-center gap-1 bg-blue-100 text-blue-700 px-2 py-1 rounded text-xs font-semibold">
+                              <Clock size={12} />
+                              {minutesToHours(issue.timeSpent)}
+                            </div>
+                          )}
+                          {!issue.storyPoints && (!issue.timeSpent || issue.timeSpent === 0) && (
+                            <span className="text-gray-400 text-xs">-</span>
+                          )}
+                        </div>
+                      </TableCell>
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
+                    <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
                       {keyword ? "No issues matching your search" : "No issues found in this workspace"}
                     </TableCell>
                   </TableRow>

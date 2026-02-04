@@ -194,7 +194,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [] }: BoardList
       </div>
 
       {/* Cards */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar">
         <Droppable
           droppableId={droppableIdSafe}
           type="card"

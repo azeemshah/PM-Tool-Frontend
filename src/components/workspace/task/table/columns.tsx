@@ -1,6 +1,6 @@
 import { ColumnDef, Row } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Flag } from "lucide-react";
+import { Flag, Clock, Zap } from "lucide-react";
 
 import { DataTableColumnHeader } from "./table-column-header";
 import { DataTableRowActions } from "./table-row-actions";
@@ -20,6 +20,15 @@ import {
 import { priorities, statuses, issueTypes } from "./data";
 import { TaskType } from "@/api/issue/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+
+// Helper function to convert minutes to hours
+const minutesToHours = (minutes: number): string => {
+  if (!minutes || minutes <= 0) return "0h";
+  const hours = Math.floor(minutes / 60);
+  const mins = minutes % 60;
+  if (mins === 0) return `${hours}h`;
+  return `${hours}h ${mins}m`;
+};
 
 export const getColumns = (): ColumnDef<TaskType>[] => {
   const columns: ColumnDef<TaskType>[] = [
@@ -234,6 +243,42 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
               <span>{priority.label}</span>
             </Badge>
           </div>
+        );
+      },
+    },
+
+    // Story Points Column
+    {
+      accessorKey: "storyPoints",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Story Points" />,
+      cell: ({ row }) => {
+        const storyPoints = row.original.storyPoints;
+        if (!storyPoints || storyPoints <= 0) {
+          return <span className="text-sm text-muted-foreground">-</span>;
+        }
+        return (
+          <Badge className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400">
+            <Zap className="h-3 w-3" />
+            <span>{storyPoints}</span>
+          </Badge>
+        );
+      },
+    },
+
+    // Time Logged Column
+    {
+      accessorKey: "timeSpent",
+      header: ({ column }) => <DataTableColumnHeader column={column} title="Time Logged" />,
+      cell: ({ row }) => {
+        const timeSpent = row.original.timeSpent;
+        if (!timeSpent || timeSpent <= 0) {
+          return <span className="text-sm text-muted-foreground">-</span>;
+        }
+        return (
+          <Badge className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
+            <Clock className="h-3 w-3" />
+            <span>{minutesToHours(timeSpent)}</span>
+          </Badge>
         );
       },
     },

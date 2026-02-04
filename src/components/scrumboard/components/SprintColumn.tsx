@@ -46,7 +46,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
       </div>
 
       {/* Cards */}
-      <div className="flex-1 overflow-y-auto">
+      <div className="flex-1 overflow-y-auto scrollbar">
         <Droppable
           droppableId={columnId}
           type="card"

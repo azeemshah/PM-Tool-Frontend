@@ -1,6 +1,6 @@
 import { KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks, Flag } from 'lucide-react';
+import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,13 +15,19 @@ interface BoardCardProps {
   card: KanbanCard | Issue;
 }
 
+const minutesToHours = (minutes: number): string => {
+  if (!minutes) return '0h';
+  const hours = minutes / 60;
+  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
+};
+
 export function BoardCard({ card }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
 
   // Determine if this is an Issue or KanbanCard
-  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type));
+  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type).toLowerCase());
   const issue = isIssue ? (card as Issue) : null;
 
   // Get card properties (handle both Issue and KanbanCard)
@@ -121,6 +127,22 @@ export function BoardCard({ card }: BoardCardProps) {
             >
               <Flag className="h-3 w-3 text-inherit" />
               <span className="capitalize">Overdue</span>
+            </Badge>
+          )}
+        </div>
+
+        {/* Story points and time tracking badges */}
+        <div className="flex items-center gap-1">
+          {(card as any)?.storyPoints && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+              <Zap className="h-3 w-3" />
+              {(card as any).storyPoints}
+            </Badge>
+          )}
+          {(card as any)?.timeSpent > 0 && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 border-0">
+              <Clock className="h-3 w-3" />
+              {minutesToHours((card as any).timeSpent)}
             </Badge>
           )}
         </div>

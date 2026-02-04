@@ -367,6 +367,33 @@ export const issueApiService = {
 	},
 
 	/**
+	 * Log work against an item
+	 * POST /items/:id/log-work
+	 */
+	async logWork(itemId: string, data: { timeSpent: number; comment?: string; adjustRemaining?: boolean }) {
+		const response = await API.post(`/items/${itemId}/log-work`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Set original estimate
+	 * POST /items/:id/estimate
+	 */
+	async setEstimate(itemId: string, data: { originalEstimate: number }) {
+		const response = await API.post(`/items/${itemId}/estimate`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get time tracking summary and logs
+	 * GET /items/:id/time-tracking
+	 */
+	async getTimeTracking(itemId: string) {
+		const response = await API.get(`/items/${itemId}/time-tracking`);
+		return response.data.data || response.data;
+	},
+
+	/**
 	 * Delete any issue (works for all types)
 	 * DELETE /items/delete/:id
 	 */
@@ -396,6 +423,82 @@ export const issueApiService = {
 	 */
 	async changeIssuePriority(issueId: string, priority: string): Promise<Issue> {
 		return this.updateIssue(issueId, { priority } as UpdateIssueDTO);
+	},
+
+	// ==================== TIME LOGGING (8.2) ====================
+
+	/**
+	 * Start a timer for an issue
+	 * POST /time-logs/start
+	 */
+	async startTimer(issueId: string) {
+		const response = await API.post('/time-logs/start', { issueId });
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Stop the active timer
+	 * POST /time-logs/stop
+	 */
+	async stopTimer(issueId: string, comment?: string) {
+		const response = await API.post('/time-logs/stop', { issueId, comment });
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get active timer for a user
+	 * GET /time-logs/active/:userId
+	 */
+	async getActiveTimer(userId: string) {
+		const response = await API.get(`/time-logs/active/${userId}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get all time logs for an issue
+	 * GET /time-logs/issue/:issueId
+	 */
+	async getIssueLogs(issueId: string) {
+		const response = await API.get(`/time-logs/issue/${issueId}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get all time logs for a user
+	 * GET /time-logs/user/:userId
+	 */
+	async getUserLogs(userId: string) {
+		const response = await API.get(`/time-logs/user/${userId}`);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Get timesheet with daily/weekly grouping
+	 * GET /time-logs/timesheet?userId=&from=&to=
+	 */
+	async getTimesheet(userId: string, fromDate: string, toDate: string) {
+		const response = await API.get('/time-logs/timesheet', {
+			params: { userId, from: fromDate, to: toDate },
+		});
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Edit a time log
+	 * PUT /time-logs/:id
+	 */
+	async updateTimeLog(logId: string, data: { timeSpent?: number; comment?: string; logDate?: string }) {
+		const response = await API.put(`/time-logs/${logId}`, data);
+		return response.data.data || response.data;
+	},
+
+	/**
+	 * Delete a time log
+	 * DELETE /time-logs/:id
+	 */
+	async deleteTimeLog(logId: string) {
+		const response = await API.delete(`/time-logs/${logId}`);
+		return response.data.data || response.data;
 	},
 };
 

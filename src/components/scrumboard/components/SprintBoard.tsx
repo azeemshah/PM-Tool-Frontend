@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Calendar, Target, Plus } from 'lucide-react';
+import { Calendar, Target, Plus, Clock } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -140,6 +140,25 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
   const sprintWorkItems = allWorkItems.filter((item: TaskType) =>
     sprint.workItems.includes(item._id)
   );
+
+  // Helper to convert minutes to hours
+  const minutesToHours = (minutes: number): string => {
+    if (!minutes) return '0h';
+    const hours = minutes / 60;
+    return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
+  };
+
+  // Calculate sprint time tracking stats
+  const sprintTimeStats = useMemo(() => {
+    const totalTimeSpent = sprintWorkItems.reduce((sum, item: TaskType) => sum + ((item as any)?.timeSpent || 0), 0);
+    const totalStoryPoints = sprintWorkItems.reduce((sum, item: TaskType) => sum + ((item as any)?.storyPoints || 0), 0);
+    
+    return {
+      totalTimeSpent,
+      totalStoryPointsEstimate: totalStoryPoints,
+      timeSpentInHours: totalTimeSpent / 60,
+    };
+  }, [sprintWorkItems]);
 
   // Calculate sprint statistics
   const stats: SprintStats = {
@@ -343,6 +362,37 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
           <Progress value={stats.completionPercentage} className="h-2" />
         </div>
 
+        {/* Time Tracking Stats */}
+        {sprintTimeStats.totalTimeSpent > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-4">
+            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Time Logged</span>
+              </div>
+              <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
+                {minutesToHours(sprintTimeStats.totalTimeSpent)}
+              </div>
+            </div>
+            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Story Points</span>
+              </div>
+              <div className="text-lg font-bold text-purple-700 dark:text-purple-400">
+                {sprintTimeStats.totalStoryPointsEstimate || 0}
+              </div>
+            </div>
+            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+              <div className="flex items-center gap-2 mb-1">
+                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Items</span>
+              </div>
+              <div className="text-lg font-bold text-amber-700 dark:text-amber-400">
+                {stats.completedWorkItems}/{stats.totalWorkItems}
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Add Column Input */}
         {isAddingColumn && (
           <div className="mt-4 flex gap-2">
@@ -387,7 +437,7 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
         <div className="flex-1 overflow-hidden">
           <div
             ref={scrollableRef}
-            className="h-full overflow-x-auto"
+            className="h-full overflow-x-auto scrollbar"
           >
             <Droppable
               droppableId="sprint-columns"

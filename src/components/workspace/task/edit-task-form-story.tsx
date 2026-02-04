@@ -488,7 +488,7 @@ export default function EditTaskForm(props: {
                   <p className="text-sm text-gray-600 mb-2">
                     {attachments.length} attachment{attachments.length !== 1 ? "s" : ""}
                   </p>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                  <div className="space-y-2 max-h-48 overflow-y-auto scrollbar">
                     {attachments.map((att, index) => {
                       const fileNameRaw = att.name || att.url.split("/").pop() || `Attachment ${index + 1}`;
                       const fileName = (() => {

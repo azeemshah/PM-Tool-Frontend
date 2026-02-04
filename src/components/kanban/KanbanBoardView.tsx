@@ -86,6 +86,8 @@ export function KanbanBoardView() {
         column: item.column,
         assignedTo: item.assignedTo,
         reporter: item.reporter,
+        timeSpent: item.timeSpent,
+        storyPoints: item.storyPoints,
         assignee: (item.assignedTo && typeof item.assignedTo === 'object' && (item.assignedTo._id || item.assignedTo.id))
           ? {
             _id: item.assignedTo._id || item.assignedTo.id,
@@ -450,7 +452,7 @@ export function KanbanBoardView() {
         <div className="flex-1 overflow-hidden">
           <div
             ref={scrollableRef}
-            className="h-full overflow-x-auto"
+            className="h-full overflow-x-auto scrollbar"
           >
             <Droppable
               droppableId="board"

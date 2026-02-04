@@ -44,6 +44,8 @@ import type { IssueStatus } from "@/api/issue/types";
 import { ParentSelector } from "@/components/issue/ParentSelector";
 import { IssueTypeIcon } from "@/components/issue/IssueTypeIcon";
 import { useQuery } from "@tanstack/react-query";
+import { LogWorkDialog } from "@/components/issue/LogWorkDialog";
+import { TimeTrackingSummary, TimerButton, TimeLogsList } from "@/components/time-tracking";
 
 const API_PRIORITY_MAP = {
   LOW: "low",
@@ -58,6 +60,10 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   const workspaceId = useWorkspaceId();
   const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
   const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
+  const [logWorkOpen, setLogWorkOpen] = useState(false);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [timeLogs, setTimeLogs] = useState<any[]>([]);
+  const [loadingLogs, setLoadingLogs] = useState(false);
 
   const { data: kanbanBoards = [] } = useGetKanbanBoards(workspaceId);
   const defaultBoardId = kanbanBoards && kanbanBoards.length > 0 ? (kanbanBoards[0] as any)._id : null;
@@ -128,6 +134,8 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     assignedTo: z.string().trim().optional(),
     dueDate: z.date().optional(),
     parent: z.string().optional(),
+    originalEstimate: z.number().optional(),
+    storyPoints: z.number().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -140,6 +148,8 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       assignedTo: task.assignedTo?._id ?? "",
       dueDate: task?.dueDate ? new Date(task.dueDate) : undefined,
       parent: task?.parent || (task as any)?.epic?._id || undefined,
+      originalEstimate: (task as any)?.originalEstimate ? Math.round((task as any).originalEstimate / 60) : undefined,
+      storyPoints: (task as any)?.storyPoints || undefined,
     },
   });
 
@@ -159,8 +169,20 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
         // ignore
       }
     };
+    const loadTimeLogs = async () => {
+      try {
+        setLoadingLogs(true);
+        const logs = await issueApiService.getIssueLogs(String(task._id));
+        setTimeLogs(logs || []);
+      } catch (e) {
+        // ignore
+      } finally {
+        setLoadingLogs(false);
+      }
+    };
     loadAttachments();
-  }, [task._id]);
+    loadTimeLogs();
+  }, [task._id, refreshTrigger]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
@@ -451,6 +473,84 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               </FormItem>
             )} />
 
+            {/* Original Estimate (hours) */}
+            <FormField control={form.control} name="originalEstimate" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Original Estimate (hours)</FormLabel>
+                <FormControl>
+                  <Input type="number" step={0.25} min={0} placeholder="0" value={field.value || ''} onChange={(e) => field.onChange(e.target.value === '' ? undefined : Number(e.target.value))} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )} />
+
+            {/* ===== TIME TRACKING SECTION (8.2) ===== */}
+            <div className="border-2 border-blue-300 dark:border-blue-800 rounded-lg p-4 bg-blue-50 dark:bg-slate-900 space-y-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-block bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">8.2</span>
+                <div className="font-bold text-sm text-blue-900 dark:text-blue-100">Time Tracking</div>
+              </div>
+              
+              {/* Time Tracking Summary */}
+              <TimeTrackingSummary
+                originalEstimate={(task as any)?.originalEstimate}
+                remainingEstimate={(task as any)?.remainingEstimate}
+                timeSpent={(task as any)?.timeSpent}
+                storyPoints={(task as any)?.storyPoints}
+              />
+
+              {/* Timer Control */}
+              <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">⏱️ Timer Control</div>
+                <TimerButton 
+                  issueId={String(task._id)}
+                  userId={task.assignedTo?._id || (typeof task.assignedTo === 'string' ? task.assignedTo : '')}
+                  onTimerStop={() => setRefreshTrigger(prev => prev + 1)}
+                />
+              </div>
+
+              {/* Log Work Button */}
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setLogWorkOpen(true)}
+                className="gap-1 w-full"
+              >
+                📝 Log Work
+              </Button>
+
+              {/* Time Logs List */}
+              {timeLogs.length > 0 && (
+                <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
+                  <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">📋 Recent Time Logs ({timeLogs.length})</div>
+                  <TimeLogsList 
+                    logs={timeLogs}
+                    isLoading={loadingLogs}
+                    currentUserId={task.assignedTo?._id}
+                    onLogDeleted={() => setRefreshTrigger(prev => prev + 1)}
+                    onLogUpdated={() => setRefreshTrigger(prev => prev + 1)}
+                  />
+                </div>
+              )}
+            </div>
+
+            {/* Story Points */}
+            <FormField control={form.control} name="storyPoints" render={({ field }) => (
+              <FormItem>
+                <FormLabel>Story Points (Optional)</FormLabel>
+                <Select value={field.value ? String(field.value) : ''} onValueChange={(v) => field.onChange(v ? Number(v) : undefined)}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select story points" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {[1, 2, 3, 5, 8, 13].map((sp) => (
+                      <SelectItem key={sp} value={String(sp)}>{sp}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )} />
+
             {/* Attachments Section */}
             <div className="border-t pt-4 mt-4">
               <FormLabel className="text-base font-semibold mb-3 block">Attachments</FormLabel>
@@ -524,13 +624,30 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               )}
             </div>
 
-            <Button type="submit" className="w-full" disabled={isPending}>
-              {isPending && <Loader className="animate-spin" />}
-              Save Changes
-            </Button>
+            <div className="flex gap-2">
+              <Button type="submit" className="flex-1" disabled={isPending}>
+                {isPending && <Loader className="animate-spin" />}
+                Save Changes
+              </Button>
+              <Button type="button" variant="outline" onClick={() => setLogWorkOpen(true)} disabled={isPending}>
+                Log Work
+              </Button>
+            </div>
           </form>
         </Form>
       </div>
+
+      {/* Log Work Dialog */}
+      <LogWorkDialog
+        isOpen={logWorkOpen}
+        onOpenChange={setLogWorkOpen}
+        itemId={task._id}
+        onSuccess={() => {
+          setRefreshTrigger(prev => prev + 1);
+          queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+          queryClient.invalidateQueries({ queryKey: ['workspace-items'] });
+        }}
+      />
     </div>
   );
 }

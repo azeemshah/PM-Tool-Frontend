@@ -5,7 +5,7 @@ import useAuth from '@/hooks/api/use-auth';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { MessageSquare, Edit2, Trash2, Reply, AtSign } from 'lucide-react';
+import { MessageSquare, Edit2, Trash2, Reply, AtSign, Paperclip, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
@@ -22,6 +22,8 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover"
+import { commentApiService } from '@/api/comment/services/commentApiService';
+import API from '@/lib/axios-client';
 
 interface CommentSectionProps {
   workItemId: string;
@@ -33,6 +35,16 @@ interface CommentSectionProps {
   };
 }
 
+const buildFullUrl = (url: string) => {
+  const base = (API as any)?.defaults?.baseURL || '';
+  if (url.startsWith('http')) return url;
+  try {
+    return new URL(url, base).toString();
+  } catch {
+    return `${base}${url}`;
+  }
+};
+
 interface CommentItemProps {
   comment: any;
   currentUserId: string;
@@ -41,9 +53,11 @@ interface CommentItemProps {
   onEdit: (comment: any) => void;
   replyingTo: string | null;
   setReplyingTo: (id: string | null) => void;
-  submitReply: (parentId: string, content: string) => void;
+  submitReply: (parentId: string, content: string, attachments?: any[]) => void;
   isCreating: boolean;
   getUserName: (u: any) => string;
+  workItemId: string;
+  members: any[];
 }
 
 const CommentItem = ({ 
@@ -56,14 +70,48 @@ const CommentItem = ({
   setReplyingTo,
   submitReply,
   isCreating,
-  getUserName 
+  getUserName,
+  workItemId,
+  members
 }: CommentItemProps) => {
   const [replyContent, setReplyContent] = useState('');
+  const [replyAttachments, setReplyAttachments] = useState<{ fileName: string; fileUrl: string; fileType?: string }[]>([]);
+  const [isReplyUploading, setIsReplyUploading] = useState(false);
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const replyFileInputRef = React.useRef<HTMLInputElement>(null);
+
+  const insertMention = (memberName: string) => {
+    setReplyContent(prev => prev + `@${memberName} `);
+    setMentionOpen(false);
+  };
+
+  const handleReplyFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setIsReplyUploading(true);
+      try {
+        const result = await commentApiService.uploadAttachment(workItemId, file);
+        if (result.success || result.url) {
+             setReplyAttachments(prev => [...prev, { fileName: result.fileName, fileUrl: result.url, fileType: file.type }]);
+        }
+      } catch (error) {
+        console.error('Failed to upload attachment:', error);
+      } finally {
+        setIsReplyUploading(false);
+        if (replyFileInputRef.current) replyFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeReplyAttachment = (index: number) => {
+    setReplyAttachments(prev => prev.filter((_, i) => i !== index));
+  };
 
   const handleSubmitReply = () => {
-    if (!replyContent.trim()) return;
-    submitReply(comment._id, replyContent);
+    if (!replyContent.trim() && replyAttachments.length === 0) return;
+    submitReply(comment._id, replyContent, replyAttachments);
     setReplyContent('');
+    setReplyAttachments([]);
   };
 
   return (
@@ -119,9 +167,30 @@ const CommentItem = ({
           </div>
         </div>
 
-        <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">
-          {comment.content}
-        </div>
+        {comment.content && (
+          <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap mt-1">
+            {comment.content}
+          </div>
+        )}
+
+        {/* Attachments */}
+        {comment.attachments && comment.attachments.length > 0 && (
+            <div className="mt-2 space-y-1">
+                {comment.attachments.map((att: any, index: number) => (
+                    <div key={index} className="flex items-center gap-2 text-sm">
+                        <Paperclip className="w-3 h-3 text-gray-500" />
+                        <a 
+                            href={`${buildFullUrl(att.fileUrl)}?token=${localStorage.getItem('accessToken') || ''}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-blue-600 hover:underline"
+                        >
+                            {att.fileName}
+                        </a>
+                    </div>
+                ))}
+            </div>
+        )}
 
         {/* Reply Input */}
         {replyingTo === comment._id && (
@@ -133,13 +202,92 @@ const CommentItem = ({
               className="min-h-[60px] text-sm bg-white dark:bg-muted/30"
               autoFocus
             />
-            <div className="flex gap-2">
-              <Button size="sm" onClick={handleSubmitReply} disabled={isCreating}>
-                {isCreating ? 'Sending...' : 'Reply'}
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
-                Cancel
-              </Button>
+            {/* Reply Attachment Preview */}
+            {replyAttachments.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                  {replyAttachments.map((att, index) => (
+                      <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-md text-xs">
+                          <Paperclip className="w-3 h-3 text-gray-500" />
+                          <a 
+                              href={`${buildFullUrl(att.fileUrl)}?token=${localStorage.getItem('accessToken') || ''}`}
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="max-w-[150px] truncate text-blue-600 hover:underline"
+                          >
+                              {att.fileName}
+                          </a>
+                          <button 
+                              onClick={() => removeReplyAttachment(index)}
+                              className="text-gray-500 hover:text-red-500 ml-1"
+                          >
+                              <X className="w-3 h-3" />
+                          </button>
+                      </div>
+                  ))}
+              </div>
+            )}
+            <div className="flex justify-between items-center">
+                <div className="flex gap-2">
+                   {/* Mention Popover */}
+                   <Popover open={mentionOpen} onOpenChange={setMentionOpen}>
+                    <PopoverTrigger asChild>
+                      <Button variant="ghost" size="sm" className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 h-8 px-2" title="Mention someone">
+                        <AtSign className="w-4 h-4 mr-1" />
+                        Mention
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0 w-[200px]" align="start">
+                      <Command>
+                        <CommandInput placeholder="Search member..." />
+                        <CommandList>
+                          <CommandEmpty>No member found.</CommandEmpty>
+                          <CommandGroup>
+                            {members?.map((member: any) => (
+                              <CommandItem
+                                key={member._id}
+                                value={getUserName(member)}
+                                onSelect={() => insertMention(getUserName(member))}
+                              >
+                                <Avatar className="w-6 h-6 mr-2">
+                                    <AvatarImage src={member.profilePicture} />
+                                    <AvatarFallback className="text-[10px]">{getAvatarFallbackText(getUserName(member))}</AvatarFallback>
+                                </Avatar>
+                                <span>{getUserName(member)}</span>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+
+                  {/* Reply Attachment Button */}
+                  <input
+                      type="file"
+                      ref={replyFileInputRef}
+                      className="hidden"
+                      onChange={handleReplyFileSelect}
+                  />
+                  <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 h-8 px-2" 
+                      title="Attach file"
+                      onClick={() => replyFileInputRef.current?.click()}
+                      disabled={isReplyUploading}
+                  >
+                      <Paperclip className="w-4 h-4 mr-1" />
+                      {isReplyUploading ? '...' : 'Attach'}
+                  </Button>
+                </div>
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={handleSubmitReply} disabled={isCreating || isReplyUploading || (!replyContent.trim() && replyAttachments.length === 0)}>
+                    {isCreating ? 'Sending...' : 'Reply'}
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setReplyingTo(null)}>
+                    Cancel
+                  </Button>
+                </div>
             </div>
           </div>
         )}
@@ -160,6 +308,8 @@ const CommentItem = ({
                 submitReply={submitReply}
                 isCreating={isCreating}
                 getUserName={getUserName}
+                workItemId={workItemId}
+                members={members}
               />
             ))}
           </div>
@@ -191,11 +341,36 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
   const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
   const [replyingTo, setReplyingTo] = useState<string | null>(null);
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [attachments, setAttachments] = useState<{ fileName: string; fileUrl: string; fileType?: string }[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const currentUserId = user?.id || user?._id;
 
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      setIsUploading(true);
+      try {
+        const result = await commentApiService.uploadAttachment(workItemId, file);
+        if (result.success || result.url) {
+             setAttachments(prev => [...prev, { fileName: result.fileName, fileUrl: result.url, fileType: file.type }]);
+        }
+      } catch (error) {
+        console.error('Failed to upload attachment:', error);
+      } finally {
+        setIsUploading(false);
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
   const handleSubmit = () => {
-    if (!newComment.trim()) return;
+    if (!newComment.trim() && attachments.length === 0) return;
 
     if (editingCommentId) {
       updateComment(
@@ -204,16 +379,18 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
           onSuccess: () => {
             setEditingCommentId(null);
             setNewComment('');
+            setAttachments([]);
             queryClient.invalidateQueries({ queryKey: ['comments', workItemId] });
           },
         }
       );
     } else {
       createComment(
-        { workItemId, content: newComment, userId: currentUserId },
+        { workItemId, content: newComment, userId: currentUserId, attachments },
         {
           onSuccess: () => {
             setNewComment('');
+            setAttachments([]);
             queryClient.invalidateQueries({ queryKey: ['comments', workItemId] });
           },
         }
@@ -221,9 +398,9 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
     }
   };
 
-  const handleReplySubmit = (parentId: string, content: string) => {
+  const handleReplySubmit = (parentId: string, content: string, attachments: any[] = []) => {
     createComment(
-      { workItemId, content, userId: currentUserId, parentCommentId: parentId },
+      { workItemId, content, userId: currentUserId, parentCommentId: parentId, attachments },
       {
         onSuccess: () => {
           setReplyingTo(null);
@@ -338,6 +515,30 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
             onChange={(e) => setNewComment(e.target.value)}
             className="min-h-[80px] resize-y bg-white dark:bg-muted/30"
           />
+          {/* Attachment Preview */}
+          {attachments.length > 0 && (
+            <div className="flex flex-wrap gap-2 mt-2">
+                {attachments.map((att, index) => (
+                    <div key={index} className="flex items-center gap-2 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-md text-sm">
+                        <Paperclip className="w-3 h-3 text-gray-500" />
+                        <a 
+                            href={`${buildFullUrl(att.fileUrl)}?token=${localStorage.getItem('accessToken') || ''}`}
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="max-w-[150px] truncate text-blue-600 hover:underline"
+                        >
+                            {att.fileName}
+                        </a>
+                        <button 
+                            onClick={() => removeAttachment(index)}
+                            className="text-gray-500 hover:text-red-500 ml-1"
+                        >
+                            <X className="w-3 h-3" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+          )}
           <div className="flex justify-between items-center">
             <div className="flex gap-2">
                {/* Mention Popover */}
@@ -372,12 +573,31 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
                   </Command>
                 </PopoverContent>
               </Popover>
+
+              {/* Attachment Button */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                onChange={handleFileSelect}
+              />
+              <Button 
+                variant="ghost" 
+                size="sm" 
+                className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" 
+                title="Attach file"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                <Paperclip className="w-4 h-4 mr-1" />
+                {isUploading ? 'Uploading...' : 'Attach'}
+              </Button>
             </div>
 
             <div className="flex gap-2">
               <Button
                 onClick={handleSubmit}
-                disabled={isCreating || isUpdating || !newComment.trim()}
+                disabled={isCreating || isUpdating || (!newComment.trim() && attachments.length === 0)}
                 size="sm"
               >
                 {editingCommentId ? (isUpdating ? 'Updating...' : 'Update') : (isCreating ? 'Saving...' : 'Save')}
@@ -411,6 +631,8 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
             submitReply={handleReplySubmit}
             isCreating={isCreating}
             getUserName={getUserName}
+            workItemId={workItemId}
+            members={members}
           />
         ))}
         {commentTree.length === 0 && (
