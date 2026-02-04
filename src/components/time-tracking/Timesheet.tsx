@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from "@/hooks/use-toast";
+import { formatDuration } from '@/lib/helper';
 
 export interface TimesheetEntry {
   _id: string;
@@ -32,12 +33,6 @@ export interface TimesheetProps {
   initialFromDate?: string;
   initialToDate?: string;
 }
-
-const minutesToHours = (minutes?: number): string => {
-  if (!minutes) return '0h';
-  const hours = minutes / 60;
-  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(1)}h`;
-};
 
 /**
  * Timesheet Component
@@ -141,7 +136,7 @@ export const Timesheet: React.FC<TimesheetProps> = ({
         <div className="flex items-center justify-between">
           <div>
             <div className="text-xs text-blue-600 font-semibold">Total Time Logged</div>
-            <div className="text-2xl font-bold text-blue-900">{minutesToHours(data.totalMinutes)}</div>
+            <div className="text-2xl font-bold text-blue-900">{formatDuration(data.totalMinutes)}</div>
           </div>
           <TrendingUp className="text-blue-600" size={32} />
         </div>
@@ -156,7 +151,7 @@ export const Timesheet: React.FC<TimesheetProps> = ({
               <div key={date} className="border rounded-lg p-3 bg-white hover:bg-gray-50">
                 <div className="flex items-center justify-between mb-2">
                   <div className="font-semibold text-sm">{new Date(date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</div>
-                  <div className="font-bold text-blue-600">{minutesToHours(day.totalMinutes)}</div>
+                  <div className="font-bold text-blue-600">{formatDuration(day.totalMinutes)}</div>
                 </div>
                 <div className="space-y-1">
                   {day.entries.map((entry) => (
@@ -165,7 +160,7 @@ export const Timesheet: React.FC<TimesheetProps> = ({
                         <span className="font-medium">{entry.workItem.key}</span>
                         <span className="text-gray-500"> - {entry.workItem.title}</span>
                       </div>
-                      <span className="text-gray-700">{minutesToHours(entry.timeSpent)}</span>
+                      <span className="text-gray-700">{formatDuration(entry.timeSpent)}</span>
                     </div>
                   ))}
                 </div>
@@ -191,7 +186,7 @@ export const Timesheet: React.FC<TimesheetProps> = ({
                       Week of {weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} -{' '}
                       {weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
-                    <div className="font-bold text-blue-600">{minutesToHours(total)}</div>
+                    <div className="font-bold text-blue-600">{formatDuration(total)}</div>
                   </div>
                 </div>
               );

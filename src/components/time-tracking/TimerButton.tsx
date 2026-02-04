@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from '@/hooks/use-toast';
+import { formatDuration } from '@/lib/helper';
 
 export interface TimerButtonProps {
   issueId: string;
@@ -88,7 +89,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
       setElapsedSeconds(0);
       setComment('');
       setShowCommentInput(false);
-      toast({ description: `Timer logged: ${result.elapsedMinutes} minutes` });
+      toast({ description: `Timer logged: ${formatDuration(result.elapsedMinutes)}` });
       onTimerStop?.(result.elapsedMinutes);
     } catch (error: any) {
       toast({
@@ -101,17 +102,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   };
 
   const formatTime = (seconds: number): string => {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
+    return formatDuration(seconds / 60);
   };
 
   if (isActive) {

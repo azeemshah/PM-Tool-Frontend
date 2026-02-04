@@ -16,6 +16,7 @@ import {
   formatStatusToEnum,
   getAvatarColor,
   getAvatarFallbackText,
+  formatDuration,
 } from "@/lib/helper";
 import { priorities, statuses, issueTypes } from "./data";
 import { TaskType } from "@/api/issue/types";
@@ -27,15 +28,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
-
-// Helper function to convert minutes to hours
-const minutesToHours = (minutes: number): string => {
-  if (!minutes || minutes <= 0) return "0h";
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) return `${hours}h`;
-  return `${hours}h ${mins}m`;
-};
 
 export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[] => {
   const columns: ColumnDef<TaskType>[] = [
@@ -284,7 +276,7 @@ export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[
         return (
           <Badge className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
             <Clock className="h-3 w-3" />
-            <span>{minutesToHours(timeSpent)}</span>
+            <span>{formatDuration(timeSpent)}</span>
           </Badge>
         );
       },

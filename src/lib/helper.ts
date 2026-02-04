@@ -76,7 +76,24 @@ export const mapColumnToStatus = (columnName: string): IssueStatus => {
   return columnName; // Return original column name for custom columns
 };
 
+/**
+ * Formats duration in minutes to human readable string (e.g. 1h 30m 15s)
+ * @param minutesInput Duration in minutes (can be float)
+ */
+export const formatDuration = (minutesInput: number): string => {
+  if (!minutesInput && minutesInput !== 0) return '0h 0m';
+  
+  const totalSeconds = Math.round(minutesInput * 60);
+  if (totalSeconds === 0) return '0h 0m';
 
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
+  if (seconds === 0) {
+    if (minutes === 0) return `${hours}h`;
+    return `${hours}h ${minutes}m`;
+  }
 
-
+  return `${hours}h ${minutes}m ${seconds}s`;
+};

@@ -2,6 +2,7 @@ import React from 'react';
 import { Progress } from '@/components/ui/progress';
 import { Clock, Zap } from 'lucide-react';
 import { Issue } from '@/api/issue/types';
+import { formatDuration } from '@/lib/helper';
 
 interface TimeTrackingSummaryProps {
   issue?: Issue;
@@ -10,15 +11,6 @@ interface TimeTrackingSummaryProps {
   timeSpent?: number; // minutes
   storyPoints?: number | null;
 }
-
-/**
- * Converts minutes to hours with proper decimal formatting
- */
-const minutesToHours = (minutes: number): string => {
-  if (!minutes) return '0h';
-  const hours = minutes / 60;
-  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
-};
 
 export function TimeTrackingSummary({
   issue,
@@ -46,12 +38,12 @@ export function TimeTrackingSummary({
       <div className="flex items-center justify-between">
         <div>
           <div className="text-sm text-gray-600 dark:text-gray-300">
-            <span className="font-semibold text-gray-900 dark:text-white">{minutesToHours(spent)}</span>
+            <span className="font-semibold text-gray-900 dark:text-white">{formatDuration(spent)}</span>
             {' '}logged
             {original > 0 && (
               <>
                 {' / '}
-                <span className="font-semibold text-gray-900 dark:text-white">{minutesToHours(remaining)}</span>
+                <span className="font-semibold text-gray-900 dark:text-white">{formatDuration(remaining)}</span>
                 {' '}remaining
               </>
             )}
@@ -72,12 +64,12 @@ export function TimeTrackingSummary({
           <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400">
             <span>
               {original > 0
-                ? `${Math.round(progressPercent)}% of ${minutesToHours(original)}`
+                ? `${Math.round(progressPercent)}% of ${formatDuration(original)}`
                 : 'No estimate'}
             </span>
             {spent > original && (
               <span className="text-red-600 dark:text-red-400 font-semibold">
-                +{minutesToHours(spent - original)} over
+                +{formatDuration(spent - original)} over
               </span>
             )}
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Clock, TrendingUp, AlertCircle, CheckCircle } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { issueApiService } from '@/api/issue/services/issueApiService';
+import { formatDuration } from '@/lib/helper';
 
 export interface TimeTrackingDashboardProps {
   workspaceId: string;
@@ -15,15 +16,6 @@ interface TimeStats {
   tasksOverdue: number;
   activeTasks: number;
 }
-
-const minutesToHours = (minutes: number): string => {
-  if (!minutes) return '0h';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0 && mins > 0) return `${hours}h ${mins}m`;
-  if (hours > 0) return `${hours}h`;
-  return `${mins}m`;
-};
 
 /**
  * Time Tracking Dashboard Widget
@@ -144,21 +136,21 @@ export const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({ wo
           {/* Total Logged */}
           <div className="border rounded-lg p-3 bg-blue-50 dark:bg-blue-900/20 dark:border-blue-800 hover:bg-blue-100 dark:hover:bg-blue-900/30 transition">
             <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Time Logged</div>
-            <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{minutesToHours(stats.totalLogged)}</div>
+            <div className="text-xl font-bold text-blue-900 dark:text-blue-100">{formatDuration(stats.totalLogged)}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">{stats.tasksWithTime} tasks</div>
           </div>
 
           {/* Total Estimated */}
           <div className="border rounded-lg p-3 bg-purple-50 dark:bg-purple-900/20 dark:border-purple-800 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition">
             <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Estimated</div>
-            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">{minutesToHours(stats.totalEstimated)}</div>
+            <div className="text-xl font-bold text-purple-900 dark:text-purple-100">{formatDuration(stats.totalEstimated)}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">total assigned</div>
           </div>
 
           {/* Total Remaining */}
           <div className="border rounded-lg p-3 bg-amber-50 dark:bg-amber-900/20 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/30 transition">
             <div className="text-xs text-gray-600 dark:text-gray-400 font-semibold">Remaining</div>
-            <div className="text-xl font-bold text-amber-900 dark:text-amber-100">{minutesToHours(stats.totalRemaining)}</div>
+            <div className="text-xl font-bold text-amber-900 dark:text-amber-100">{formatDuration(stats.totalRemaining)}</div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">to complete</div>
           </div>
         </div>
@@ -179,7 +171,7 @@ export const TimeTrackingDashboard: React.FC<TimeTrackingDashboardProps> = ({ wo
               ></div>
             </div>
             <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-              {stats.totalLogged} of {stats.totalEstimated} minutes used
+              {Math.round(stats.totalLogged)} of {stats.totalEstimated} minutes used
             </div>
           </div>
 

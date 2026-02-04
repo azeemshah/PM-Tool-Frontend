@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from '@/hooks/use-toast';
+import { formatDuration } from '@/lib/helper';
 
 export interface TimeLog {
   _id: string;
@@ -26,14 +27,6 @@ export interface TimeLogsListProps {
   onLogUpdated?: (logId: string) => void;
   currentUserId?: string;
 }
-
-const minutesToHours = (minutes?: number): string => {
-  if (!minutes) return '0m';
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (hours > 0) return `${hours}h ${mins}m`;
-  return `${mins}m`;
-};
 
 /**
  * Time Logs List Component
@@ -67,7 +60,7 @@ export const TimeLogsList: React.FC<TimeLogsListProps> = ({
   const saveEdit = async (logId: string) => {
     try {
       setLoading(true);
-      const timeSpentMinutes = Math.round(parseFloat(editData.timeSpent) * 60);
+      const timeSpentMinutes = parseFloat(editData.timeSpent) * 60;
       if (timeSpentMinutes <= 0) {
         toast({ variant: 'destructive', description: 'Time must be greater than 0' });
         return;
@@ -135,7 +128,7 @@ export const TimeLogsList: React.FC<TimeLogsListProps> = ({
                     <label className="text-xs font-medium text-gray-600 dark:text-gray-400">Time (hours)</label>
                     <Input
                       type="number"
-                      step="0.25"
+                      step="any"
                       min="0"
                       value={editData.timeSpent}
                       onChange={(e) => setEditData({ ...editData, timeSpent: e.target.value })}
@@ -177,7 +170,7 @@ export const TimeLogsList: React.FC<TimeLogsListProps> = ({
                 <div className="flex-1 space-y-1">
                   <div className="flex items-center gap-2">
                     <Clock size={14} className="text-blue-600 dark:text-blue-400 flex-shrink-0" />
-                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{minutesToHours(log.timeSpent)}</span>
+                    <span className="font-semibold text-sm text-gray-900 dark:text-white">{formatDuration(log.timeSpent)}</span>
                     <span className="text-xs text-gray-400 dark:text-gray-600">•</span>
                     <span className="text-xs text-gray-600 dark:text-gray-400">{logDate}</span>
                   </div>

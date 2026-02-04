@@ -4,7 +4,7 @@ import { Activity } from "@/hooks/api/use-history";
 import { DataTableColumnHeader } from "../task/table/table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, formatDuration } from "@/lib/helper";
 import { ArrowRight, Clock, CheckCircle2, Circle, AlertCircle, Move, Activity as ActivityIcon, Edit, Trash2, MessageSquare } from "lucide-react";
 
 const getActivityIcon = (type: string) => {
@@ -185,10 +185,13 @@ export const columns: ColumnDef<Activity>[] = [
       } else if (activity.type === 'time_logged') {
         // timeSpent is stored in minutes
         const timeSpentMinutes = activity.details?.timeSpent || 0;
-        const h = Math.floor(timeSpentMinutes / 60);
-        const m = timeSpentMinutes % 60;
-        const duration = timeSpentMinutes ? ` (${h}h ${m}m)` : '';
-        content = <span className="text-sm">{(activity.details?.description || 'Logged time') + duration}</span>;
+        const duration = formatDuration(timeSpentMinutes);
+        
+        // Detect if it was from timer based on description (legacy or new)
+        const isTimer = activity.details?.description?.includes('timer');
+        const baseText = isTimer ? 'Logged time from timer' : 'Logged time';
+        
+        content = <span className="text-sm">{`${baseText} (${duration})`}</span>;
       } else if (activity.type === 'comment') {
         content = <span className="text-sm">Comment: {activity.details?.description || 'No content'}</span>;
       } else if (activity.details && typeof activity.details === 'object') {

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { TrendingDown } from 'lucide-react';
+import { formatDuration } from '@/lib/helper';
 
 interface BurndownDataPoint {
   date: string; // ISO date string
@@ -153,7 +154,7 @@ export function BurndownChart({
           {/* Y-axis labels */}
           {[0, 0.25, 0.5, 0.75, 1].map((fraction) => {
             const value = Math.round(maxRemaining * fraction);
-            const hours = Math.round(value / 60);
+            const label = formatDuration(value);
             return (
               <g key={`y-label-${fraction}`}>
                 <text
@@ -163,7 +164,7 @@ export function BurndownChart({
                   textAnchor="end"
                   className="fill-gray-600 dark:fill-gray-400"
                 >
-                  {hours}h
+                  {label}
                 </text>
               </g>
             );
