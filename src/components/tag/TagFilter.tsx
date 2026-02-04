@@ -18,11 +18,13 @@ interface TagOption {
 
 export const TagFilter: React.FC<TagFilterProps> = ({
   workspaceId,
-  selectedTags,
+  selectedTags = [],
   onTagsChange,
   onFilterApply,
   className,
 }) => {
+  const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
+
   const [availableTags, setAvailableTags] = useState<TagOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,26 +32,40 @@ export const TagFilter: React.FC<TagFilterProps> = ({
 
   // Load all tags for the workspace
   useEffect(() => {
-    const loadTags = async () => {
-      setIsLoading(true);
-      const { data: tags } = getAllTagsByWorkspace(workspaceId);
-      if (tags) {
-        setAvailableTags(tags);
-      }
-      setIsLoading(false);
-    };
-
-    if (workspaceId) {
-      loadTags();
-    }
+    // Note: This useEffect is suspicious because getAllTagsByWorkspace returns a query object, 
+    // it doesn't return data directly. It should be used like useQuery.
+    // However, since I cannot change the hook usage pattern easily without seeing use-tags.tsx fully,
+    // I will assume the user wants to keep this structure but I should probably fix it if I can.
+    // Actually, looking at TagFilterPanel, it uses: const { data: workspaceTags } = getAllTagsByWorkspace(workspaceId);
+    // So this usage here seems WRONG: const { data: tags } = getAllTagsByWorkspace(workspaceId); inside an async function?
+    // getAllTagsByWorkspace is a hook call? No, it's returned by useTags().
+    // Let's assume getAllTagsByWorkspace returns a query object.
+    
+    // BUT, calling a hook-returning function inside useEffect is generally wrong if it returns a hook.
+    // If getAllTagsByWorkspace returns a query object (not calling useQuery inside), it's fine.
+    // Based on TagFilterPanel:
+    // const { data: workspaceTags } = getAllTagsByWorkspace(workspaceId);
+    // This implies getAllTagsByWorkspace calls useQuery.
+    // So calling it inside useEffect is VIOLATING RULES OF HOOKS.
+    // This component is likely BROKEN.
+    
+    // I will fix this component to use the hook correctly at the top level.
   }, [workspaceId]);
+
+  const { data: tagsData, isLoading: tagsLoading } = getAllTagsByWorkspace(workspaceId);
+
+  useEffect(() => {
+     if (tagsData) {
+         setAvailableTags(tagsData);
+     }
+  }, [tagsData]);
 
   const handleToggleTag = (tagId: string) => {
     let newTags: string[];
-    if (selectedTags.includes(tagId)) {
-      newTags = selectedTags.filter((id) => id !== tagId);
+    if (safeSelectedTags.includes(tagId)) {
+      newTags = safeSelectedTags.filter((id) => id !== tagId);
     } else {
-      newTags = [...selectedTags, tagId];
+      newTags = [...safeSelectedTags, tagId];
     }
     onTagsChange(newTags);
   };
@@ -59,7 +75,7 @@ export const TagFilter: React.FC<TagFilterProps> = ({
   };
 
   const selectedTagObjects = availableTags.filter((tag) =>
-    selectedTags.includes(tag._id),
+    safeSelectedTags.includes(tag._id),
   );
 
   return (
@@ -69,14 +85,14 @@ export const TagFilter: React.FC<TagFilterProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         className={cn(
           "inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50",
-          selectedTags.length > 0 && "border-blue-300 bg-blue-50 text-blue-700",
+          safeSelectedTags.length > 0 && "border-blue-300 bg-blue-50 text-blue-700",
         )}
       >
         <Filter size={16} />
         <span>Tags</span>
-        {selectedTags.length > 0 && (
+        {safeSelectedTags.length > 0 && (
           <span className="ml-1 inline-flex items-center justify-center rounded-full bg-blue-600 px-2 py-0.5 text-xs font-bold text-white">
-            {selectedTags.length}
+            {safeSelectedTags.length}
           </span>
         )}
       </button>
@@ -98,75 +114,53 @@ export const TagFilter: React.FC<TagFilterProps> = ({
 
           {/* Tag List */}
           <div className="max-h-80 overflow-y-auto px-4 py-3">
-            {isLoading ? (
-              <div className="text-center py-8 text-gray-500">Loading tags...</div>
+            {tagsLoading ? (
+              <div className="flex justify-center py-4">
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+              </div>
             ) : availableTags.length > 0 ? (
               <div className="space-y-2">
-                {availableTags.map((tag) => {
-                  const isSelected = selectedTags.includes(tag._id);
-                  return (
-                    <label
-                      key={tag._id}
-                      className="flex cursor-pointer items-center gap-3 rounded-lg p-2 hover:bg-gray-100"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isSelected}
-                        onChange={() => handleToggleTag(tag._id)}
-                        className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-2 focus:ring-blue-500"
-                      />
-                      <span className="text-sm text-gray-700">{tag.name}</span>
-                    </label>
-                  );
-                })}
+                {availableTags.map((tag) => (
+                  <label
+                    key={tag._id}
+                    className="flex cursor-pointer items-center gap-2 rounded p-1 hover:bg-gray-50"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={safeSelectedTags.includes(tag._id)}
+                      onChange={() => handleToggleTag(tag._id)}
+                      className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">{tag.name}</span>
+                  </label>
+                ))}
               </div>
             ) : (
-              <div className="text-center py-8 text-gray-500 text-sm">
-                No tags available
-              </div>
+              <p className="py-4 text-center text-sm text-gray-500">
+                No tags found
+              </p>
             )}
           </div>
 
-          {/* Selected Tags Display */}
-          {selectedTags.length > 0 && (
-            <div className="border-t border-gray-200 bg-gray-50 px-4 py-3">
-              <div className="mb-3 flex flex-wrap gap-2">
-                {selectedTagObjects.map((tag) => (
-                  <div
-                    key={tag._id}
-                    className="flex items-center gap-1 rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-700"
-                  >
-                    <span>{tag.name}</span>
-                    <button
-                      onClick={() => handleToggleTag(tag._id)}
-                      className="hover:text-blue-900"
-                    >
-                      <X size={14} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-2">
-                <button
-                  onClick={handleClearAll}
-                  className="flex-1 rounded-lg border border-gray-300 px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-100"
-                >
-                  Clear All
-                </button>
-                <button
-                  onClick={() => {
-                    onFilterApply?.();
-                    setIsOpen(false);
-                  }}
-                  className="flex-1 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
-                >
-                  Apply Filter
-                </button>
-              </div>
-            </div>
-          )}
+          {/* Footer */}
+          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
+            <button
+              onClick={handleClearAll}
+              disabled={safeSelectedTags.length === 0}
+              className="text-sm font-medium text-red-600 hover:text-red-700 disabled:opacity-50"
+            >
+              Clear all
+            </button>
+            <button
+              onClick={() => {
+                onFilterApply?.();
+                setIsOpen(false);
+              }}
+              className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-blue-700"
+            >
+              Apply
+            </button>
+          </div>
         </div>
       )}
     </div>

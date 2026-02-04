@@ -33,11 +33,11 @@ export const TagManager: React.FC<TagManagerProps> = ({
   loading = false,
   title = "Manage Tags",
 }) => {
-  const [selectedTags, setSelectedTags] = React.useState<string[]>(currentTags);
+  const [selectedTags, setSelectedTags] = React.useState<string[]>(currentTags || []);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   React.useEffect(() => {
-    setSelectedTags(currentTags);
+    setSelectedTags(currentTags || []);
   }, [currentTags, isOpen]);
 
   const handleSave = () => {

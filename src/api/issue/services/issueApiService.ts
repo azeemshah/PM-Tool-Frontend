@@ -338,11 +338,11 @@ export const issueApiService = {
 
 	/**
 	 * Get single issue by ID
-	 * GET /kanban/items/:id
+	 * GET /items/:id
 	 */
 	async getIssue(issueId: string): Promise<Issue> {
-		// Use kanban/items endpoint which matches WorkItemController
-		const response = await API.get(`/kanban/items/${issueId}`);
+		// Use /items endpoint which matches WorkItemController
+		const response = await API.get(`/items/${issueId}`);
 		return response.data.data || response.data;
 	},
 
@@ -360,21 +360,14 @@ export const issueApiService = {
 
 	/**
 	 * Update any issue (works for all types)
-	 * PUT /kanban/items/:id (Unified with Kanban WorkItemController)
+	 * PATCH /items/:id
 	 */
 	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
 		const payload: any = { ...data };
-		// Map frontend DTO to backend DTO
-		if (data.assignedTo) {
-			payload.assigneeId = data.assignedTo;
-			delete payload.assignedTo;
-		}
-		if (data.assignee) {
-			payload.assigneeId = data.assignee;
-			delete payload.assignee;
-		}
+        // Backend expects 'assignedTo' and 'parent' directly, no mapping needed.
+        // And use /items endpoint which matches ItemController
 		
-		const response = await API.put(`/kanban/items/${issueId}`, payload);
+		const response = await API.patch(`/items/${issueId}`, payload);
 		return response.data.data || response.data;
 	},
 

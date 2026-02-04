@@ -71,7 +71,7 @@ export const useTags = () => {
         });
         return response.data;
       },
-      enabled: !!tagIds || tagIds.length > 0,
+      enabled: Array.isArray(tagIds) && tagIds.length > 0,
     });
   };
 

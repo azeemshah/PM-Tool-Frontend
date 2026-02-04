@@ -7,6 +7,7 @@ import { Sprint } from '@/api/scrumboard/types';
 import { useUpdateSprintStatus } from '@/api/scrumboard/hooks/sprints/useUpdateSprintStatus';
 import SprintCreationDialog from './SprintCreationDialog';
 import SprintEditDialog from './SprintEditDialog';
+import CompleteSprintDialog from './CompleteSprintDialog';
 import { useDeleteSprint } from '@/api/scrumboard/hooks/sprints/useDeleteSprint';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { toast } from '@/hooks/use-toast';
@@ -23,6 +24,8 @@ const SprintList: React.FC<SprintListProps> = ({
   onSprintSelect,
 }) => {
   const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [completeSprintDialogOpen, setCompleteSprintDialogOpen] = useState(false);
+  const [sprintToComplete, setSprintToComplete] = useState<Sprint | null>(null);
   const updateSprintMutation = useUpdateSprintStatus();
   const deleteSprintMutation = useDeleteSprint();
   const workspaceId = useWorkspaceId();
@@ -54,15 +57,25 @@ const SprintList: React.FC<SprintListProps> = ({
     }
   };
 
-  const handleSprintAction = async (sprintId: string, action: 'start' | 'complete' | 'reopen') => {
+  const handleSprintAction = async (sprintId: string, action: 'start' | 'complete' | 'reopen', targetSprintId?: string) => {
     try {
       await updateSprintMutation.mutateAsync({
         sprintId,
         action,
         workspaceId: sprints.find(s => s._id === sprintId)?.workspaceId || '',
+        ...(targetSprintId && { targetSprintId }),
       });
-    } catch (error) {
+      toast({
+        title: 'Success',
+        description: `Sprint ${action}d successfully`,
+      });
+    } catch (error: any) {
       console.error(`Failed to ${action} sprint:`, error);
+      toast({
+        title: 'Error',
+        description: `Failed to ${action} sprint`,
+        variant: 'destructive',
+      });
     }
   };
 
@@ -170,7 +183,8 @@ const SprintList: React.FC<SprintListProps> = ({
                     className="text-xs h-7"
                     onClick={(e) => {
                       e.stopPropagation();
-                      handleSprintAction(sprint._id, 'complete');
+                      setSprintToComplete(sprint);
+                      setCompleteSprintDialogOpen(true);
                     }}
                     disabled={updateSprintMutation.isPending}
                   >
@@ -257,6 +271,25 @@ const SprintList: React.FC<SprintListProps> = ({
           sprint={editTarget}
           open={!!editTarget}
           onClose={() => setEditTarget(null)}
+        />
+      )}
+
+      {/* Complete Sprint Dialog */}
+      {sprintToComplete && (
+        <CompleteSprintDialog
+          open={completeSprintDialogOpen}
+          onClose={() => {
+            setCompleteSprintDialogOpen(false);
+            setSprintToComplete(null);
+          }}
+          sprint={sprintToComplete}
+          otherSprints={sprints.filter((s) => s._id !== sprintToComplete._id && s.status !== 'COMPLETED')}
+          onConfirm={(targetSprintId) => {
+            handleSprintAction(sprintToComplete._id, 'complete', targetSprintId);
+            setCompleteSprintDialogOpen(false);
+            setSprintToComplete(null);
+          }}
+          isLoading={updateSprintMutation.isPending}
         />
       )}
     </div>

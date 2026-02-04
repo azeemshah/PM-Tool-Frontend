@@ -23,12 +23,14 @@ interface TagWithCount {
 
 export const TagFilterPanel: React.FC<TagFilterPanelProps> = ({
   workspaceId,
-  selectedTags,
+  selectedTags = [],
   onTagsChange,
   onApply,
   compact = false,
   className,
 }) => {
+  const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
+
   const { getAllTagsByWorkspace } = useTags();
   const [searchTerm, setSearchTerm] = useState("");
   const [isExpanded, setIsExpanded] = useState(!compact);
@@ -50,10 +52,10 @@ export const TagFilterPanel: React.FC<TagFilterPanelProps> = ({
   );
 
   const handleToggleTag = (tagId: string) => {
-    if (selectedTags.includes(tagId)) {
-      onTagsChange(selectedTags.filter((id) => id !== tagId));
+    if (safeSelectedTags.includes(tagId)) {
+      onTagsChange(safeSelectedTags.filter((id) => id !== tagId));
     } else {
-      onTagsChange([...selectedTags, tagId]);
+      onTagsChange([...safeSelectedTags, tagId]);
     }
   };
 
@@ -76,9 +78,9 @@ export const TagFilterPanel: React.FC<TagFilterPanelProps> = ({
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <h3 className="text-sm font-semibold">Filter by Tags</h3>
-          {selectedTags.length > 0 && (
+          {safeSelectedTags.length > 0 && (
             <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-              {selectedTags.length}
+              {safeSelectedTags.length}
             </span>
           )}
         </div>
@@ -98,63 +100,72 @@ export const TagFilterPanel: React.FC<TagFilterPanelProps> = ({
 
       {isExpanded && (
         <>
-          <Input
-            placeholder="Search tags..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="mb-3 h-8"
-          />
+          <div className="relative mb-3">
+            <Input
+              type="text"
+              placeholder="Search tags..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8"
+            />
+            {searchTerm && (
+              <button
+                onClick={() => setSearchTerm("")}
+                className="absolute right-2 top-2.5 text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
 
-          <div className="space-y-2 max-h-64 overflow-y-auto mb-3">
-            {isLoading || isLoadingTags ? (
-              <div className="text-sm text-muted-foreground">
+          <div className="space-y-2 max-h-[200px] overflow-y-auto mb-3">
+            {isLoadingTags ? (
+              <p className="text-sm text-gray-500 text-center py-4">
                 Loading tags...
-              </div>
+              </p>
             ) : filteredTags.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
-                {searchTerm ? "No tags found" : "No tags available"}
-              </div>
+              <p className="text-sm text-gray-500 text-center py-4">
+                No tags found
+              </p>
             ) : (
               filteredTags.map((tag) => (
                 <div
                   key={tag._id}
-                  className="flex items-center gap-2 hover:bg-gray-50 p-1.5 rounded transition-colors"
+                  className="flex items-center space-x-2 p-1 hover:bg-gray-50 rounded"
                 >
                   <Checkbox
                     id={`tag-${tag._id}`}
-                    checked={selectedTags.includes(tag._id)}
+                    checked={safeSelectedTags.includes(tag._id)}
                     onCheckedChange={() => handleToggleTag(tag._id)}
                   />
                   <label
                     htmlFor={`tag-${tag._id}`}
-                    className="flex-1 text-sm cursor-pointer"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 flex-1 cursor-pointer"
                   >
                     {tag.name}
                   </label>
                   {tag.count !== undefined && (
-                    <span className="text-xs text-muted-foreground">
-                      ({tag.count})
-                    </span>
+                    <span className="text-xs text-gray-400">{tag.count}</span>
                   )}
                 </div>
               ))
             )}
           </div>
 
-          <div className="flex gap-2 border-t pt-3">
+          <div className="flex justify-between pt-2 border-t">
             <Button
-              variant="outline"
+              variant="ghost"
               size="sm"
               onClick={handleClearAll}
-              disabled={selectedTags.length === 0}
-              className="flex-1"
+              disabled={safeSelectedTags.length === 0}
             >
-              <X className="w-3.5 h-3.5 mr-1" />
-              Clear
+              Clear All
             </Button>
-            <Button size="sm" onClick={handleApply} className="flex-1">
-              Apply
-            </Button>
+            {onApply && (
+              <Button size="sm" onClick={handleApply}>
+                Apply
+              </Button>
+            )}
           </div>
         </>
       )}

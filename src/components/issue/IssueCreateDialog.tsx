@@ -45,9 +45,10 @@ interface IssueCreateDialogProps {
     boardId?: string;
     onSuccess?: () => void;
     defaultType?: IssueType;
+    boardType?: 'kanban' | 'scrumboard';
 }
 
-const PRIORITIES: IssuePriority[] = ['lowest', 'low', 'medium', 'high', 'highest'];
+const PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 
 export function IssueCreateDialog({
     isOpen,
@@ -56,6 +57,7 @@ export function IssueCreateDialog({
     boardId,
     onSuccess,
     defaultType,
+    boardType = 'kanban',
 }: IssueCreateDialogProps) {
     const queryClient = useQueryClient();
 
@@ -268,8 +270,6 @@ export function IssueCreateDialog({
         };
 
         const mapPriorityToItemPriority = (value: IssuePriority): ItemPriority => {
-            if (value === 'lowest') return 'low';
-            if (value === 'highest') return 'high';
             if (value === 'low' || value === 'medium' || value === 'high') return value;
             return 'medium';
         };
@@ -545,22 +545,24 @@ export function IssueCreateDialog({
                         />
                     </div>
 
-                    {/* Status */}
-                    <div className="space-y-2">
-                        <label className="text-sm font-medium">Status</label>
-                        <Select value={status} onValueChange={setStatus}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Select a status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {dynamicStatuses.map((s) => (
-                                    <SelectItem key={s.value} value={s.value}>
-                                        {s.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+                    {/* Status - Only shown for Kanban boards */}
+                    {boardType === 'kanban' && (
+                        <div className="space-y-2">
+                            <label className="text-sm font-medium">Status</label>
+                            <Select value={status} onValueChange={setStatus}>
+                                <SelectTrigger>
+                                    <SelectValue placeholder="Select a status" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {dynamicStatuses.map((s) => (
+                                        <SelectItem key={s.value} value={s.value}>
+                                            {s.label}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
 
                     {/* Labels - Only show if we have a board ID (either prop or inferred) */}
                     {effectiveBoardId && (

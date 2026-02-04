@@ -98,6 +98,8 @@ export default function CreateTaskForm(props: {
       message: "Reporter is required",
     }),
     dueDate: z.date().optional(),
+    labels: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -108,11 +110,12 @@ export default function CreateTaskForm(props: {
       dueDate: undefined,
       reporter: members.length > 0 ? members[0].userId._id : "",
       labels: [],
+      tags: [],
     },
   });
 
   const STATUSES = ["todo", "in_progress", "in_review", "done"];
-  const PRIORITIES = ["lowest", "low", "medium", "high", "highest"];
+  const PRIORITIES = ["low", "medium", "high"];
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
@@ -126,6 +129,7 @@ export default function CreateTaskForm(props: {
       reporter: values.reporter,
       dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       labels: values.labels,
+      tags: values.tags,
     };
 
     // Create task in workspace

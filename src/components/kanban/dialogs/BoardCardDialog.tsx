@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { X, Edit2, Trash2 } from 'lucide-react';
@@ -31,6 +31,7 @@ import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from './CommentSection';
 import { LabelsSelector } from './LabelsSelector';
+import { TagInput } from '@/components/tag/TagInput';
 
 export function BoardCardDialog() {
   const {
@@ -49,6 +50,7 @@ export function BoardCardDialog() {
 
   const { data: boardLists } = useGetKanbanBoardLists(boardId || null);
   const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || '');
+
   const queryClient = useQueryClient();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
@@ -202,8 +204,23 @@ export function BoardCardDialog() {
     }).filter(Boolean);
   };
 
+  const getTagIds = (list: any) => {
+    if (!Array.isArray(list)) return [];
+    return list.map((l: any) => {
+      if (!l) return null;
+      if (typeof l === 'string') return l;
+      // Handle object with _id or id, ensuring it's a string
+      if (typeof l === 'object') {
+        const id = l._id || l.id;
+        return id ? String(id) : null;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
   const [parentId, setParentId] = useState<string>(getParentId(issue));
   const [labels, setLabels] = useState<string[]>(getLabelIds(issue?.labels));
+  const [tags, setTags] = useState<string[]>(getTagIds(issue?.tags));
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -246,6 +263,7 @@ export function BoardCardDialog() {
       setDueDate(issue.dueDate || null);
       setParentId(getParentId(issue));
       setLabels(getLabelIds(issue.labels));
+      setTags(getTagIds(issue.tags));
     }
   }, [issue]);
 
@@ -256,6 +274,35 @@ export function BoardCardDialog() {
     enabled: !!issueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  // Memoize effective labels map (merging board labels and populated issue labels)
+  const effectiveLabelsMap = useMemo(() => {
+    const map = new Map<string, any>();
+    // Priority 1: Board labels (usually complete)
+    boardLabels.forEach((l: any) => map.set(String(l._id || l.id), l));
+    
+    // Priority 2: Detailed issue labels (populated)
+    if (detailedIssue && Array.isArray(detailedIssue.labels)) {
+        detailedIssue.labels.forEach((l: any) => {
+            if (typeof l === 'object' && l) {
+                 const id = String(l._id || l.id);
+                 if (!map.has(id)) map.set(id, l);
+            }
+        });
+    }
+    return map;
+  }, [boardLabels, detailedIssue]);
+
+  // Memoize populated tags for preloading
+  const populatedTags = useMemo(() => {
+    if (!detailedIssue?.tags || !Array.isArray(detailedIssue.tags)) return [];
+    return detailedIssue.tags
+      .filter((t: any) => t && typeof t === 'object' && (t._id || t.id) && t.name)
+      .map((t: any) => ({
+          _id: String(t._id || t.id),
+          name: t.name
+      }));
+  }, [detailedIssue]);
 
   // Sync state with detailedIssue when it loads
   useEffect(() => {
@@ -269,8 +316,26 @@ export function BoardCardDialog() {
       setDueDate(detailedIssue.dueDate || null);
       setParentId(getParentId(detailedIssue));
       setLabels(getLabelIds(detailedIssue.labels));
+      setTags(getTagIds(detailedIssue.tags));
     }
   }, [detailedIssue]);
+
+  // Debug logging for data flow
+  useEffect(() => {
+    if (isCardDialogOpen && issue) {
+      console.log('BoardCardDialog Debug:', {
+        issueId: issue._id,
+        detailedIssueId: detailedIssue?._id,
+        labelsState: labels,
+        tagsState: tags,
+        boardLabelsCount: boardLabels.length,
+        detailedIssueLabels: detailedIssue?.labels,
+        detailedIssueTags: detailedIssue?.tags,
+        effectiveLabelsMapSize: effectiveLabelsMap.size,
+        populatedTagsCount: populatedTags.length
+      });
+    }
+  }, [isCardDialogOpen, issue, detailedIssue, labels, tags, boardLabels, effectiveLabelsMap, populatedTags]);
 
   const parentIssueIdStr = getParentId(issue);
   const { data: workItemAttachments = [] } = useQuery({
@@ -389,6 +454,20 @@ export function BoardCardDialog() {
     return fullUrl;
   };
 
+  useEffect(() => {
+    if (detailedIssue) {
+        // Sync state with detailed issue if available (it has latest data)
+        // Only if not currently editing (to avoid overwriting user changes)
+        if (!isEditing) {
+            setLabels(getLabelIds(detailedIssue.labels));
+            setTags(getTagIds(detailedIssue.tags));
+            setParentId(getParentId(detailedIssue));
+            setAssigneeId(getAssigneeInfo(detailedIssue).id);
+            // Don't overwrite title/desc/status/priority as they might be handled by optimistic UI or context
+        }
+    }
+  }, [detailedIssue, isEditing]);
+
   if (!isCardDialogOpen || !issue) {
     return null;
   }
@@ -486,9 +565,34 @@ export function BoardCardDialog() {
       return;
     }
 
+    // Check for pending tags
+    if (tags.some(t => t.startsWith('temp-'))) {
+        toast({
+            title: 'Please wait',
+            description: 'Tags are still being created. Please try again in a moment.',
+            variant: 'default',
+        });
+        return;
+    }
+
     const normalizedStatus = normalizeStatusForColumn(status);
     const targetColumnId = findColumnIdForStatus(normalizedStatus);
     const issueIdStr = String(issue._id);
+
+    console.log('Update Issue Payload:', {
+      issueId: issueIdStr,
+      data: {
+        title,
+        description,
+        status: mapStatusForApi(status),
+        priority: mapPriorityForApi(priority),
+        assignedTo: assigneeId || null,
+        dueDate,
+        parent: parentId || null,
+        labels,
+        tags,
+      }
+    });
 
     updateIssue(
       {
@@ -499,10 +603,10 @@ export function BoardCardDialog() {
           status: mapStatusForApi(status),
           priority: mapPriorityForApi(priority),
           assignedTo: assigneeId || null,
-          reporter: reporterId || null,
           dueDate,
           parent: parentId || null,
           labels,
+          tags,
         },
       },
       {
@@ -516,6 +620,7 @@ export function BoardCardDialog() {
           setAssigneeId(assignee?._id || assignee || '');
           setDueDate(updatedIssue.dueDate || null);
           setLabels(getLabelIds(updatedIssue.labels || []));
+          setTags(getTagIds(updatedIssue.tags || []));
           setIsEditing(false);
           toast({
             title: 'Success',
@@ -698,8 +803,14 @@ export function BoardCardDialog() {
               <div className="flex flex-wrap gap-2">
                 {labels && labels.length > 0 ? (
                   labels.map((labelId) => {
-                    const label = boardLabels.find(l => l._id === labelId);
-                    if (!label) return null;
+                    const label = effectiveLabelsMap.get(labelId);
+                    if (!label) {
+                        return (
+                             <Badge key={labelId} variant="outline" className="text-gray-500 border-dashed">
+                                Unknown ({labelId.slice(-4)})
+                             </Badge>
+                        );
+                    }
                     return (
                       <Badge key={labelId} style={{ backgroundColor: label.color }} className="text-white hover:opacity-80">
                         {label.name}
@@ -711,6 +822,22 @@ export function BoardCardDialog() {
                 )}
               </div>
             )}
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tags
+            </label>
+            <TagInput
+                workspaceId={workspaceId}
+                selectedTags={tags}
+                onTagsChange={isEditing ? setTags : () => {}}
+                disabled={!isEditing}
+                placeholder={isEditing ? "Add tags..." : "No tags"}
+                contentClassName={!isEditing ? "border-none px-0" : ""}
+                preloadedTags={populatedTags}
+            />
           </div>
 
           {/* Issue Type */}

@@ -1,16 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { X, Check, Plus } from "lucide-react";
+import { X } from "lucide-react";
 import useTags from "@/hooks/api/use-tags";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
-import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandItem,
-  CommandList,
-} from "@/components/ui/command";
-import { Command as CommandPrimitive } from "cmdk";
 
 interface TagInputProps {
   workspaceId: string;
@@ -19,6 +11,8 @@ interface TagInputProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  contentClassName?: string;
+  preloadedTags?: TagOption[];
 }
 
 interface TagOption {
@@ -33,9 +27,13 @@ export const TagInput: React.FC<TagInputProps> = ({
   placeholder = "Add tags...",
   disabled = false,
   className,
+  contentClassName,
+  preloadedTags = [],
 }) => {
+  // Ensure selectedTags is always an array to prevent "undefined is not iterable" errors
+  const safeSelectedTags = Array.isArray(selectedTags) ? selectedTags : [];
+
   const inputRef = useRef<HTMLInputElement>(null);
-  const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState("");
   const [suggestedTags, setSuggestedTags] = useState<TagOption[]>([]);
   const [selectedTagObjects, setSelectedTagObjects] = useState<TagOption[]>([]);
@@ -57,7 +55,7 @@ export const TagInput: React.FC<TagInputProps> = ({
   const searchQuery = searchTags(workspaceId, debouncedInput, 10);
   
   // Filter out temp IDs for server query to avoid errors
-  const serverQueryTags = selectedTags.filter(id => !id.startsWith("temp-"));
+  const serverQueryTags = safeSelectedTags.filter(id => !id.startsWith("temp-"));
   const tagsByIdsQuery = getTagsByIds(serverQueryTags);
 
   // Sync selected tag objects
@@ -70,7 +68,23 @@ export const TagInput: React.FC<TagInputProps> = ({
       
       const newSelectedObjects: TagOption[] = [];
       
-      selectedTags.forEach(id => {
+      // Debug logging
+      if (preloadedTags.length > 0 || safeSelectedTags.length > 0) {
+          console.log('TagInput Sync:', { 
+              selectedIds: safeSelectedTags, 
+              preloadedCount: preloadedTags.length,
+              serverCount: serverTags.length 
+          });
+      }
+
+      safeSelectedTags.forEach(id => {
+          // 0. Try Preloaded Data
+          const preloaded = preloadedTags.find(t => t._id === id);
+          if (preloaded) {
+              newSelectedObjects.push(preloaded);
+              return;
+          }
+
           // 1. Try Server Data
           if (serverTagMap.has(id)) {
               newSelectedObjects.push(serverTagMap.get(id)!);
@@ -90,7 +104,7 @@ export const TagInput: React.FC<TagInputProps> = ({
       
       return newSelectedObjects;
     });
-  }, [tagsByIdsQuery.data, selectedTags]);
+  }, [tagsByIdsQuery.data, safeSelectedTags, preloadedTags]);
 
   // Sync suggestions
   useEffect(() => {
@@ -102,16 +116,16 @@ export const TagInput: React.FC<TagInputProps> = ({
   }, [debouncedInput, searchQuery.data, allTagsQuery.data]);
 
   const handleUnselect = (tagId: string) => {
-    const newTags = selectedTags.filter((id) => id !== tagId);
+    const newTags = safeSelectedTags.filter((id) => id !== tagId);
     onTagsChange(newTags);
     setSelectedTagObjects(selectedTagObjects.filter((tag) => tag._id !== tagId));
   };
 
   const handleSelect = (tag: TagOption) => {
-    if (selectedTags.includes(tag._id)) {
+    if (safeSelectedTags.includes(tag._id)) {
       handleUnselect(tag._id);
     } else {
-      onTagsChange([...selectedTags, tag._id]);
+      onTagsChange([...safeSelectedTags, tag._id]);
       setSelectedTagObjects([...selectedTagObjects, tag]);
     }
     setInputValue("");
@@ -134,7 +148,7 @@ export const TagInput: React.FC<TagInputProps> = ({
     const tempTag: TagOption = { _id: tempId, name };
 
     // Optimistic add
-    const newTagsIds = [...selectedTags, tempId];
+    const newTagsIds = [...safeSelectedTags, tempId];
     const newTagObjects = [...selectedTagObjects, tempTag];
     onTagsChange(newTagsIds);
     setSelectedTagObjects(newTagObjects);
@@ -174,8 +188,8 @@ export const TagInput: React.FC<TagInputProps> = ({
   };
 
   // Use ref for selectedTags to access latest in async callbacks if needed
-  const selectedTagsRef = useRef(selectedTags);
-  selectedTagsRef.current = selectedTags;
+  const selectedTagsRef = useRef(safeSelectedTags);
+  selectedTagsRef.current = safeSelectedTags;
 
   const handleCreateNewTagSafe = async () => {
     if (inputValue.trim().length === 0) return;
@@ -195,7 +209,6 @@ export const TagInput: React.FC<TagInputProps> = ({
     onTagsChange([...currentTags, tempId]);
     setSelectedTagObjects(prev => [...prev, tempTag]);
     setInputValue("");
-    setOpen(true);
 
     try {
       const newTag = await createTag.mutateAsync({ name, workspaceId });
@@ -225,47 +238,43 @@ export const TagInput: React.FC<TagInputProps> = ({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    const input = inputRef.current;
-    if (input) {
-      if (e.key === "Enter") {
-        if (inputValue && inputValue.trim().length > 0) {
-          e.preventDefault();
-          // trigger create
-          void handleCreateNewTagSafe();
-          return;
-        }
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter") {
+      if (inputValue && inputValue.trim().length > 0) {
+        e.preventDefault();
+        // trigger create
+        void handleCreateNewTagSafe();
+        return;
       }
-      if (e.key === "Backspace" || e.key === "Delete") {
-        if (input.value === "" && selectedTags.length > 0) {
-          handleUnselect(selectedTags[selectedTags.length - 1]);
-        }
+    }
+    if (e.key === "Backspace" || e.key === "Delete") {
+      if (inputValue === "" && safeSelectedTags.length > 0) {
+        handleUnselect(safeSelectedTags[safeSelectedTags.length - 1]);
       }
-      if (e.key === "Escape") {
-        input.blur();
-      }
+    }
+    if (e.key === "Escape") {
+      inputRef.current?.blur();
     }
   };
 
-  const showCreateOption = inputValue.trim() && !suggestedTags.some(t => t.name.toLowerCase() === inputValue.trim().toLowerCase());
-
   return (
-    <Command
-      onKeyDown={handleKeyDown}
+    <div
       className={cn("overflow-visible bg-transparent", className)}
-      shouldFilter={false} // We filter manually via API/Suggestions
     >
       <div
         className={cn(
             "group border border-input px-3 py-2 text-sm ring-offset-background rounded-md focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2 flex flex-wrap gap-1 bg-background",
-            disabled && "opacity-50 cursor-not-allowed"
+            disabled && "opacity-50 cursor-not-allowed",
+            contentClassName
         )}
         onClick={() => inputRef.current?.focus()}
       >
         {selectedTagObjects.map((tag) => (
           <Badge key={tag._id} variant="secondary" className="mr-1 hover:bg-secondary/80 cursor-default pr-1">
             {tag.name}
+            {!disabled && (
             <button
+              type="button"
               className="ml-1 ring-offset-background rounded-full outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-gray-300 dark:hover:bg-gray-600 p-0.5"
               onKeyDown={(e) => {
                 if (e.key === "Enter") {
@@ -281,60 +290,20 @@ export const TagInput: React.FC<TagInputProps> = ({
             >
               <X className="h-3 w-3 text-gray-500 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-100" />
             </button>
+            )}
           </Badge>
         ))}
-        <CommandPrimitive.Input
+        <input
           ref={inputRef}
           value={inputValue}
-          onValueChange={setInputValue}
-          onBlur={() => setOpen(false)}
-          onFocus={() => setOpen(true)}
+          onChange={(e) => setInputValue(e.target.value)}
           placeholder={selectedTagObjects.length > 0 ? "" : placeholder}
           disabled={disabled}
-          className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground min-w-[100px]"
+          onKeyDown={handleKeyDown}
+          className="ml-2 flex-1 bg-transparent outline-none placeholder:text-muted-foreground min-w-[100px] text-sm"
         />
       </div>
-
-      {open && (
-        <div className="relative mt-2">
-            <div className="absolute top-0 z-50 w-full rounded-md border bg-popover text-popover-foreground shadow-md outline-none animate-in fade-in-0 zoom-in-95">
-                <CommandList>
-                    <CommandEmpty>No tags found.</CommandEmpty>
-                    <CommandGroup className="max-h-[200px] overflow-y-auto">
-                        {showCreateOption && (
-                            <CommandItem
-                                value={`Create ${inputValue}`}
-                                onSelect={handleCreateNewTagSafe}
-                                className="cursor-pointer font-medium text-blue-600 dark:text-blue-400"
-                                onMouseDown={(e) => e.preventDefault()}
-                            >
-                                <Plus className="mr-2 h-4 w-4" />
-                                Create "{inputValue}"
-                            </CommandItem>
-                        )}
-                        {suggestedTags.map((tag) => {
-                            const isSelected = selectedTags.includes(tag._id);
-                            return (
-                                <CommandItem
-                                    key={tag._id}
-                                    value={tag.name}
-                                    onSelect={() => handleSelect(tag)}
-                                    className="cursor-pointer"
-                                    onMouseDown={(e) => e.preventDefault()}
-                                >
-                                    <div className="flex items-center gap-2 flex-1">
-                                        {tag.name}
-                                    </div>
-                                    {isSelected && <Check className="h-4 w-4 mr-2" />}
-                                </CommandItem>
-                            );
-                        })}
-                    </CommandGroup>
-                </CommandList>
-            </div>
-        </div>
-      )}
-    </Command>
+    </div>
   );
 };
 

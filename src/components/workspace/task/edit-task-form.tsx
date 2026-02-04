@@ -111,11 +111,9 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   // Helper function to convert API priority to form priority
   const apiPriorityToFormPriority = (apiPriority: string): keyof typeof TaskPriorityEnum => {
     const reverseMap: Record<string, keyof typeof TaskPriorityEnum> = {
-      "lowest": "LOW",
       "low": "LOW",
       "medium": "MEDIUM",
       "high": "HIGH",
-      "highest": "HIGH",
     };
     return reverseMap[apiPriority] || "MEDIUM";
   };

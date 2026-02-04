@@ -18,6 +18,7 @@ import { BoardCardDialog } from './dialogs/BoardCardDialog';
 import { IssueCreateDialog } from '@/components/issue';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useAutoScroll } from '@/hooks/use-auto-scroll';
+import { useTags } from '@/hooks/api/use-tags';
 
 
 export function KanbanBoardView() {
@@ -40,6 +41,21 @@ export function KanbanBoardView() {
     scrollThreshold: 50,
     scrollSpeed: 8,
   });
+
+  const { getAllTagsByWorkspace } = useTags();
+  const { data: allTags = [] } = getAllTagsByWorkspace(workspaceId);
+  
+  const tagsMap = useMemo(() => {
+    const map = new Map<string, string>();
+    if (Array.isArray(allTags)) {
+      allTags.forEach((tag: any) => {
+        if (tag._id && tag.name) {
+          map.set(tag._id, tag.name);
+        }
+      });
+    }
+    return map;
+  }, [allTags]);
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
   // Fetch workspace items (All Tasks) and treat them as issues for the board
@@ -86,6 +102,7 @@ export function KanbanBoardView() {
         column: item.column,
         assignedTo: item.assignedTo,
         reporter: item.reporter,
+        tags: item.tags,
         assignee: (item.assignedTo && typeof item.assignedTo === 'object' && (item.assignedTo._id || item.assignedTo.id))
           ? {
             _id: item.assignedTo._id || item.assignedTo.id,
@@ -531,6 +548,7 @@ export function KanbanBoardView() {
                                 boardId={board._id}
                                 onCardClick={handleCardClick}
                                 issues={issues}
+                                tagsMap={tagsMap}
                               />
                             </div>
                           )}
