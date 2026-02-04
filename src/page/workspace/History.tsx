@@ -12,7 +12,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { format } from "date-fns";
-import { Calendar as CalendarIcon, Filter, X, Activity as ActivityIcon, CheckCircle2, Move, Clock, Edit, Trash2, MessageSquare } from "lucide-react";
+import { Calendar as CalendarIcon, Filter, X, CheckCircle2, Move, Clock, Edit, Trash2, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { DateRange } from "react-day-picker";
 
@@ -47,7 +47,6 @@ export default function History() {
   const activityTypes = [
     { value: "create", label: "Create", icon: CheckCircle2 },
     { value: "move", label: "Move", icon: Move },
-    { value: "status_change", label: "Status Change", icon: ActivityIcon },
     { value: "edit", label: "Edit", icon: Edit },
     { value: "time_logged", label: "Time Logged", icon: Clock },
     { value: "comment", label: "Comment", icon: MessageSquare },
