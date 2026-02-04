@@ -51,11 +51,11 @@ export interface TaskType {
 	parent?: string | null;
 	path?: string;
 
-  // Time tracking & estimation (minutes)
-  originalEstimate?: number;
-  remainingEstimate?: number;
-  timeSpent?: number;
-  storyPoints?: number | null;
+	// Time tracking & estimation (minutes)
+	originalEstimate?: number;
+	remainingEstimate?: number;
+	timeSpent?: number;
+	storyPoints?: number | null;
 }
 
 
@@ -79,6 +79,8 @@ export interface CreateItemDto {
 	parent?: string;       // MongoDB ObjectId
 	labels?: string[];
 	tags?: string[];
+	storyPoints?: number;
+	originalEstimate?: number;
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
@@ -108,6 +110,10 @@ export interface Issue {
 	comments?: IssueComment[];
 	subtasks?: Issue[];
 	children?: Issue[]; // For Epic: Story/Task/Bug
+
+	// Time tracking & estimation
+	storyPoints?: number | null;
+	timeSpent?: number;
 }
 
 // ==================== EPIC SPECIFIC ====================

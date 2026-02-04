@@ -100,6 +100,8 @@ export default function CreateTaskForm(props: {
     dueDate: z.date().optional(),
     labels: z.array(z.string()).optional(),
     tags: z.array(z.string()).optional(),
+    storyPoints: z.number().optional(),
+    originalEstimate: z.number().optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -111,11 +113,14 @@ export default function CreateTaskForm(props: {
       reporter: members.length > 0 ? members[0].userId._id : "",
       labels: [],
       tags: [],
+      storyPoints: undefined,
+      originalEstimate: undefined,
     },
   });
 
   const STATUSES = ["todo", "in_progress", "in_review", "done"];
   const PRIORITIES = ["low", "medium", "high"];
+  const STORY_POINTS = [1, 2, 3, 5, 8, 13];
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
@@ -130,6 +135,8 @@ export default function CreateTaskForm(props: {
       dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
       labels: values.labels,
       tags: values.tags,
+      storyPoints: values.storyPoints,
+      originalEstimate: values.originalEstimate ? values.originalEstimate * 60 : undefined,
     };
 
     // Create task in workspace
@@ -399,6 +406,65 @@ export default function CreateTaskForm(props: {
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Story Points & Estimate */}
+            <div className="flex gap-4">
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="storyPoints"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Story Points</FormLabel>
+                      <Select
+                        value={field.value ? String(field.value) : ""}
+                        onValueChange={(v) => field.onChange(Number(v))}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Points" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {STORY_POINTS.map((sp) => (
+                            <SelectItem key={sp} value={String(sp)}>
+                              {sp}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <div className="flex-1">
+                <FormField
+                  control={form.control}
+                  name="originalEstimate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Est. Hours</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min={0}
+                          step={0.5}
+                          placeholder="0"
+                          value={field.value || ""}
+                          onChange={(e) =>
+                            field.onChange(
+                              e.target.value ? Number(e.target.value) : undefined
+                            )
+                          }
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
             </div>
 
             {/* Labels */}

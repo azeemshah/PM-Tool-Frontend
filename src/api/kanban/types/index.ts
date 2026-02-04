@@ -94,6 +94,10 @@ export interface KanbanCard {
 	metadata?: Record<string, any>;
 	createdAt?: string;
 	updatedAt?: string;
+
+	// Time tracking & estimation
+	storyPoints?: number | null;
+	timeSpent?: number;
 }
 
 // ==================== BOARDS ====================

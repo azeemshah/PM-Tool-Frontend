@@ -197,6 +197,8 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       assignedTo: values.assignedTo || null, // Send null if not assigned
       dueDate: values.dueDate ? values.dueDate.toISOString() : null, // Send null if no due date
       parent: values.parent || null,
+      storyPoints: values.storyPoints,
+      originalEstimate: values.originalEstimate ? Math.round(values.originalEstimate * 60) : undefined,
     };
 
     mutate({ issueId: taskId, data: payload }, {
