@@ -9,6 +9,7 @@ import { Sprint, SprintStats } from '@/api/scrumboard/types';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { SprintApiService } from '@/api/scrumboard/services/SprintApiService';
+import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import WorkItemCard from './WorkItemCard';
 import SprintColumn from './SprintColumn';
 import useWorkspaceId from '@/hooks/use-workspace-id';
@@ -34,6 +35,11 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     scrollSpeed: 8,
   });
   const { setSelectedCard, setIsCardDialogOpen } = useKanbanAppContext();
+
+  // Get boards for this workspace to find default board ID for labels
+  const { data: boards = [] } = useGetKanbanBoards(workspaceId);
+  const defaultBoard = boards.length > 0 ? boards[0] : null;
+  const boardId = defaultBoard?._id;
 
   const normalizeColumnName = (name: string) => {
     switch (name.toLowerCase()) {
@@ -447,6 +453,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                               sprintId={sprint._id}
                               onCardClick={handleCardClick}
                               onDelete={handleDeleteColumn}
+                              boardId={boardId}
                             />
                           </div>
                         )}

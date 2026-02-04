@@ -39,6 +39,8 @@ import { Download, Trash2 } from 'lucide-react';
 import { uploadWorkItemAttachment } from '@/lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
+import { TagInput } from '@/components/tag/TagInput';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -48,6 +50,10 @@ const workItemSchema = z.object({
   status: z.string().min(1, 'Status is required'),
   reporterId: z.string().min(1, 'Reporter is required'),
   dueDate: z.string().optional(),
+  labels: z.array(z.string()).optional(),
+  tags: z.array(z.string()).optional(),
+  originalEstimate: z.string().or(z.number()).optional(),
+  storyPoints: z.string().or(z.number()).optional(),
 });
 
 type WorkItemFormData = z.infer<typeof workItemSchema>;
@@ -90,10 +96,10 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       const userId = typeof userObj === 'string' ? userObj : userObj?._id;
       if (!userId) return null;
 
-      const name = typeof userObj === 'string' 
-        ? 'Unknown' 
+      const name = typeof userObj === 'string'
+        ? 'Unknown'
         : (userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown'));
-      
+
       const initials = getAvatarFallbackText(name);
       const avatarColor = getAvatarColor(name);
       const profilePicture = typeof userObj === 'string' ? undefined : userObj.profilePicture;
@@ -123,6 +129,10 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       status: 'Backlog',
       reporterId: reporterOptions?.[0]?.value || '',
       dueDate: '',
+      labels: [],
+      tags: [],
+      originalEstimate: '',
+      storyPoints: '',
     },
   });
 
@@ -180,7 +190,17 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
         reporter: data.reporterId,
         dueDate: data.dueDate ? new Date(data.dueDate + 'T00:00:00').toISOString() : undefined,
         column: listId || undefined, // Pass the column ID (listId) so it gets assigned to the correct column/status
+        labels: data.labels && data.labels.length > 0 ? data.labels : undefined,
+        tags: data.tags && data.tags.length > 0 ? data.tags : undefined,
       };
+
+      if (data.originalEstimate && Number(data.originalEstimate) > 0) {
+        (payload as any).originalEstimate = Math.round(Number(data.originalEstimate) * 60);
+      }
+
+      if (data.storyPoints && Number(data.storyPoints) > 0) {
+        (payload as any).storyPoints = Number(data.storyPoints);
+      }
 
       await createWorkItemMutation.mutateAsync(payload);
     } catch (error) {
@@ -305,6 +325,93 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
               )}
             />
 
+            {/* Labels */}
+            <FormField
+              control={form.control}
+              name="labels"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Labels</FormLabel>
+                  <FormControl>
+                    <LabelsSelector
+                      boardId={boardId}
+                      selectedLabelIds={field.value || []}
+                      onChange={field.onChange}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {/* Tags */}
+            <FormField
+              control={form.control}
+              name="tags"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tags</FormLabel>
+                  <FormControl>
+                    <TagInput
+                      workspaceId={workspaceId}
+                      selectedTags={field.value || []}
+                      onTagsChange={field.onChange}
+                      placeholder="Add tags to organize this issue..."
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="grid grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="originalEstimate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Original Estimate (hours)</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.25}
+                        placeholder="0"
+                        {...field}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="storyPoints"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Story Points</FormLabel>
+                    <Select onValueChange={(value) => field.onChange(value)} value={String(field.value || '')}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select story points" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {[1, 2, 3, 5, 8, 13].map((sp) => (
+                          <SelectItem key={sp} value={String(sp)}>
+                            {sp}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
             {/* Status dropdown is hidden in scrum board since status is determined by sprint column */}
 
             <FormField
@@ -345,9 +452,9 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                 onChange={(e) => {
                   const files = Array.from(e.target.files || []);
                   const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
-                  
+
                   if (files.length !== validFiles.length) {
-                      alert('Some files were skipped because they exceed the 2MB limit.');
+                    alert('Some files were skipped because they exceed the 2MB limit.');
                   }
 
                   if (validFiles.length > 0) {

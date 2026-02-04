@@ -4,6 +4,7 @@ import { Issue, TaskType } from '@/api/issue/types';
 import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
+import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { priorities, issueTypes } from '@/components/workspace/task/table/data';
@@ -20,12 +21,18 @@ const minutesToHours = (minutes: number): string => {
 interface WorkItemCardProps {
   card: KanbanCard | Issue | TaskType;
   onClick?: () => void;
+  boardId?: string;
 }
 
-const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
+const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId }) => {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
+
+  const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || null);
+  const labelsMap = useMemo(() => {
+    return new Map(boardLabels.map((l) => [l._id, l]));
+  }, [boardLabels]);
 
   // Determine if this is an Issue or KanbanCard
   const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type));
@@ -149,16 +156,33 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick }) => {
       {
         (card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-2">
-            {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
-              <span
-                key={labelId}
-                className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
-              >
-                {labelId}
-              </span>
-            ))}
+            {(card as KanbanCard).labels.slice(0, 3).map((labelId) => {
+              const label = labelsMap.get(labelId);
+              if (label) {
+                return (
+                  <span
+                    key={labelId}
+                    className="inline-flex text-[10px] px-2 py-0.5 rounded text-white font-medium"
+                    style={{ backgroundColor: label.color }}
+                  >
+                    {label.name}
+                  </span>
+                );
+              }
+              return (
+                <span
+                  key={labelId}
+                  className="inline-flex text-[10px] px-2 py-0.5 rounded text-white bg-gray-400 font-medium"
+                >
+                  {/* Fallback to ID if not found, but maybe truncated? Or just 'Unknown' */}
+                  {/* User said "ID show hu rahi", so maybe we show name if available, else ID or just ID */}
+                  {/* Actually user wants name. If we can't find it, we might still show ID or slice it */}
+                  {labelId.slice(0, 6)}...
+                </span>
+              );
+            })}
             {(card as KanbanCard).labels.length > 3 && (
-              <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
+              <span className="inline-flex text-[10px] px-2 py-0.5 rounded text-gray-600 bg-gray-100 font-medium">
                 +{(card as KanbanCard).labels.length - 3}
               </span>
             )}

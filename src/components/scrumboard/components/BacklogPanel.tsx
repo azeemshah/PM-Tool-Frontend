@@ -76,29 +76,29 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
   });
 
   // Get all work items using issueApiService to match All Tasks page
-// Get all work items using issueApiService to match All Tasks page
-const { data: allWorkItems = [], isLoading } = useQuery({
-  queryKey: ['workspace-items', workspaceId, 'backlog'], // keep key unique per workspace & filter
-  queryFn: async () => {
-    if (!workspaceId) return [];
+  // Get all work items using issueApiService to match All Tasks page
+  const { data: allWorkItems = [], isLoading } = useQuery({
+    queryKey: ['workspace-items', workspaceId, 'backlog'], // keep key unique per workspace & filter
+    queryFn: async () => {
+      if (!workspaceId) return [];
 
-    // Call updated backend API
-    const response = await issueApiService.getTasksByWorkspace(workspaceId, {
-      page: 1,           // server-side pagination, first page
-      limit: 1000,       // adjust if you expect more items
-      status: 'Backlog', // server-side filter
-    });
+      // Call updated backend API
+      const response = await issueApiService.getTasksByWorkspace(workspaceId, {
+        page: 1,           // server-side pagination, first page
+        limit: 1000,       // adjust if you expect more items
+        status: 'Backlog', // server-side filter
+      });
 
-    // Extract only the array of tasks, ignoring meta
-    return response.data || [];
-  },
-  enabled: !!workspaceId,
-});
+      // Extract only the array of tasks, ignoring meta
+      return response.data || [];
+    },
+    enabled: !!workspaceId,
+  });
 
 
 
-// data.data contains the tasks
-const backlogItems = allWorkItems || [];
+  // data.data contains the tasks
+  const backlogItems = allWorkItems || [];
 
 
   // Filter by search term
@@ -214,7 +214,7 @@ const backlogItems = allWorkItems || [];
             <div className="space-y-3">
               {filteredItems.map((item: any) => (
                 <div key={item._id} className="relative group">
-                  <WorkItemCard card={item} />
+                  <WorkItemCard card={item} boardId={defaultBoard?._id} />
 
                   {/* Actions Dropdown */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">

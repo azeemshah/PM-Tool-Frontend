@@ -19,6 +19,7 @@ interface SprintColumnProps {
   onDelete?: (columnId: string) => void;
   isDeleting?: boolean;
   onCardClick?: (card: KanbanCard | Issue | TaskType) => void;
+  boardId?: string;
 }
 
 const SprintColumn: React.FC<SprintColumnProps> = ({
@@ -28,6 +29,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
   sprintId,
   onDelete,
   onCardClick,
+  boardId,
 }) => {
   return (
     <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
@@ -92,6 +94,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
                           <WorkItemCard
                             card={workItem}
                             onClick={() => onCardClick && onCardClick(workItem as any)}
+                            boardId={boardId}
                           />
                         </div>
                       )}

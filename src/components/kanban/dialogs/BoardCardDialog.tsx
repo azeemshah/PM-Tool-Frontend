@@ -8,6 +8,7 @@ import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { KanbanCard } from '@/api/kanban/types';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
+import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
 import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
@@ -47,10 +48,14 @@ export function BoardCardDialog() {
   const workspaceId = useWorkspaceId();
   const { boardId: routeBoardId } = useParams<{ boardId: string }>();
 
+  // Get boards to fallback if route/card doesn't provide one
+  const { data: boards = [] } = useGetKanbanBoards(workspaceId);
+  const defaultBoardId = boards.length > 0 ? boards[0]._id : '';
+
   // Determine boardId from route or selected card
-  const boardId = routeBoardId || (selectedCard && 'board' in selectedCard ? 
-    (typeof (selectedCard as any).board === 'object' ? (selectedCard as any).board?._id : (selectedCard as any).board) 
-    : '') || '';
+  const boardId = routeBoardId || (selectedCard && 'board' in selectedCard ?
+    (typeof (selectedCard as any).board === 'object' ? (selectedCard as any).board?._id : (selectedCard as any).board)
+    : '') || defaultBoardId;
 
   const { data: boardLists } = useGetKanbanBoardLists(boardId || null);
   const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || '');
@@ -90,13 +95,13 @@ export function BoardCardDialog() {
         // If we only have ID (or name is missing/undefined), try to look up in members
         if (id) {
           const member = members.find((m: any) => {
-             const u = m.user || m.userId;
-             return (u?._id === id || u === id);
+            const u = m.user || m.userId;
+            return (u?._id === id || u === id);
           });
           if (member) {
-              const u = member.user || member.userId;
-              const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-              return { id, name: n };
+            const u = member.user || member.userId;
+            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+            return { id, name: n };
           }
           // If member not found, return ID as fallback or empty name
           return { id, name: name || 'Unknown' };
@@ -107,13 +112,13 @@ export function BoardCardDialog() {
       if (typeof i.assignee === 'string') {
         const id = i.assignee;
         const member = members.find((m: any) => {
-             const u = m.user || m.userId;
-             return (u?._id === id || u === id);
+          const u = m.user || m.userId;
+          return (u?._id === id || u === id);
         });
         if (member) {
-            const u = member.user || member.userId;
-            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-            return { id, name: n };
+          const u = member.user || member.userId;
+          const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+          return { id, name: n };
         }
         return { id, name: 'Unknown' };
       }
@@ -127,13 +132,13 @@ export function BoardCardDialog() {
         if (id && name) return { id, name };
         if (id) {
           const member = members.find((m: any) => {
-             const u = m.user || m.userId;
-             return (u?._id === id || u === id);
+            const u = m.user || m.userId;
+            return (u?._id === id || u === id);
           });
           if (member) {
-              const u = member.user || member.userId;
-              const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-              return { id, name: n };
+            const u = member.user || member.userId;
+            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+            return { id, name: n };
           }
           return { id, name: name || 'Unknown' };
         }
@@ -141,13 +146,13 @@ export function BoardCardDialog() {
       if (typeof i.assignedTo === 'string') {
         const id = i.assignedTo;
         const member = members.find((m: any) => {
-             const u = m.user || m.userId;
-             return (u?._id === id || u === id);
+          const u = m.user || m.userId;
+          return (u?._id === id || u === id);
         });
         if (member) {
-            const u = member.user || member.userId;
-            const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-            return { id, name: n };
+          const u = member.user || member.userId;
+          const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+          return { id, name: n };
         }
         return { id, name: 'Unknown' };
       }
@@ -165,8 +170,8 @@ export function BoardCardDialog() {
       }
       if (typeof i.reporter === 'string') {
         const member = members.find((m: any) => {
-             const u = m.user || m.userId;
-             return (u?._id === i.reporter || u === i.reporter);
+          const u = m.user || m.userId;
+          return (u?._id === i.reporter || u === i.reporter);
         });
         const u = member?.user || member?.userId;
         const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
@@ -292,15 +297,15 @@ export function BoardCardDialog() {
     const map = new Map<string, any>();
     // Priority 1: Board labels (usually complete)
     boardLabels.forEach((l: any) => map.set(String(l._id || l.id), l));
-    
+
     // Priority 2: Detailed issue labels (populated)
     if (detailedIssue && Array.isArray(detailedIssue.labels)) {
-        detailedIssue.labels.forEach((l: any) => {
-            if (typeof l === 'object' && l) {
-                 const id = String(l._id || l.id);
-                 if (!map.has(id)) map.set(id, l);
-            }
-        });
+      detailedIssue.labels.forEach((l: any) => {
+        if (typeof l === 'object' && l) {
+          const id = String(l._id || l.id);
+          if (!map.has(id)) map.set(id, l);
+        }
+      });
     }
     return map;
   }, [boardLabels, detailedIssue]);
@@ -311,8 +316,8 @@ export function BoardCardDialog() {
     return detailedIssue.tags
       .filter((t: any) => t && typeof t === 'object' && (t._id || t.id) && t.name)
       .map((t: any) => ({
-          _id: String(t._id || t.id),
-          name: t.name
+        _id: String(t._id || t.id),
+        name: t.name
       }));
   }, [detailedIssue]);
 
@@ -485,15 +490,15 @@ export function BoardCardDialog() {
 
   useEffect(() => {
     if (detailedIssue) {
-        // Sync state with detailed issue if available (it has latest data)
-        // Only if not currently editing (to avoid overwriting user changes)
-        if (!isEditing) {
-            setLabels(getLabelIds(detailedIssue.labels));
-            setTags(getTagIds(detailedIssue.tags));
-            setParentId(getParentId(detailedIssue));
-            setAssigneeId(getAssigneeInfo(detailedIssue).id);
-            // Don't overwrite title/desc/status/priority as they might be handled by optimistic UI or context
-        }
+      // Sync state with detailed issue if available (it has latest data)
+      // Only if not currently editing (to avoid overwriting user changes)
+      if (!isEditing) {
+        setLabels(getLabelIds(detailedIssue.labels));
+        setTags(getTagIds(detailedIssue.tags));
+        setParentId(getParentId(detailedIssue));
+        setAssigneeId(getAssigneeInfo(detailedIssue).id);
+        // Don't overwrite title/desc/status/priority as they might be handled by optimistic UI or context
+      }
     }
   }, [detailedIssue, isEditing]);
 
@@ -596,12 +601,12 @@ export function BoardCardDialog() {
 
     // Check for pending tags
     if (tags.some(t => t.startsWith('temp-'))) {
-        toast({
-            title: 'Please wait',
-            description: 'Tags are still being created. Please try again in a moment.',
-            variant: 'default',
-        });
-        return;
+      toast({
+        title: 'Please wait',
+        description: 'Tags are still being created. Please try again in a moment.',
+        variant: 'default',
+      });
+      return;
     }
 
     const normalizedStatus = normalizeStatusForColumn(status);
@@ -834,11 +839,11 @@ export function BoardCardDialog() {
                   labels.map((labelId) => {
                     const label = effectiveLabelsMap.get(labelId);
                     if (!label) {
-                        return (
-                             <Badge key={labelId} variant="outline" className="text-gray-500 border-dashed">
-                                Unknown ({labelId.slice(-4)})
-                             </Badge>
-                        );
+                      return (
+                        <Badge key={labelId} variant="outline" className="text-gray-500 border-dashed">
+                          Unknown ({labelId.slice(-4)})
+                        </Badge>
+                      );
                     }
                     return (
                       <Badge key={labelId} style={{ backgroundColor: label.color }} className="text-white hover:opacity-80">
@@ -859,13 +864,13 @@ export function BoardCardDialog() {
               Tags
             </label>
             <TagInput
-                workspaceId={workspaceId}
-                selectedTags={tags}
-                onTagsChange={isEditing ? setTags : () => {}}
-                disabled={!isEditing}
-                placeholder={isEditing ? "Add tags..." : "No tags"}
-                contentClassName={!isEditing ? "border-none px-0" : ""}
-                preloadedTags={populatedTags}
+              workspaceId={workspaceId}
+              selectedTags={tags}
+              onTagsChange={isEditing ? setTags : () => { }}
+              disabled={!isEditing}
+              placeholder={isEditing ? "Add tags..." : "No tags"}
+              contentClassName={!isEditing ? "border-none px-0" : ""}
+              preloadedTags={populatedTags}
             />
           </div>
 
@@ -1094,8 +1099,8 @@ export function BoardCardDialog() {
                 {reporterId ? (() => {
                   const reporterName = getReporterInfo(issue).name;
                   const member = members.find((m: any) => {
-                      const u = m.user || m.userId;
-                      return (u?._id === reporterId || u === reporterId);
+                    const u = m.user || m.userId;
+                    return (u?._id === reporterId || u === reporterId);
                   });
                   const userObj = member?.user || member?.userId;
                   const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : (reporterName || 'Unknown'));
@@ -1132,11 +1137,11 @@ export function BoardCardDialog() {
                   onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file || !issueIdStr) return;
-                    
+
                     if (file.size > 2 * 1024 * 1024) {
-                        toast({ title: 'Error', description: 'File size must be less than 2MB', variant: 'destructive' });
-                        if (e.target) e.target.value = '';
-                        return;
+                      toast({ title: 'Error', description: 'File size must be less than 2MB', variant: 'destructive' });
+                      if (e.target) e.target.value = '';
+                      return;
                     }
 
                     setIsUploadingAttachment(true);
@@ -1260,17 +1265,17 @@ export function BoardCardDialog() {
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 ⏱️ Time Tracking
               </label>
-              
+
               <div className="space-y-3">
                 {/* Time Tracking Summary */}
                 {issue && (
-                  <TimeTrackingSummary 
+                  <TimeTrackingSummary
                     issue={issue}
                   />
                 )}
 
                 {/* Timer Button */}
-                <TimerButton 
+                <TimerButton
                   issueId={issueIdStr}
                   userId={currentUserId}
                   onTimerStop={() => {
@@ -1284,7 +1289,7 @@ export function BoardCardDialog() {
                     <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
                       Recent Time Logs ({timeLogs.length})
                     </div>
-                    <TimeLogsList 
+                    <TimeLogsList
                       logs={timeLogs}
                       isLoading={loadingTimeLogs}
                       currentUserId={currentUserId}
