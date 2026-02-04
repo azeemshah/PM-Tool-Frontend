@@ -1,6 +1,6 @@
-import { ColumnDef, Row } from "@tanstack/react-table";
+import { ColumnDef, Row, Table } from "@tanstack/react-table";
 import { format } from "date-fns";
-import { Flag, Clock, Zap } from "lucide-react";
+import { Flag, Clock, Zap, MoreHorizontal, Trash2 } from "lucide-react";
 
 import { DataTableColumnHeader } from "./table-column-header";
 import { DataTableRowActions } from "./table-row-actions";
@@ -20,6 +20,13 @@ import {
 import { priorities, statuses, issueTypes } from "./data";
 import { TaskType } from "@/api/issue/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 
 // Helper function to convert minutes to hours
 const minutesToHours = (minutes: number): string => {
@@ -30,7 +37,7 @@ const minutesToHours = (minutes: number): string => {
   return `${hours}h ${mins}m`;
 };
 
-export const getColumns = (): ColumnDef<TaskType>[] => {
+export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[] => {
   const columns: ColumnDef<TaskType>[] = [
     // Selection Checkbox
     {
@@ -286,6 +293,29 @@ export const getColumns = (): ColumnDef<TaskType>[] => {
     // Actions Column
     {
       id: "actions",
+      header: ({ table }) => (
+        <div className="flex justify-end">
+          {table.getFilteredSelectedRowModel().rows.length > 0 && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                  <span className="sr-only">Open menu</span>
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  onClick={onBulkDeleteClick}
+                  className="text-destructive focus:text-destructive cursor-pointer"
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  <span>Delete Issues</span>
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+        </div>
+      ),
       cell: ({ row }) => <DataTableRowActions row={row} />,
     },
   ];

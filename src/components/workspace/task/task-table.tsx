@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { X, Trash2, Zap } from "lucide-react";
+import { X, Trash2 } from "lucide-react";
 import { DataTable } from "./table/table";
 import { getColumns } from "./table/columns";
 import { DataTableFacetedFilter } from "./table/table-faceted-filter";
@@ -58,7 +58,11 @@ const TaskTable: FC = () => {
   setPageNumber(1);
 }, [filters.keyword]);
 
-  const columns = getColumns(); // remove projectId logic
+  const handleBulkDeleteClick = () => {
+    setIsDeleteAlertOpen(true);
+  };
+
+  const columns = getColumns(handleBulkDeleteClick); // remove projectId logic
 
   const { data: kanbanBoards = [] } = useGetKanbanBoards(workspaceId);
   const defaultBoardId =
@@ -156,15 +160,6 @@ const totalCount = data?.meta?.total ?? 0;
 
   return (
     <div className="w-full relative">
-      {selectedTaskIds.length > 0 && (
-        <BulkActionsBar
-          selectedCount={selectedTaskIds.length}
-          onClearSelection={() => setSelectedTaskIds([])}
-          onDelete={handleBulkDelete}
-          isLoading={bulkDeleteMutation.isPending}
-        />
-      )}
-
       {isError && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 mb-4 text-sm text-red-700">
           {(error as any)?.response?.status === 401
@@ -349,31 +344,5 @@ const DataTableFilterToolbar: FC<{
     </div>
   );
 };
-
-// ---- Bulk Actions ----
-const BulkActionsBar: FC<{
-  selectedCount: number;
-  onClearSelection: () => void;
-  onDelete: () => void;
-  isLoading?: boolean;
-}> = ({ selectedCount, onClearSelection, onDelete, isLoading }) => (
-  <div className="mb-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900 dark:bg-amber-950/30">
-    <div className="flex items-center gap-3">
-      <Zap className="h-5 w-5 text-amber-600 dark:text-amber-400" />
-      <span className="text-sm font-medium text-amber-900 dark:text-amber-100">
-        {selectedCount} task{selectedCount !== 1 ? "s" : ""} selected
-      </span>
-    </div>
-    <div className="flex items-center gap-2">
-      <Button size="sm" variant="destructive" onClick={onDelete} disabled={isLoading} className="gap-2">
-        <Trash2 className="h-4 w-4" /> Delete
-      </Button>
-
-      <Button size="sm" variant="ghost" onClick={onClearSelection} disabled={isLoading}>
-        <X className="h-4 w-4" />
-      </Button>
-    </div>
-  </div>
-);
 
 export default TaskTable;
