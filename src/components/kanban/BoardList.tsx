@@ -16,9 +16,10 @@ interface BoardListProps {
   onCardClick: (card: KanbanCard | Issue) => void;
   issues?: Issue[];
   tagsMap?: Map<string, string>;
+  labelsMap?: Map<string, { name: string; color: string }>;
 }
 
-export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap }: BoardListProps) {
+export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, labelsMap }: BoardListProps) {
   const workspaceId = useWorkspaceId();
   const { setIsIssueCreateDialogOpen } = useKanbanAppContext();
 
@@ -224,9 +225,9 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap }: 
                           {...provided.draggableProps}
                           {...provided.dragHandleProps}
                           className={`mb-2 ${snapshot.isDragging ? 'opacity-50' : ''}`}
-                          onClick={() => onCardClick(card as KanbanCard | Issue)}
+                          onClick={() => onCardClick(card)}
                         >
-                          <BoardCard card={card as KanbanCard | Issue} tagsMap={tagsMap} />
+                          <BoardCard card={card} tagsMap={tagsMap} labelsMap={labelsMap} />
                         </div>
                       )}
                     </Draggable>

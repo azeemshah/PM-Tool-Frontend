@@ -4,6 +4,7 @@ import { useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useGetKanbanBoard } from '@/api/kanban/hooks/boards/useGetKanbanBoard';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
+import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
 import { useKanbanReorder } from '@/api/kanban/hooks/order/useKanbanReorder';
 import { useGetKanbanBoardCards } from '@/api/kanban/hooks/cards/useGetKanbanBoardCards';
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
@@ -27,6 +28,7 @@ export function KanbanBoardView() {
   const queryClient = useQueryClient();
   const { data: board, isLoading, error } = useGetKanbanBoard(boardId || '');
   const { data: lists } = useGetKanbanBoardLists(boardId || null);
+  const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || '');
 
   const {
     setSelectedBoard,
@@ -45,6 +47,7 @@ export function KanbanBoardView() {
   const { getAllTagsByWorkspace } = useTags();
   const { data: allTags = [] } = getAllTagsByWorkspace(workspaceId);
   
+  // Map for resolving Tags (legacy/system tags)
   const tagsMap = useMemo(() => {
     const map = new Map<string, string>();
     if (Array.isArray(allTags)) {
@@ -56,6 +59,19 @@ export function KanbanBoardView() {
     }
     return map;
   }, [allTags]);
+
+  // Map for resolving Board Labels
+  const labelsMap = useMemo(() => {
+    const map = new Map<string, { name: string; color: string }>();
+    if (Array.isArray(boardLabels)) {
+      boardLabels.forEach((label: any) => {
+        if (label._id && label.name) {
+          map.set(label._id, { name: label.name, color: label.color || '#3b82f6' });
+        }
+      });
+    }
+    return map;
+  }, [boardLabels]);
 
   // Fetch workspace items (All Tasks) and treat them as issues for the board
   // Fetch workspace items (All Tasks) and treat them as issues for the board
@@ -105,6 +121,7 @@ export function KanbanBoardView() {
         timeSpent: item.timeSpent,
         storyPoints: item.storyPoints,
         tags: item.tags,
+        labels: item.labels,
         assignee: (item.assignedTo && typeof item.assignedTo === 'object' && (item.assignedTo._id || item.assignedTo.id))
           ? {
             _id: item.assignedTo._id || item.assignedTo.id,
@@ -551,6 +568,7 @@ export function KanbanBoardView() {
                                 onCardClick={handleCardClick}
                                 issues={issues}
                                 tagsMap={tagsMap}
+                                labelsMap={labelsMap}
                               />
                             </div>
                           )}
