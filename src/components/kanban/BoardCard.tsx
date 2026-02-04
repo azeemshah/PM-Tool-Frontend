@@ -14,9 +14,10 @@ import React, { useMemo } from 'react';
 interface BoardCardProps {
   card: KanbanCard | Issue;
   tagsMap?: Map<string, string>;
+  labelsMap?: Map<string, { name: string; color: string }>;
 }
 
-export function BoardCard({ card, tagsMap }: BoardCardProps) {
+export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
@@ -36,7 +37,7 @@ export function BoardCard({ card, tagsMap }: BoardCardProps) {
 
   const cardDueDate = issue?.dueDate || (card as any)?.dueDate;
   const cardStatus = issue?.status || (card as any)?.status;
-  const cardTags = issue?.tags || (card as KanbanCard).labels || [];
+  const cardTags = issue?.labels || (card as KanbanCard).labels || [];
 
   const isOverdue = useMemo(() => {
     if (!cardDueDate) return false;
@@ -133,21 +134,24 @@ export function BoardCard({ card, tagsMap }: BoardCardProps) {
         cardTags && cardTags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2 items-center">
              <span className="text-[10px] text-gray-500 font-medium mr-1">Labels:</span>
-            {cardTags.slice(0, 3).map((tag: any) => {
-              // Try to resolve name from object, or tagsMap, or fallback to ID
-              const tagId = typeof tag === 'string' ? tag : (tag._id || tag.id);
-              let labelText = typeof tag === 'string' ? tag : (tag.name || 'Unknown');
-              
-              if (tagsMap && tagsMap.has(tagId)) {
-                  labelText = tagsMap.get(tagId)!;
+            {cardTags.slice(0, 3).map((label: any) => {
+              const labelId = typeof label === 'string' ? label : (label._id || label.id);
+              let labelText = typeof label === 'string' ? label : (label.name || label.label || 'Unknown');
+              let labelColor = '#3b82f6'; // Default blue
+
+              if (labelsMap && labelsMap.has(labelId)) {
+                  const resolved = labelsMap.get(labelId)!;
+                  labelText = resolved.name;
+                  if (resolved.color) labelColor = resolved.color;
               }
 
-              const key = tagId || labelText;
+              const key = labelId || labelText;
               
               return (
                 <span
                   key={key}
-                  className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-white bg-blue-500/80 font-medium truncate max-w-[100px]"
+                  className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-white font-medium truncate max-w-[100px]"
+                  style={{ backgroundColor: labelColor }}
                   title={labelText}
                 >
                   {labelText}
