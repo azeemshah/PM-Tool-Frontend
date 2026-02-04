@@ -183,10 +183,11 @@ export const columns: ColumnDef<Activity>[] = [
       } else if (activity.type === 'create') {
         content = <span className="text-sm">Created: {activity.details?.title || activity.taskId?.title || 'Task'}</span>;
       } else if (activity.type === 'time_logged') {
-        const timeSpent = activity.details?.timeSpent || activity.timeSpentSeconds;
-        const h = Math.floor((timeSpent || 0) / 3600);
-        const m = Math.floor(((timeSpent || 0) % 3600) / 60);
-        const duration = timeSpent ? ` (${h}h ${m}m)` : '';
+        // timeSpent is stored in minutes
+        const timeSpentMinutes = activity.details?.timeSpent || 0;
+        const h = Math.floor(timeSpentMinutes / 60);
+        const m = timeSpentMinutes % 60;
+        const duration = timeSpentMinutes ? ` (${h}h ${m}m)` : '';
         content = <span className="text-sm">{(activity.details?.description || 'Logged time') + duration}</span>;
       } else if (activity.type === 'comment') {
         content = <span className="text-sm">Comment: {activity.details?.description || 'No content'}</span>;
