@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { CalendarIcon, Loader, Trash2, Download } from "lucide-react";
@@ -75,6 +76,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   // Members Dropdown Options
   const membersOptions = members.map((member) => {
@@ -362,19 +364,31 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
             {/* Due Date */}
             <FormField control={form.control} name="dueDate" render={({ field }) => (
-              <FormItem>
+              <FormItem className="flex flex-col">
                 <FormLabel>Due Date (Optional)</FormLabel>
-                <Popover>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <FormControl>
-                      <Button variant="outline">
+                      <Button variant="outline" className={cn(
+                        "w-full pl-3 text-left font-normal border-gray-300 dark:border-border dark:bg-background dark:text-foreground h-[42px] rounded-lg",
+                        !field.value && "text-muted-foreground"
+                      )}>
                         {field.value ? format(field.value, "PPP") : "No due date"}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent>
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
+                  <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                    <Calendar
+                      mode="single"
+                      selected={field.value}
+                      onSelect={(e) => {
+                        field.onChange(e);
+                        setIsCalendarOpen(false);
+                      }}
+                      disabled={(date) => date < new Date("1900-01-01")}
+                      initialFocus
+                    />
                   </PopoverContent>
                 </Popover>
                 <FormMessage />

@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { Loader } from "lucide-react";
+import { Loader, Calendar as CalendarIcon } from "lucide-react";
 import {
   Form,
   FormControl,
@@ -17,6 +18,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
@@ -40,6 +49,8 @@ export default function CreateTaskForm(props: {
   onClose: () => void;
 }) {
   const { workspaceId: propWorkspaceId, onClose } = props;
+
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const queryClient = useQueryClient();
   const workspaceId = propWorkspaceId || useWorkspaceId();
@@ -305,17 +316,43 @@ export default function CreateTaskForm(props: {
                 control={form.control}
                 name="dueDate"
                 render={({ field }) => (
-                  <FormItem>
+                  <FormItem className="flex flex-col">
                     <FormLabel>Due Date</FormLabel>
-                    <FormControl>
-                      <input
-                        type="date"
-                        value={field.value ? field.value.toISOString().split('T')[0] : ''}
-                        onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
-                        disabled={isPending}
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                      />
-                    </FormControl>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
+                      <PopoverTrigger asChild>
+                        <FormControl>
+                          <Button
+                            variant={"outline"}
+                            className={cn(
+                              "w-full pl-3 text-left font-normal border-gray-300 dark:border-border dark:bg-background dark:text-foreground h-[42px] rounded-lg",
+                              !field.value && "text-muted-foreground"
+                            )}
+                            disabled={isPending}
+                          >
+                            {field.value ? (
+                              format(field.value, "PPP")
+                            ) : (
+                              <span>Pick a date</span>
+                            )}
+                            <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                          </Button>
+                        </FormControl>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                        <Calendar
+                          mode="single"
+                          selected={field.value}
+                          onSelect={(e) => {
+                            field.onChange(e);
+                            setIsCalendarOpen(false);
+                          }}
+                          disabled={(date) =>
+                            date < new Date("1900-01-01")
+                          }
+                          initialFocus
+                        />
+                      </PopoverContent>
+                    </Popover>
                     <FormMessage />
                   </FormItem>
                 )}

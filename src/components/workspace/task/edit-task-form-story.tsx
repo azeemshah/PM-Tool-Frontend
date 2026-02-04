@@ -78,6 +78,7 @@ export default function EditTaskForm(props: {
   });
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
@@ -355,7 +356,7 @@ export default function EditTaskForm(props: {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Due Date</FormLabel>
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -374,11 +375,14 @@ export default function EditTaskForm(props: {
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[100]" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(e) => {
+                            field.onChange(e);
+                            setIsCalendarOpen(false);
+                          }}
                           disabled={
                             (date) =>
                               date >

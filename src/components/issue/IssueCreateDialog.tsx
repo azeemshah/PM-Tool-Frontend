@@ -18,7 +18,15 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Loader2, Trash2, Download } from 'lucide-react';
+import { Loader2, Trash2, Download, Calendar as CalendarIcon } from 'lucide-react';
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { format } from "date-fns";
+import { cn } from "@/lib/utils";
 import { IssueTypeSelector } from './IssueTypeSelector';
 import { ParentSelector } from './ParentSelector';
 import { IssueType, IssuePriority, ItemStatus, ItemType, ItemPriority, CreateItemDto, TaskType } from '@/api/issue/types';
@@ -77,6 +85,7 @@ export function IssueCreateDialog({
     const [attachments, setAttachments] = useState<LocalAttachment[]>([]);
     const [originalEstimateHours, setOriginalEstimateHours] = useState<number | ''>('');
     const [storyPoints, setStoryPoints] = useState<number | ''>('');
+    const [isCalendarOpen, setIsCalendarOpen] = useState(false);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
@@ -554,15 +563,41 @@ export function IssueCreateDialog({
                     </div>
 
                     {/* Due Date */}
-                    <div className="space-y-2">
+                    <div className="space-y-2 flex flex-col">
                         <label className="text-sm font-medium">Due Date</label>
-                        <input
-                            type="date"
-                            value={dueDate ? dueDate.toISOString().split('T')[0] : ''}
-                            onChange={(e) => setDueDate(e.target.value ? new Date(e.target.value + 'T00:00:00') : undefined)}
-                            disabled={isLoading}
-                            className="w-full px-3 py-2 border border-gray-300 dark:border-border dark:bg-background dark:text-foreground rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-                        />
+                        <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                        "w-full pl-3 text-left font-normal border-gray-300 dark:border-border dark:bg-background dark:text-foreground h-[42px] rounded-lg",
+                                        !dueDate && "text-muted-foreground"
+                                    )}
+                                    disabled={isLoading}
+                                >
+                                    {dueDate ? (
+                                        format(dueDate, "PPP")
+                                    ) : (
+                                        <span>Pick a date</span>
+                                    )}
+                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                                <Calendar
+                                    mode="single"
+                                    selected={dueDate}
+                                    onSelect={(e) => {
+                                        setDueDate(e);
+                                        setIsCalendarOpen(false);
+                                    }}
+                                    disabled={(date) =>
+                                        date < new Date("1900-01-01")
+                                    }
+                                    initialFocus
+                                />
+                            </PopoverContent>
+                        </Popover>
                     </div>
 
                     {/* Status - Only shown for Kanban boards */}

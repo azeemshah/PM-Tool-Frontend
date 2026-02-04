@@ -660,6 +660,8 @@ export function BoardCardDialog() {
             title: 'Success',
             description: 'Issue updated successfully',
           });
+          queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+
           if (workspaceId) {
             const sprintKey = ['workspace-items', workspaceId];
             const mappedSprintStatus = mapStatusForSprint(updatedIssue.status || '');
