@@ -19,6 +19,7 @@ import { DateRange } from "react-day-picker";
 export default function History() {
   const workspaceId = useWorkspaceId();
   const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
   const [type, setType] = useState<string[]>([]);
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
@@ -34,7 +35,7 @@ export default function History() {
     from: dateRange?.from?.toISOString(),
     to: dateRange?.to?.toISOString(),
     page,
-    limit: 20,
+    limit: pageSize,
     sortOrder,
   });
 
@@ -72,9 +73,13 @@ export default function History() {
           pagination={{
             totalCount: data?.total || 0,
             pageNumber: page,
-            pageSize: 20,
+            pageSize: pageSize,
           }}
           onPageChange={setPage}
+          onPageSizeChange={(size) => {
+            setPageSize(size);
+            setPage(1); // Reset to first page when page size changes
+          }}
           filtersToolbar={
             <div className="flex flex-1 items-center space-x-2">
               <DataTableFacetedFilter
