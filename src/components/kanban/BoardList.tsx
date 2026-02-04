@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { Droppable, Draggable } from '@hello-pangea/dnd';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Circle } from 'lucide-react';
 import { KanbanList, KanbanCard } from '@/api/kanban/types';
 import { Issue } from '@/api/issue/types';
 import { useDeleteKanbanBoardList } from '@/api/kanban/hooks/lists/useDeleteKanbanBoardList';
@@ -9,6 +9,11 @@ import { Button } from '@/components/ui/button';
 import { BoardCard } from './BoardCard';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useGetKanbanBoardCards } from '@/api/kanban/hooks/cards/useGetKanbanBoardCards';
+import { badgeVariants } from '@/components/ui/badge';
+import { statuses } from '@/components/workspace/task/table/data';
+import { TaskStatusEnum, TaskStatusEnumType } from '@/constant';
+import { formatStatusToEnum } from '@/lib/helper';
+import { cn } from '@/lib/utils';
 
 interface BoardListProps {
   list: KanbanList;
@@ -176,24 +181,35 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, la
   return (
     <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
-      <div className="p-3 border-b bg-gray-50 dark:bg-muted/50 dark:border-border flex items-center justify-between">
-        <div className="flex-1">
-          {(() => {
-            const rawName = (list && (list.name || (list as any).label || ''));
-            const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
-            return <h3 className="font-semibold text-sm text-gray-900 dark:text-foreground">{displayName}</h3>;
-          })()}
-          <p className="text-xs text-gray-500 dark:text-muted-foreground mt-1">{cardsForThisList.length || 0} items</p>
-        </div>
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => deleteList({ boardId, listId: list._id })}
-          className="text-red-500 hover:text-red-700"
-        >
-          <Trash2 size={14} />
-        </Button>
-      </div>
+      {(() => {
+        const rawName = (list && (list.name || (list as any).label || ''));
+        const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
+        const statusKey = formatStatusToEnum(displayName) as TaskStatusEnumType;
+        const statusConfig = statuses.find(s => s.value.toLowerCase() === displayName.toLowerCase());
+        const StatusIcon = statusConfig?.icon || Circle;
+        const variant = TaskStatusEnum[statusKey] || 'secondary';
+
+        return (
+          <div className={cn(
+            badgeVariants({ variant }),
+            "p-3 border-b flex items-center justify-between rounded-t-lg rounded-b-none border-x-0 border-t-0"
+          )}>
+            <div className="flex items-center gap-2">
+              <StatusIcon className="h-4 w-4" />
+              <h3 className="font-semibold text-sm capitalize">{displayName}</h3>
+              <span className="ml-2 text-xs opacity-80 bg-white/20 px-1.5 py-0.5 rounded-full">{cardsForThisList.length || 0}</span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => deleteList({ boardId, listId: list._id })}
+              className="text-inherit hover:text-inherit hover:bg-black/10 h-8 w-8 p-0"
+            >
+              <Trash2 size={14} />
+            </Button>
+          </div>
+        );
+      })()}
 
       {/* Cards */}
       <div className="flex-1 overflow-y-auto scrollbar">
@@ -206,9 +222,8 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, la
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className={`p-3 space-y-2 min-h-[100px] transition-colors ${
-                snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-transparent'
-              }`}
+              className={`p-3 space-y-2 min-h-[100px] transition-colors ${snapshot.isDraggingOver ? 'bg-blue-50 dark:bg-blue-900/20' : 'bg-white dark:bg-transparent'
+                }`}
             >
               {cardsForThisList.length > 0 ? (
                 cardsForThisList.map((card: KanbanCard | Issue, index: number) => {

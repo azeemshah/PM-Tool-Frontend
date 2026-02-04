@@ -69,11 +69,7 @@ export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
 
   if (issue) {
     const t = String(issue.type || '').toLowerCase();
-    if (['story', 'task', 'bug'].includes(t)) {
-      if (meta.epicTitle) {
-        hierarchyLabel = `Epic: ${meta.epicTitle}`;
-      }
-    } else if (t === 'subtask') {
+    if (t === 'subtask') {
       if (meta.parentTitle) {
         const parentType = meta.parentType ? String(meta.parentType).toLowerCase() : '';
         const prefix =
@@ -155,20 +151,20 @@ export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
       {
         cardTags && cardTags.length > 0 && (
           <div className="flex flex-wrap gap-1 mb-2 items-center">
-             <span className="text-[10px] text-gray-500 font-medium mr-1">Labels:</span>
+            <span className="text-[10px] text-gray-500 font-medium mr-1">Labels:</span>
             {cardTags.slice(0, 3).map((label: any) => {
               const labelId = typeof label === 'string' ? label : (label._id || label.id);
               let labelText = typeof label === 'string' ? label : (label.name || label.label || 'Unknown');
               let labelColor = '#3b82f6'; // Default blue
 
               if (labelsMap && labelsMap.has(labelId)) {
-                  const resolved = labelsMap.get(labelId)!;
-                  labelText = resolved.name;
-                  if (resolved.color) labelColor = resolved.color;
+                const resolved = labelsMap.get(labelId)!;
+                labelText = resolved.name;
+                if (resolved.color) labelColor = resolved.color;
               }
 
               const key = labelId || labelText;
-              
+
               return (
                 <span
                   key={key}
@@ -190,9 +186,16 @@ export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
       }
 
       {/* Title */}
-      <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 mb-3">
-        {cardTitle}
-      </h4>
+      <div className="mb-3">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 inline">
+          {cardTitle}
+        </h4>
+        {meta.epicTitle && (
+          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+            {meta.epicTitle}
+          </span>
+        )}
+      </div>
 
       {
         hierarchyLabel && (

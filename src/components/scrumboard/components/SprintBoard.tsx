@@ -78,23 +78,23 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     },
   });
 
-const { data: allWorkItemsData } = useQuery({
-  queryKey: ['workspace-items', workspaceId],
-  queryFn: async () => {
-    if (!workspaceId) return [];
-    const response = await issueApiService.getTasksByWorkspace(workspaceId, {
-      page: 1,
-      limit: 1000,
-    });
+  const { data: allWorkItemsData } = useQuery({
+    queryKey: ['workspace-items', workspaceId],
+    queryFn: async () => {
+      if (!workspaceId) return [];
+      const response = await issueApiService.getTasksByWorkspace(workspaceId, {
+        page: 1,
+        limit: 1000,
+      });
 
-    // Always return the array
-    return response?.data ?? [];
-  },
-  enabled: !!workspaceId,
-});
+      // Always return the array
+      return response?.data ?? [];
+    },
+    enabled: !!workspaceId,
+  });
 
-// Make sure this is always an array
-const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsData : [];
+  // Make sure this is always an array
+  const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsData : [];
 
 
 
@@ -152,7 +152,7 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
   const sprintTimeStats = useMemo(() => {
     const totalTimeSpent = sprintWorkItems.reduce((sum, item: TaskType) => sum + ((item as any)?.timeSpent || 0), 0);
     const totalStoryPoints = sprintWorkItems.reduce((sum, item: TaskType) => sum + ((item as any)?.storyPoints || 0), 0);
-    
+
     return {
       totalTimeSpent,
       totalStoryPointsEstimate: totalStoryPoints,
@@ -362,36 +362,7 @@ const allWorkItems: TaskType[] = Array.isArray(allWorkItemsData) ? allWorkItemsD
           <Progress value={stats.completionPercentage} className="h-2" />
         </div>
 
-        {/* Time Tracking Stats */}
-        {sprintTimeStats.totalTimeSpent > 0 && (
-          <div className="mt-4 grid grid-cols-3 gap-4">
-            <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <Clock className="w-4 h-4 text-blue-600 dark:text-blue-400" />
-                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Time Logged</span>
-              </div>
-              <div className="text-lg font-bold text-blue-700 dark:text-blue-400">
-                {minutesToHours(sprintTimeStats.totalTimeSpent)}
-              </div>
-            </div>
-            <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Story Points</span>
-              </div>
-              <div className="text-lg font-bold text-purple-700 dark:text-purple-400">
-                {sprintTimeStats.totalStoryPointsEstimate || 0}
-              </div>
-            </div>
-            <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
-              <div className="flex items-center gap-2 mb-1">
-                <span className="text-xs font-medium text-gray-600 dark:text-muted-foreground">Items</span>
-              </div>
-              <div className="text-lg font-bold text-amber-700 dark:text-amber-400">
-                {stats.completedWorkItems}/{stats.totalWorkItems}
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Stats removed */}
 
         {/* Add Column Input */}
         {isAddingColumn && (

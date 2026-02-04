@@ -20,6 +20,8 @@ const badgeVariants = cva(
         [TaskStatusEnum.TO_DO]: "  bg-[#DEEBFF] text-[#0052CC]",
         [TaskStatusEnum.IN_PROGRESS]: "bg-yellow-100 text-yellow-600",
         [TaskStatusEnum.IN_REVIEW]: "bg-purple-100 text-purple-500",
+        [TaskStatusEnum.BLOCKED]: "bg-red-100 text-red-600",
+        [TaskStatusEnum.CLOSED]: "bg-gray-100 text-gray-500",
         [TaskStatusEnum.DONE]: "bg-green-100 text-green-600",
         [TaskPriorityEnum.HIGH]: "bg-orange-100 text-orange-600",
         [TaskPriorityEnum.MEDIUM]: "bg-yellow-100 text-yellow-600",
@@ -34,7 +36,7 @@ const badgeVariants = cva(
 
 export interface BadgeProps
   extends React.HTMLAttributes<HTMLDivElement>,
-    VariantProps<typeof badgeVariants> {}
+  VariantProps<typeof badgeVariants> { }
 
 function Badge({ className, variant, ...props }: BadgeProps) {
   return (
