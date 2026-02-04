@@ -13,6 +13,7 @@ import React, { useMemo } from 'react';
 
 interface BoardCardProps {
   card: KanbanCard | Issue;
+  tagsMap?: Map<string, string>;
 }
 
 const minutesToHours = (minutes: number): string => {
@@ -21,7 +22,7 @@ const minutesToHours = (minutes: number): string => {
   return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
 };
 
-export function BoardCard({ card }: BoardCardProps) {
+export function BoardCard({ card, tagsMap }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
@@ -41,6 +42,7 @@ export function BoardCard({ card }: BoardCardProps) {
 
   const cardDueDate = issue?.dueDate || (card as any)?.dueDate;
   const cardStatus = issue?.status || (card as any)?.status;
+  const cardTags = issue?.tags || (card as KanbanCard).labels || [];
 
   const isOverdue = useMemo(() => {
     if (!cardDueDate) return false;
@@ -150,19 +152,33 @@ export function BoardCard({ card }: BoardCardProps) {
 
       {/* Labels */}
       {
-        (card as KanbanCard).labels && (card as KanbanCard).labels.length > 0 && (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {(card as KanbanCard).labels.slice(0, 3).map((labelId) => (
-              <span
-                key={labelId}
-                className="inline-flex text-sm px-3 py-1 rounded text-white bg-blue-500"
-              >
-                {labelId}
-              </span>
-            ))}
-            {(card as KanbanCard).labels.length > 3 && (
-              <span className="inline-flex text-sm px-3 py-1 rounded text-gray-600 bg-gray-100">
-                +{(card as KanbanCard).labels.length - 3}
+        cardTags && cardTags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2 items-center">
+             <span className="text-[10px] text-gray-500 font-medium mr-1">Labels:</span>
+            {cardTags.slice(0, 3).map((tag: any) => {
+              // Try to resolve name from object, or tagsMap, or fallback to ID
+              const tagId = typeof tag === 'string' ? tag : (tag._id || tag.id);
+              let labelText = typeof tag === 'string' ? tag : (tag.name || 'Unknown');
+              
+              if (tagsMap && tagsMap.has(tagId)) {
+                  labelText = tagsMap.get(tagId)!;
+              }
+
+              const key = tagId || labelText;
+              
+              return (
+                <span
+                  key={key}
+                  className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-white bg-blue-500/80 font-medium truncate max-w-[100px]"
+                  title={labelText}
+                >
+                  {labelText}
+                </span>
+              );
+            })}
+            {cardTags.length > 3 && (
+              <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300">
+                +{cardTags.length - 3}
               </span>
             )}
           </div>

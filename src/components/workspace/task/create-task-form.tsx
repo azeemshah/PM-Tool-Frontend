@@ -18,6 +18,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
+import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../../ui/textarea";
@@ -31,6 +33,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { createTaskMutationFn, createTaskWithoutEpicMutationFn } from "@/lib/api";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import { TagInput } from '@/components/tag/TagInput';
 
 export default function CreateTaskForm(props: {
   workspaceId?: string;
@@ -42,6 +45,8 @@ export default function CreateTaskForm(props: {
   const workspaceId = propWorkspaceId || useWorkspaceId();
 
   const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId);
+  const { data: boards = [] } = useGetKanbanBoards(workspaceId);
+  const effectiveBoardId = (Array.isArray(boards) && boards.length > 0 ? boards[0]._id : undefined);
 
   // Mutation for creating task in workspace
   const { mutate: mutateIndependentTask, isPending: isIndependentTaskPending } = useMutation({
@@ -93,6 +98,8 @@ export default function CreateTaskForm(props: {
       message: "Reporter is required",
     }),
     dueDate: z.date().optional(),
+    labels: z.array(z.string()).optional(),
+    tags: z.array(z.string()).optional(),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -102,11 +109,13 @@ export default function CreateTaskForm(props: {
       description: "",
       dueDate: undefined,
       reporter: members.length > 0 ? members[0].userId._id : "",
+      labels: [],
+      tags: [],
     },
   });
 
   const STATUSES = ["todo", "in_progress", "in_review", "done"];
-  const PRIORITIES = ["lowest", "low", "medium", "high", "highest"];
+  const PRIORITIES = ["low", "medium", "high"];
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
@@ -119,6 +128,8 @@ export default function CreateTaskForm(props: {
       assignedTo: values.assignedTo,
       reporter: values.reporter,
       dueDate: values.dueDate ? values.dueDate.toISOString() : undefined,
+      labels: values.labels,
+      tags: values.tags,
     };
 
     // Create task in workspace
@@ -384,6 +395,50 @@ export default function CreateTaskForm(props: {
                         </div>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+
+            {/* Labels */}
+            {effectiveBoardId && (
+              <div>
+                <FormField
+                  control={form.control}
+                  name="labels"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Labels</FormLabel>
+                      <FormControl>
+                        <LabelsSelector
+                          boardId={effectiveBoardId}
+                          selectedLabelIds={field.value || []}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            )}
+
+            {/* Tags */}
+            <div>
+              <FormField
+                control={form.control}
+                name="tags"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tags</FormLabel>
+                    <FormControl>
+                      <TagInput
+                        workspaceId={workspaceId}
+                        selectedTags={field.value || []}
+                        onTagsChange={field.onChange}
+                      />
+                    </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}

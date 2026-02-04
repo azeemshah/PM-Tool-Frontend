@@ -185,7 +185,7 @@ export const KanbanApiService = {
 	// ==================== LABELS ====================
 
 	async getKanbanBoardLabels(boardId: string): Promise<KanbanLabel[]> {
-		const response = await API.get(`${KANBAN_ENDPOINT}/boards/${boardId}/labels`);
+		const response = await API.get(`${KANBAN_ENDPOINT}/labels/board/${boardId}`);
 		return response.data.data || response.data;
 	},
 
@@ -193,7 +193,7 @@ export const KanbanApiService = {
 		boardId: string,
 		data: CreateLabelDTO
 	): Promise<KanbanLabel> {
-		const response = await API.post(`${KANBAN_ENDPOINT}/boards/${boardId}/labels`, data);
+		const response = await API.post(`${KANBAN_ENDPOINT}/labels`, data);
 		return response.data.data || response.data;
 	},
 
@@ -202,7 +202,7 @@ export const KanbanApiService = {
 		labelId: string,
 		data: UpdateLabelDTO
 	): Promise<KanbanLabel> {
-		const response = await API.put(`${KANBAN_ENDPOINT}/boards/${boardId}/labels/${labelId}`, data);
+		const response = await API.patch(`${KANBAN_ENDPOINT}/labels/${labelId}`, data);
 		return response.data.data || response.data;
 	},
 
@@ -210,7 +210,7 @@ export const KanbanApiService = {
 		boardId: string,
 		labelId: string
 	): Promise<void> {
-		await API.delete(`${KANBAN_ENDPOINT}/boards/${boardId}/labels/${labelId}`);
+		await API.delete(`${KANBAN_ENDPOINT}/labels/${labelId}`);
 	},
 
 	// ==================== MEMBERS ====================

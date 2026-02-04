@@ -70,16 +70,20 @@ export interface CreateItemDto {
 	assignedTo?: string;   // MongoDB ObjectId
 	reporter?: string;     // MongoDB ObjectId
 	dueDate?: string;      // ISO date string
+	labels?: string[];
+	tags?: string[];
+	column?: string;       // MongoDB ObjectId
+	parent?: string;       // MongoDB ObjectId
 	workspace: string;     // MongoDB ObjectId
 	column?: string;       // MongoDB ObjectId
 	parent?: string;       // MongoDB ObjectId
-  originalEstimate?: number; // minutes
-  remainingEstimate?: number; // minutes
-  storyPoints?: number;
+	labels?: string[];
+	tags?: string[];
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
 	issueId: ReactNode;
+	tags?: string[];
 	_id: string;
 	projectId: string;
 	type: IssueType;
@@ -175,6 +179,8 @@ export interface CreateEpicDTO {
 	type: IssueType;
 	status?: ItemStatus;
 	dueDate?: string;
+	labels?: string[];
+	tags?: string[];
 }
 
 // Create Story DTO
@@ -184,6 +190,7 @@ export interface CreateStoryDTO {
 	description?: string;
 	reporter: string;
 	priority?: IssuePriority;
+	tags?: string[];
 	// epicId comes from URL: POST /issues/epic/:epicId/story
 }
 
@@ -194,6 +201,7 @@ export interface CreateTaskDTO {
 	description?: string;
 	assignedTo: string;
 	priority?: IssuePriority;
+	tags?: string[];
 	// epicId comes from URL: POST /issues/epic/:epicId/task
 }
 
@@ -204,6 +212,7 @@ export interface CreateBugDTO {
 	description?: string;
 	reporter: string;
 	priority?: IssuePriority;
+	tags?: string[];
 	// epicId comes from URL: POST /issues/epic/:epicId/bug
 }
 
@@ -214,6 +223,7 @@ export interface CreateSubtaskDTO {
 	description?: string;
 	reporter: string;
 	priority?: IssuePriority;
+	tags?: string[];
 	// parentIssueId comes from URL: POST /issues/:parentId/subtask
 }
 
@@ -226,6 +236,7 @@ export interface UpdateIssueDTO {
 	assignee?: string;
 	assignedTo?: string | null;
 	labels?: string[];
+	tags?: string[];
 	dueDate?: string | null;
 	reporter?: string;
 	parent?: string | null;

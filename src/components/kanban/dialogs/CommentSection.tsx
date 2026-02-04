@@ -37,6 +37,7 @@ interface CommentSectionProps {
 
 const buildFullUrl = (url: string) => {
   const base = (API as any)?.defaults?.baseURL || '';
+  if (!url) return '';
   if (url.startsWith('http')) return url;
   try {
     return new URL(url, base).toString();
@@ -78,6 +79,7 @@ const CommentItem = ({
   const [replyAttachments, setReplyAttachments] = useState<{ fileName: string; fileUrl: string; fileType?: string }[]>([]);
   const [isReplyUploading, setIsReplyUploading] = useState(false);
   const [mentionOpen, setMentionOpen] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const replyFileInputRef = React.useRef<HTMLInputElement>(null);
 
   const insertMention = (memberName: string) => {
@@ -86,8 +88,15 @@ const CommentItem = ({
   };
 
   const handleReplyFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMsg(null);
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        setErrorMsg('File size must be less than 2MB');
+        if (replyFileInputRef.current) replyFileInputRef.current.value = '';
+        return;
+      }
       setIsReplyUploading(true);
       try {
         const result = await commentApiService.uploadAttachment(workItemId, file);
@@ -202,6 +211,9 @@ const CommentItem = ({
               className="min-h-[60px] text-sm bg-white dark:bg-muted/30"
               autoFocus
             />
+            {errorMsg && (
+              <div className="text-xs text-red-500 mt-2">{errorMsg}</div>
+            )}
             {/* Reply Attachment Preview */}
             {replyAttachments.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -272,7 +284,7 @@ const CommentItem = ({
                       variant="ghost" 
                       size="sm" 
                       className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100 h-8 px-2" 
-                      title="Attach file"
+                      title="Attach file (Max 2MB)"
                       onClick={() => replyFileInputRef.current?.click()}
                       disabled={isReplyUploading}
                   >
@@ -343,13 +355,21 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
   const [mentionOpen, setMentionOpen] = useState(false);
   const [attachments, setAttachments] = useState<{ fileName: string; fileUrl: string; fileType?: string }[]>([]);
   const [isUploading, setIsUploading] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
 
   const currentUserId = user?.id || user?._id;
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setErrorMsg(null);
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        alert('File size must be less than 2MB');
+        setErrorMsg('File size must be less than 2MB');
+        if (fileInputRef.current) fileInputRef.current.value = '';
+        return;
+      }
       setIsUploading(true);
       try {
         const result = await commentApiService.uploadAttachment(workItemId, file);
@@ -516,6 +536,9 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
             className="min-h-[80px] resize-y bg-white dark:bg-muted/30"
           />
           {/* Attachment Preview */}
+          {errorMsg && (
+              <div className="text-xs text-red-500 mt-2">{errorMsg}</div>
+          )}
           {attachments.length > 0 && (
             <div className="flex flex-wrap gap-2 mt-2">
                 {attachments.map((att, index) => (
@@ -585,7 +608,7 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
                 variant="ghost" 
                 size="sm" 
                 className="text-gray-500 hover:text-gray-900 dark:hover:text-gray-100" 
-                title="Attach file"
+                title="Attach file (Max 2MB)"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
               >

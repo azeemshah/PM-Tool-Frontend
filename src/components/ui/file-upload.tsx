@@ -25,6 +25,15 @@ export default function FileUpload({ type, id, onUploaded }: Props) {
       });
       return;
     }
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: 'Error',
+        description: 'File size must be less than 2MB',
+        variant: 'destructive',
+      });
+      if (e.target) e.target.value = '';
+      return;
+    }
     setUploading(true);
     try {
       let res: any;

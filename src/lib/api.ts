@@ -462,11 +462,14 @@ export const createTaskWithoutEpicMutationFn = async ({
     status?: string;
     assignedTo?: string;
     dueDate?: string;
+    labels?: string[];
+    tags?: string[];
   };
 }) => {
-  const response = await API.post(`/issues/task`, {
+  const response = await API.post(`/items/create`, {
     ...data,
-    workspaceId,
+    workspace: workspaceId,
+    type: 'task',
   });
   return response.data;
 };
@@ -956,10 +959,10 @@ export const updateIssueMutationFn = async ({
 
 /**
  * Delete an Issue
- * DELETE /issues/:id
+ * DELETE /items/delete/:id
  */
 export const deleteIssueMutationFn = async (issueId: string) => {
-  const response = await API.delete(`/issues/${issueId}`);
+  const response = await API.delete(`/items/delete/${issueId}`);
   return response.data;
 };
 

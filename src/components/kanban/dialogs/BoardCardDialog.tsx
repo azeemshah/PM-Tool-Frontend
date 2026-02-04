@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams } from 'react-router-dom';
 import { useQueryClient, useQuery } from '@tanstack/react-query';
 import { X, Edit2, Trash2 } from 'lucide-react';
@@ -7,6 +7,7 @@ import { useUpdateIssue, useDeleteIssue } from '@/api/issue/hooks';
 import { Issue, IssuePriority, IssueStatus } from '@/api/issue/types';
 import { KanbanCard } from '@/api/kanban/types';
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
+import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
 import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
@@ -33,6 +34,8 @@ import { CommentSection } from './CommentSection';
 import { TimerButton } from '@/components/time-tracking/TimerButton';
 import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
 import { TimeTrackingSummary } from '@/components/time-tracking/TimeTrackingSummary';
+import { LabelsSelector } from './LabelsSelector';
+import { TagInput } from '@/components/tag/TagInput';
 
 export function BoardCardDialog() {
   const {
@@ -42,8 +45,16 @@ export function BoardCardDialog() {
     setSelectedCard,
   } = useKanbanAppContext();
   const workspaceId = useWorkspaceId();
-  const { boardId } = useParams<{ boardId: string }>();
+  const { boardId: routeBoardId } = useParams<{ boardId: string }>();
+
+  // Determine boardId from route or selected card
+  const boardId = routeBoardId || (selectedCard && 'board' in selectedCard ? 
+    (typeof (selectedCard as any).board === 'object' ? (selectedCard as any).board?._id : (selectedCard as any).board) 
+    : '') || '';
+
   const { data: boardLists } = useGetKanbanBoardLists(boardId || null);
+  const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || '');
+
   const queryClient = useQueryClient();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const { toast } = useToast();
@@ -178,9 +189,48 @@ export function BoardCardDialog() {
   const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
   const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
-  const [parentId, setParentId] = useState<string>(
-    issue?.type === 'subtask' ? (issue?.parentIssueId || '') : (issue?.epicId || '')
-  );
+  const getParentId = (item: any) => {
+    if (!item) return '';
+    if (item.parentIssueId) return item.parentIssueId;
+    if (item.epicId) return item.epicId;
+    if (item.parent) {
+      if (typeof item.parent === 'string') return item.parent;
+      if (typeof item.parent === 'object') return item.parent._id || item.parent.id || '';
+    }
+    return '';
+  };
+
+  const getLabelIds = (list: any) => {
+    if (!Array.isArray(list)) return [];
+    return list.map((l: any) => {
+      if (!l) return null;
+      if (typeof l === 'string') return l;
+      // Handle object with _id or id, ensuring it's a string
+      if (typeof l === 'object') {
+        const id = l._id || l.id;
+        return id ? String(id) : null;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  const getTagIds = (list: any) => {
+    if (!Array.isArray(list)) return [];
+    return list.map((l: any) => {
+      if (!l) return null;
+      if (typeof l === 'string') return l;
+      // Handle object with _id or id, ensuring it's a string
+      if (typeof l === 'object') {
+        const id = l._id || l.id;
+        return id ? String(id) : null;
+      }
+      return null;
+    }).filter(Boolean);
+  };
+
+  const [parentId, setParentId] = useState<string>(getParentId(issue));
+  const [labels, setLabels] = useState<string[]>(getLabelIds(issue?.labels));
+  const [tags, setTags] = useState<string[]>(getTagIds(issue?.tags));
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
   const [timeLogs, setTimeLogs] = useState<any[]>([]);
@@ -223,7 +273,9 @@ export function BoardCardDialog() {
       setAssigneeId(getAssigneeInfo(issue).id);
       setReporterId(getReporterInfo(issue).id);
       setDueDate(issue.dueDate || null);
-      setParentId(issue.type === 'subtask' ? (issue.parentIssueId || '') : (issue.epicId || ''));
+      setParentId(getParentId(issue));
+      setLabels(getLabelIds(issue.labels));
+      setTags(getTagIds(issue.tags));
     }
   }, [issue]);
 
@@ -235,6 +287,35 @@ export function BoardCardDialog() {
     staleTime: 60 * 1000,
   });
 
+  // Memoize effective labels map (merging board labels and populated issue labels)
+  const effectiveLabelsMap = useMemo(() => {
+    const map = new Map<string, any>();
+    // Priority 1: Board labels (usually complete)
+    boardLabels.forEach((l: any) => map.set(String(l._id || l.id), l));
+    
+    // Priority 2: Detailed issue labels (populated)
+    if (detailedIssue && Array.isArray(detailedIssue.labels)) {
+        detailedIssue.labels.forEach((l: any) => {
+            if (typeof l === 'object' && l) {
+                 const id = String(l._id || l.id);
+                 if (!map.has(id)) map.set(id, l);
+            }
+        });
+    }
+    return map;
+  }, [boardLabels, detailedIssue]);
+
+  // Memoize populated tags for preloading
+  const populatedTags = useMemo(() => {
+    if (!detailedIssue?.tags || !Array.isArray(detailedIssue.tags)) return [];
+    return detailedIssue.tags
+      .filter((t: any) => t && typeof t === 'object' && (t._id || t.id) && t.name)
+      .map((t: any) => ({
+          _id: String(t._id || t.id),
+          name: t.name
+      }));
+  }, [detailedIssue]);
+
   // Sync state with detailedIssue when it loads
   useEffect(() => {
     if (detailedIssue) {
@@ -245,11 +326,9 @@ export function BoardCardDialog() {
       setAssigneeId(getAssigneeInfo(detailedIssue).id);
       setReporterId(getReporterInfo(detailedIssue).id);
       setDueDate(detailedIssue.dueDate || null);
-      setParentId(
-        (detailedIssue as any).type === 'subtask'
-          ? ((detailedIssue as any).parentIssueId || '')
-          : ((detailedIssue as any).epicId || '')
-      );
+      setParentId(getParentId(detailedIssue));
+      setLabels(getLabelIds(detailedIssue.labels));
+      setTags(getTagIds(detailedIssue.tags));
     }
   }, [detailedIssue]);
 
@@ -270,7 +349,24 @@ export function BoardCardDialog() {
     loadTimeLogs();
   }, [issueIdStr]);
 
-  const parentIssueIdStr = issue?.parentIssueId ? String(issue.parentIssueId) : '';
+  // Debug logging for data flow
+  useEffect(() => {
+    if (isCardDialogOpen && issue) {
+      console.log('BoardCardDialog Debug:', {
+        issueId: issue._id,
+        detailedIssueId: detailedIssue?._id,
+        labelsState: labels,
+        tagsState: tags,
+        boardLabelsCount: boardLabels.length,
+        detailedIssueLabels: detailedIssue?.labels,
+        detailedIssueTags: detailedIssue?.tags,
+        effectiveLabelsMapSize: effectiveLabelsMap.size,
+        populatedTagsCount: populatedTags.length
+      });
+    }
+  }, [isCardDialogOpen, issue, detailedIssue, labels, tags, boardLabels, effectiveLabelsMap, populatedTags]);
+
+  const parentIssueIdStr = getParentId(issue);
   const { data: workItemAttachments = [] } = useQuery({
     queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'],
     queryFn: async () => {
@@ -300,6 +396,14 @@ export function BoardCardDialog() {
     enabled: !!issueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  const { data: fetchedParent, isLoading: isParentLoading } = useQuery({
+    queryKey: ['issue-parent', parentId],
+    queryFn: () => issueApiService.getIssue(parentId),
+    enabled: !!parentId && !!isCardDialogOpen,
+    staleTime: 5 * 60 * 1000,
+  });
+
   const { data: parentAttachments = [] } = useQuery({
     queryKey: ['attachments', 'parent-work-item', parentIssueIdStr || 'none'],
     queryFn: async () => {
@@ -315,6 +419,18 @@ export function BoardCardDialog() {
     enabled: !!parentIssueIdStr && !!isCardDialogOpen,
     staleTime: 60 * 1000,
   });
+
+  // Determine the parent object to display (prefer populated data from detailedIssue)
+  const parentObject = (() => {
+    if (detailedIssue) {
+      const p = (detailedIssue as any).parent || (detailedIssue as any).epic;
+      // Check if it's a populated object (has title or name)
+      if (p && typeof p === 'object' && (p.title || p.name)) {
+        return p;
+      }
+    }
+    return fetchedParent;
+  })();
 
   const { data: workspaceItems = [] } = useQuery({
     queryKey: ['workspace-items', workspaceId],
@@ -366,6 +482,20 @@ export function BoardCardDialog() {
     }
     return fullUrl;
   };
+
+  useEffect(() => {
+    if (detailedIssue) {
+        // Sync state with detailed issue if available (it has latest data)
+        // Only if not currently editing (to avoid overwriting user changes)
+        if (!isEditing) {
+            setLabels(getLabelIds(detailedIssue.labels));
+            setTags(getTagIds(detailedIssue.tags));
+            setParentId(getParentId(detailedIssue));
+            setAssigneeId(getAssigneeInfo(detailedIssue).id);
+            // Don't overwrite title/desc/status/priority as they might be handled by optimistic UI or context
+        }
+    }
+  }, [detailedIssue, isEditing]);
 
   if (!isCardDialogOpen || !issue) {
     return null;
@@ -464,9 +594,34 @@ export function BoardCardDialog() {
       return;
     }
 
+    // Check for pending tags
+    if (tags.some(t => t.startsWith('temp-'))) {
+        toast({
+            title: 'Please wait',
+            description: 'Tags are still being created. Please try again in a moment.',
+            variant: 'default',
+        });
+        return;
+    }
+
     const normalizedStatus = normalizeStatusForColumn(status);
     const targetColumnId = findColumnIdForStatus(normalizedStatus);
     const issueIdStr = String(issue._id);
+
+    console.log('Update Issue Payload:', {
+      issueId: issueIdStr,
+      data: {
+        title,
+        description,
+        status: mapStatusForApi(status),
+        priority: mapPriorityForApi(priority),
+        assignedTo: assigneeId || null,
+        dueDate,
+        parent: parentId || null,
+        labels,
+        tags,
+      }
+    });
 
     updateIssue(
       {
@@ -477,9 +632,10 @@ export function BoardCardDialog() {
           status: mapStatusForApi(status),
           priority: mapPriorityForApi(priority),
           assignedTo: assigneeId || null,
-          reporter: reporterId || null,
           dueDate,
           parent: parentId || null,
+          labels,
+          tags,
         },
       },
       {
@@ -489,8 +645,11 @@ export function BoardCardDialog() {
           setDescription(updatedIssue.description || '');
           setPriority(updatedIssue.priority || 'medium');
           setStatus(updatedIssue.status || 'to-do');
-          setAssigneeId(updatedIssue.assignee?._id || '');
+          const assignee = updatedIssue.assignee as any;
+          setAssigneeId(assignee?._id || assignee || '');
           setDueDate(updatedIssue.dueDate || null);
+          setLabels(getLabelIds(updatedIssue.labels || []));
+          setTags(getTagIds(updatedIssue.tags || []));
           setIsEditing(false);
           toast({
             title: 'Success',
@@ -658,6 +817,58 @@ export function BoardCardDialog() {
             )}
           </div>
 
+          {/* Labels */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Labels
+            </label>
+            {isEditing ? (
+              <LabelsSelector
+                boardId={boardId || ''}
+                selectedLabelIds={labels}
+                onChange={setLabels}
+              />
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {labels && labels.length > 0 ? (
+                  labels.map((labelId) => {
+                    const label = effectiveLabelsMap.get(labelId);
+                    if (!label) {
+                        return (
+                             <Badge key={labelId} variant="outline" className="text-gray-500 border-dashed">
+                                Unknown ({labelId.slice(-4)})
+                             </Badge>
+                        );
+                    }
+                    return (
+                      <Badge key={labelId} style={{ backgroundColor: label.color }} className="text-white hover:opacity-80">
+                        {label.name}
+                      </Badge>
+                    );
+                  })
+                ) : (
+                  <span className="text-sm text-gray-500 italic">No labels</span>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Tags */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+              Tags
+            </label>
+            <TagInput
+                workspaceId={workspaceId}
+                selectedTags={tags}
+                onTagsChange={isEditing ? setTags : () => {}}
+                disabled={!isEditing}
+                placeholder={isEditing ? "Add tags..." : "No tags"}
+                contentClassName={!isEditing ? "border-none px-0" : ""}
+                preloadedTags={populatedTags}
+            />
+          </div>
+
           {/* Issue Type */}
           <div>
             <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
@@ -720,13 +931,13 @@ export function BoardCardDialog() {
               ) : (
                 <div className="flex items-center gap-2">
                   {parentId ? (
-                    (detailedIssue as any)?.parent || (detailedIssue as any)?.epic ? (
+                    parentObject ? (
                       <div className="flex items-center gap-2 p-1 px-2 border rounded-md bg-gray-50 dark:bg-muted/50">
-                        <IssueTypeIcon type={((detailedIssue as any).parent as any)?.type || ((detailedIssue as any).epic as any)?.type || 'task'} />
-                        <span className="text-sm">{((detailedIssue as any).parent as any)?.title || ((detailedIssue as any).epic as any)?.title || 'Unknown Parent'}</span>
+                        <IssueTypeIcon type={parentObject.type || 'task'} />
+                        <span className="text-sm">{parentObject.title || parentObject.name || 'Unknown Parent'}</span>
                       </div>
                     ) : (
-                      <span className="text-gray-500 text-sm">Loading...</span>
+                      <span className="text-gray-500 text-sm">{isParentLoading ? 'Loading...' : 'Parent not found'}</span>
                     )
                   ) : (
                     <span className="text-gray-500 text-sm italic">None</span>
@@ -921,6 +1132,13 @@ export function BoardCardDialog() {
                   onChange={async (e) => {
                     const file = e.target.files && e.target.files[0];
                     if (!file || !issueIdStr) return;
+                    
+                    if (file.size > 2 * 1024 * 1024) {
+                        toast({ title: 'Error', description: 'File size must be less than 2MB', variant: 'destructive' });
+                        if (e.target) e.target.value = '';
+                        return;
+                    }
+
                     setIsUploadingAttachment(true);
                     try {
                       const resp = await uploadWorkItemAttachment({ workItemId: issueIdStr, file });

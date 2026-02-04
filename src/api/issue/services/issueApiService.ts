@@ -338,10 +338,11 @@ export const issueApiService = {
 
 	/**
 	 * Get single issue by ID
-	 * GET /issues/:id
+	 * GET /items/:id
 	 */
 	async getIssue(issueId: string): Promise<Issue> {
-		const response = await API.get(`${ISSUES_ENDPOINT}/${issueId}`);
+		// Use /items endpoint which matches WorkItemController
+		const response = await API.get(`/items/${issueId}`);
 		return response.data.data || response.data;
 	},
 
@@ -359,10 +360,14 @@ export const issueApiService = {
 
 	/**
 	 * Update any issue (works for all types)
-	 * POST /items/update/:id
+	 * PATCH /items/:id
 	 */
 	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
-		const response = await API.post(`/items/update/${issueId}`, data);
+		const payload: any = { ...data };
+        // Backend expects 'assignedTo' and 'parent' directly, no mapping needed.
+        // And use /items endpoint which matches ItemController
+		
+		const response = await API.patch(`/items/${issueId}`, payload);
 		return response.data.data || response.data;
 	},
 

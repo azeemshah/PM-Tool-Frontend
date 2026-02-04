@@ -7,6 +7,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { IssueCreateDialog } from "@/components/issue";
 import { useIssueCreateDialog } from "@/hooks/useIssueCreateDialog";
 import API from "@/lib/axios-client";
+import { getWorkspaceByIdQueryFn } from "@/lib/api";
 import {
   Table,
   TableBody,
@@ -112,6 +113,15 @@ export default function Issues() {
   const [keyword, setKeyword] = useState("");
   const [sortBy, setSortBy] = useState<"key" | "title" | "status" | "priority">("key");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
+
+  // Fetch workspace to get board type
+  const { data: workspaceResponse } = useQuery({
+    queryKey: ['workspace', workspaceId],
+    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+  });
+
+  const workspace = workspaceResponse?.workspace;
+  const boardType = (workspace?.boardType || 'kanban') as 'kanban' | 'scrumboard';
 
   // Fetch projects in the workspace
   const { data: projectsData, error: projectsError } = useQuery({
@@ -234,6 +244,7 @@ export default function Issues() {
         isOpen={dialogState.isOpen}
         onOpenChange={(open) => open ? dialogState.open(workspaceId) : dialogState.close()}
         workspaceId={dialogState.workspaceId || workspaceId}
+        boardType={boardType}
       />
 
       <div className="space-y-4">
