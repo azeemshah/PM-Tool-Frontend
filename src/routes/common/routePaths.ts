@@ -36,6 +36,7 @@ export const PROTECTED_ROUTES = {
   MEMBERS: "/workspace/:workspaceId/members",
   SETTINGS: "/workspace/:workspaceId/settings",
   WORKFLOWS: "/workspace/:workspaceId/workflows",
+  GANTT: "/workspace/:workspaceId/gantt",
 };
 
 export const BASE_ROUTE = {

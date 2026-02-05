@@ -7,6 +7,7 @@ import {
   CheckCircle,
   LayoutDashboard,
   Clock,
+  BarChart3,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -55,6 +56,11 @@ export function NavMain() {
       title: boardLabel,
       url: `/workspace/${workspaceId}/board`,
       icon: LayoutDashboard,
+    },
+    {
+      title: "Gantt Chart",
+      url: `/workspace/${workspaceId}/gantt`,
+      icon: BarChart3,
     },
     {
       title: "History",

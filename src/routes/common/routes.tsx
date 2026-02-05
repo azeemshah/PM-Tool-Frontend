@@ -9,6 +9,7 @@ import Settings from "@/page/workspace/Settings";
 import Tasks from "@/page/workspace/Tasks";
 import BoardPage from "@/page/workspace/Board";
 import WorkflowPage from "@/page/workspace/Workflow";
+import GanttPage from "@/page/workspace/Gantt";
 import { AUTH_ROUTES, BASE_ROUTE, PROTECTED_ROUTES } from "./routePaths";
 import InviteUser from "@/page/invite/InviteUser";
 import AcceptInvite from "@/page/invite/AcceptInvite";
@@ -39,6 +40,7 @@ export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.HISTORY, element: <History /> },
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },
+  { path: PROTECTED_ROUTES.GANTT, element: <GanttPage /> },
 ];
 
 export const baseRoutePaths = [
