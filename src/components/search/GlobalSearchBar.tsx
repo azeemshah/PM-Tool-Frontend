@@ -99,10 +99,10 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, []);
 
   const handleSelectResult = (result: SearchResult) => {
-    const workspaceId = typeof result.workspace === 'string' 
-      ? result.workspace 
+    const workspaceId = typeof result.workspace === 'string'
+      ? result.workspace
       : result.workspace?._id;
-    
+
     navigate(`/workspace/${workspaceId}/work-item/${result._id}`, {
       state: { workItem: result },
     });
@@ -212,44 +212,40 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                 <li key={result._id}>
                   <button
                     onClick={() => handleSelectResult(result)}
-                    className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-start gap-3 border-b dark:border-gray-700 last:border-b-0"
+                    className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors flex items-center gap-3 border-b dark:border-gray-700 last:border-b-0"
                   >
                     {/* Left: Icon and Title */}
-                    <div className="flex-shrink-0 mt-1">
+                    <div className="flex-shrink-0">
                       <IssueTypeIcon type={result.type} size={16} />
                     </div>
 
-                    <div className="flex-grow min-w-0">
-                      <div className="flex items-center gap-2 mb-2">
-                        <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                          {result.title}
-                        </h3>
-                      </div>
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        <span className="text-xs text-gray-500 dark:text-gray-400">
-                          {typeof result.workspace === 'string'
-                            ? result.workspace
-                            : result.workspace?.name}
-                        </span>
-                        {result.status && (
-                          <Badge
-                            variant={getStatusVariant(result.status) as any}
-                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0"
-                          >
-                            {getStatusIcon(result.status) && React.createElement(getStatusIcon(result.status)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
-                            <span>{result.status}</span>
-                          </Badge>
-                        )}
-                        {result.priority && (
-                          <Badge
-                            variant={getPriorityVariant(result.priority) as any}
-                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0"
-                          >
-                            {getPriorityIcon(result.priority) && React.createElement(getPriorityIcon(result.priority)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
-                            <span>{result.priority}</span>
-                          </Badge>
-                        )}
-                      </div>
+                    <div className="flex-grow min-w-0 flex items-center gap-3">
+                      <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                        {result.title}
+                      </h3>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                        {typeof result.workspace === 'string'
+                          ? result.workspace
+                          : result.workspace?.name}
+                      </span>
+                      {result.status && (
+                        <Badge
+                          variant={getStatusVariant(result.status) as any}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0"
+                        >
+                          {getStatusIcon(result.status) && React.createElement(getStatusIcon(result.status)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
+                          <span>{result.status}</span>
+                        </Badge>
+                      )}
+                      {result.priority && (
+                        <Badge
+                          variant={getPriorityVariant(result.priority) as any}
+                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0"
+                        >
+                          {getPriorityIcon(result.priority) && React.createElement(getPriorityIcon(result.priority)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
+                          <span>{result.priority}</span>
+                        </Badge>
+                      )}
                     </div>
 
                     {/* Right: Assignee Avatar */}
