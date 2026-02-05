@@ -44,10 +44,10 @@ export const GanttChartContainer: React.FC<GanttChartContainerProps> = ({
 
   if (isLoading) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
+      <div className="flex-1 flex items-center justify-center bg-background">
         <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-gray-300 border-t-blue-600"></div>
-          <p className="mt-3 text-gray-600 text-sm font-medium">Loading timeline...</p>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-muted border-t-primary"></div>
+          <p className="mt-3 text-muted-foreground text-sm font-medium">Loading timeline...</p>
         </div>
       </div>
     );
@@ -55,14 +55,14 @@ export const GanttChartContainer: React.FC<GanttChartContainerProps> = ({
 
   if (nodes.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gray-50">
-        <p className="text-gray-500 text-sm">No tasks found matching your filters</p>
+      <div className="flex-1 flex items-center justify-center bg-background">
+        <p className="text-muted-foreground text-sm">No tasks found matching your filters</p>
       </div>
     );
   }
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden bg-gray-50">
+    <div className="flex-1 flex flex-col overflow-hidden bg-background">
       {/* Sticky Timeline Header */}
       <div
         ref={timelineHeaderRef}
@@ -81,7 +81,7 @@ export const GanttChartContainer: React.FC<GanttChartContainerProps> = ({
         className="flex-1 overflow-x-auto overflow-y-auto"
       >
         {/* White background container for rows */}
-        <div className="bg-white min-h-full">
+        <div className="bg-background min-h-full">
           {nodes.map((node, index) => (
             <GanttRow
               key={node.item._id}

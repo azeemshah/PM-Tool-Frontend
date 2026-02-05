@@ -31,7 +31,12 @@ export function buildHierarchyTree(items: GanttItem[]): GanttTreeNode[] {
     const node = nodeMap.get(item._id)!;
 
     if (item.parent) {
-      const parentNode = nodeMap.get(item.parent);
+      // Handle both string ID and populated object
+      const parentId = typeof item.parent === 'object' && '_id' in item.parent 
+        ? (item.parent as any)._id 
+        : item.parent;
+
+      const parentNode = nodeMap.get(parentId);
       if (parentNode) {
         parentNode.children.push(node);
         node.level = parentNode.level + 1;

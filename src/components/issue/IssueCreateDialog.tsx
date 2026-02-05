@@ -174,6 +174,7 @@ export function IssueCreateDialog({
             queryClient.invalidateQueries({ queryKey: ['issues'] });
             queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
             queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
+            queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
             const typeLabel = variables.type.charAt(0).toUpperCase() + variables.type.slice(1);
             toast({
                 title: 'Success',

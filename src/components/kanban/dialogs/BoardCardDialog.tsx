@@ -714,9 +714,11 @@ export function BoardCardDialog() {
               });
               await issueApiService.moveItemToColumn(issueIdStr, targetColumnId);
               queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban'] });
+              queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
             } catch (error) {
               console.error('Failed to move issue to column after update:', error);
               queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban'] });
+              queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
             }
           }
         },

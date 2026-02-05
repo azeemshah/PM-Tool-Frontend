@@ -46,7 +46,7 @@ export function KanbanBoardView() {
 
   const { getAllTagsByWorkspace } = useTags();
   const { data: allTags = [] } = getAllTagsByWorkspace(workspaceId);
-  
+
   // Map for resolving Tags (legacy/system tags)
   const tagsMap = useMemo(() => {
     const map = new Map<string, string>();
@@ -379,6 +379,7 @@ export function KanbanBoardView() {
                 await issueApiService.moveItemToColumn(draggedId, destinationListId);
                 // Success
                 queryClient.invalidateQueries({ queryKey: ['history'] });
+                queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
               } catch (error) {
                 console.error('Error moving issue card:', error);
                 setDragError('Failed to move card. Please try again.');

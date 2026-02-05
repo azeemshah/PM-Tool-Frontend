@@ -19,6 +19,7 @@ export function useCreateEpic() {
 			queryClient.invalidateQueries({ queryKey: ['epics'], exact: false });
 			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'], exact: false });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
 			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
 			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({

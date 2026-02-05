@@ -92,21 +92,21 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   }
 
   return (
-    <div className="w-full h-full flex flex-col bg-white dark:bg-zinc-950">
+    <div className="w-full h-full flex flex-col bg-background">
       {/* Header */}
-      <div className="border-b border-gray-200 dark:border-zinc-800">
+      <div className="border-b border-border">
         <div className="px-6 py-4">
           {/* Controls Row */}
           <div className="flex items-center justify-between gap-4">
             {/* Left side - View toggle & Navigation */}
             <div className="flex items-center gap-3">
               {/* View toggle */}
-              <div className="flex items-center gap-1 bg-gray-100 dark:bg-zinc-900 rounded-md p-1">
+              <div className="flex items-center gap-1 bg-muted rounded-md p-1">
                 <button
                   onClick={() => setViewType('week')}
                   className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${viewType === 'week'
-                      ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                     }`}
                 >
                   Week
@@ -114,8 +114,8 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 <button
                   onClick={() => setViewType('month')}
                   className={`px-3 py-1.5 rounded text-sm font-medium transition-all ${viewType === 'month'
-                      ? 'bg-white dark:bg-zinc-800 text-gray-900 dark:text-gray-100 shadow-sm'
-                      : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
                     }`}
                 >
                   Month
@@ -123,18 +123,18 @@ export const GanttChart: React.FC<GanttChartProps> = ({
               </div>
 
               {/* Date navigation */}
-              <div className="flex items-center gap-2 border border-gray-200 dark:border-zinc-800 rounded-md px-1">
+              <div className="flex items-center gap-2 border border-border rounded-md px-1">
                 <button
                   onClick={handlePreviousPeriod}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
                   title="Previous period"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
-                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 min-w-fit px-2">{formatDateRange()}</span>
+                <span className="text-sm font-medium text-foreground min-w-fit px-2">{formatDateRange()}</span>
                 <button
                   onClick={handleNextPeriod}
-                  className="p-1.5 hover:bg-gray-100 dark:hover:bg-zinc-800 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200"
+                  className="p-1.5 hover:bg-muted rounded text-muted-foreground hover:text-foreground"
                   title="Next period"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -146,7 +146,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
             <input
               type="text"
               placeholder="Search tasks..."
-              className="px-3 py-1.5 text-sm border border-gray-200 dark:border-zinc-800 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 placeholder:text-gray-500 dark:placeholder:text-gray-500"
+              className="px-3 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground placeholder:text-muted-foreground"
               value={filters.searchText || ''}
               onChange={(e) => updateFilter('searchText', e.target.value)}
             />
@@ -155,7 +155,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       </div>
 
       {/* Main chart area */}
-      <div className="flex-1 overflow-hidden flex flex-col bg-gray-50 dark:bg-zinc-900/50">
+      <div className="flex-1 overflow-hidden flex flex-col bg-muted/50">
         {/* Timeline Header */}
         <TimelineHeader range={range} viewType={viewType} dateLabels={dateLabels} />
 
@@ -164,11 +164,11 @@ export const GanttChart: React.FC<GanttChartProps> = ({
           {enrichedNodes.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
-                <p className="text-gray-500 text-sm">No tasks found matching your filters</p>
+                <p className="text-muted-foreground text-sm">No tasks found matching your filters</p>
               </div>
             </div>
           ) : (
-            <div className="bg-white dark:bg-zinc-950">
+            <div className="bg-background">
               {enrichedNodes.map((node, index) => (
                 <GanttRow
                   key={node.item._id}
@@ -187,27 +187,27 @@ export const GanttChart: React.FC<GanttChartProps> = ({
       </div>
 
       {/* Footer Legend */}
-      <div className="border-t border-gray-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 px-6 py-3">
-        <div className="flex items-center gap-6 text-xs text-gray-600 dark:text-gray-400">
+      <div className="border-t border-border bg-background px-6 py-3">
+        <div className="flex items-center gap-6 text-xs text-muted-foreground">
           <span className="font-medium">Legend:</span>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-purple-100 border border-purple-300"></div>
+            <div className="w-3 h-3 rounded bg-purple-100 dark:bg-purple-900/30 border border-purple-300 dark:border-purple-700"></div>
             <span>Epic</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-green-100 border border-green-300"></div>
+            <div className="w-3 h-3 rounded bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-700"></div>
             <span>Story</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-blue-100 border border-blue-300"></div>
+            <div className="w-3 h-3 rounded bg-blue-100 dark:bg-blue-900/30 border border-blue-300 dark:border-blue-700"></div>
             <span>Task</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-red-100 border border-red-300"></div>
+            <div className="w-3 h-3 rounded bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700"></div>
             <span>Bug</span>
           </div>
           <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-gray-100 border border-gray-300"></div>
+            <div className="w-3 h-3 rounded bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-600"></div>
             <span>Subtask</span>
           </div>
         </div>

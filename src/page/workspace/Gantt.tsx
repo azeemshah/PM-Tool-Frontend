@@ -7,9 +7,9 @@ const LoadingFallback = () => (
   <div className="flex items-center justify-center h-full w-full">
     <div className="text-center">
       <div className="inline-block animate-spin">
-        <div className="w-8 h-8 border-4 border-gray-200 dark:border-zinc-700 border-t-blue-600 rounded-full"></div>
+        <div className="w-8 h-8 border-4 border-muted border-t-primary rounded-full"></div>
       </div>
-      <p className="mt-4 text-gray-600 dark:text-gray-400 text-sm font-medium">Loading Gantt Chart...</p>
+      <p className="mt-4 text-muted-foreground text-sm font-medium">Loading Gantt Chart...</p>
     </div>
   </div>
 );
@@ -17,8 +17,8 @@ const LoadingFallback = () => (
 const ErrorFallback = ({ error }: { error: Error }) => (
   <div className="flex items-center justify-center h-full w-full">
     <div className="text-center">
-      <h2 className="text-lg font-semibold text-red-600 dark:text-red-400">Error Loading Gantt Chart</h2>
-      <p className="mt-2 text-gray-600 dark:text-gray-400 text-sm">{error.message}</p>
+      <h2 className="text-lg font-semibold text-destructive">Error Loading Gantt Chart</h2>
+      <p className="mt-2 text-muted-foreground text-sm">{error.message}</p>
     </div>
   </div>
 );
@@ -29,7 +29,7 @@ const GanttPage = () => {
   if (!workspaceId) {
     return (
       <div className="flex items-center justify-center h-full">
-        <p className="text-gray-600 dark:text-gray-400 text-sm">No workspace selected</p>
+        <p className="text-muted-foreground text-sm">No workspace selected</p>
       </div>
     );
   }
@@ -44,7 +44,7 @@ const GanttPage = () => {
           </p>
         </div>
       </div>
-      <div className="flex-1 border rounded-xl shadow-sm overflow-hidden bg-white dark:bg-zinc-950 dark:border-zinc-800 min-h-0">
+      <div className="flex-1 border rounded-xl shadow-sm overflow-hidden bg-background border-border min-h-0">
         <ErrorBoundary fallback={ErrorFallback}>
           <Suspense fallback={<LoadingFallback />}>
             <GanttChart workspaceId={workspaceId} />

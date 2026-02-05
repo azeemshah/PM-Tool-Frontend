@@ -43,13 +43,13 @@ export const GanttChartHeader: React.FC<GanttChartHeaderProps> = ({
   };
 
   return (
-    <div className="bg-white border-b border-gray-200 px-6 py-4 space-y-3">
+    <div className="bg-background border-b border-border px-6 py-4 space-y-3">
       {/* Top row: Title and loading indicator */}
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold text-gray-900">Gantt Chart</h1>
+        <h1 className="text-xl font-semibold text-foreground">Gantt Chart</h1>
         {isLoading && (
-          <div className="flex items-center gap-2 text-sm text-gray-600">
-            <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-gray-300 border-t-blue-600"></div>
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <div className="inline-block animate-spin rounded-full h-4 w-4 border-2 border-muted border-t-primary"></div>
             <span>Loading...</span>
           </div>
         )}
@@ -58,13 +58,13 @@ export const GanttChartHeader: React.FC<GanttChartHeaderProps> = ({
       {/* Controls row: View, navigation, search */}
       <div className="flex items-center gap-3 flex-wrap">
         {/* View toggle */}
-        <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1">
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1">
           <button
             onClick={() => onViewTypeChange('week')}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
               viewType === 'week'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
             }`}
           >
             Week
@@ -73,8 +73,8 @@ export const GanttChartHeader: React.FC<GanttChartHeaderProps> = ({
             onClick={() => onViewTypeChange('month')}
             className={`px-3 py-1.5 rounded-md text-sm font-medium transition-all ${
               viewType === 'month'
-                ? 'bg-white text-gray-900 shadow-sm'
-                : 'text-gray-600 hover:text-gray-900 hover:bg-gray-200'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground hover:bg-background/50'
             }`}
           >
             Month
@@ -82,20 +82,20 @@ export const GanttChartHeader: React.FC<GanttChartHeaderProps> = ({
         </div>
 
         {/* Date navigation */}
-        <div className="flex items-center gap-2 border border-gray-200 rounded-lg px-2">
+        <div className="flex items-center gap-2 border border-border rounded-lg px-2">
           <button
             onClick={onPreviousPeriod}
-            className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
+            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
             title="Previous period"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <span className="text-sm font-medium text-gray-700 min-w-fit px-2 whitespace-nowrap">
+          <span className="text-sm font-medium text-foreground min-w-fit px-2 whitespace-nowrap">
             {formatDateRange()}
           </span>
           <button
             onClick={onNextPeriod}
-            className="p-1.5 hover:bg-gray-100 rounded-md text-gray-600 hover:text-gray-900 transition-colors"
+            className="p-1.5 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
             title="Next period"
           >
             <ChevronRight className="w-4 h-4" />
@@ -103,19 +103,19 @@ export const GanttChartHeader: React.FC<GanttChartHeaderProps> = ({
         </div>
 
         {/* Search input */}
-        <div className="flex items-center gap-2 flex-1 min-w-fit max-w-xs border border-gray-200 rounded-lg px-3 py-1.5 hover:border-gray-300 focus-within:border-blue-500 focus-within:ring-1 focus-within:ring-blue-500">
-          <Search className="w-4 h-4 text-gray-400" />
+        <div className="flex items-center gap-2 flex-1 min-w-fit max-w-xs border border-border rounded-lg px-3 py-1.5 hover:border-border/80 focus-within:border-primary focus-within:ring-1 focus-within:ring-primary">
+          <Search className="w-4 h-4 text-muted-foreground" />
           <input
             type="text"
             placeholder="Search tasks..."
-            className="flex-1 outline-none text-sm bg-transparent text-gray-900 placeholder-gray-400"
+            className="flex-1 outline-none text-sm bg-transparent text-foreground placeholder-muted-foreground"
             value={filters.searchText || ''}
             onChange={(e) => onSearchChange(e.target.value)}
           />
         </div>
 
         {/* Filter button */}
-        <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors">
+        <button className="flex items-center gap-2 px-3 py-1.5 text-sm text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
           <Filter className="w-4 h-4" />
           <span>Filters</span>
         </button>

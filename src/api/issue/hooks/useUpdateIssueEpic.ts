@@ -25,6 +25,7 @@ export function useUpdateIssueEpic() {
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['epics'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
 			toast({
 				title: 'Success',
 				description: `Issue Epic updated successfully`,

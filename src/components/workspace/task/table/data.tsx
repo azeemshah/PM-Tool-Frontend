@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { ISSUE_TYPES_LIST } from "@/components/issue/constants";
 
-const statusIcons = {
+export const statusIcons = {
   [TaskStatusEnum.BACKLOG]: HelpCircle,
   [TaskStatusEnum.TO_DO]: Circle,
   [TaskStatusEnum.IN_PROGRESS]: Timer,

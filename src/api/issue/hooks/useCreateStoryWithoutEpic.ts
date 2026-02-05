@@ -24,6 +24,7 @@ export function useCreateStoryWithoutEpic() {
 			queryClient.invalidateQueries({ queryKey: ['stories'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
 			toast({
 				title: 'Success',
 				description: `Story "${story.title}" created successfully`,

@@ -6,6 +6,9 @@ import { formatTime } from './utils/ganttCalculations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ISSUE_TYPES_CONFIG } from '@/components/issue/constants';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { statusIcons } from '@/components/workspace/task/table/data';
+import { statusColorMap } from './utils/colorMaps';
+import { TaskStatusEnum } from '@/constant';
 
 interface GanttRowProps {
   node: GanttTreeNode;
@@ -36,11 +39,11 @@ export const GanttRow: React.FC<GanttRowProps> = ({
   return (
     <>
       <div
-        className="flex border-b border-gray-100 dark:border-zinc-800 hover:bg-blue-50/40 dark:hover:bg-blue-900/20 transition-colors group"
+        className="flex border-b border-border hover:bg-muted/50 transition-colors group"
         style={{ minHeight: '32px' }}
       >
         {/* Left section: Task info */}
-        <div className="w-80 flex-shrink-0 flex items-center px-4 py-1 gap-2 bg-white dark:bg-zinc-950 group-hover:bg-blue-50/20 dark:group-hover:bg-blue-900/10">
+        <div className="w-96 flex-shrink-0 flex items-center px-4 py-1 gap-2 bg-background group-hover:bg-muted/50">
           {/* Indentation */}
           <div style={{ width: indentWidth }} />
 
@@ -49,7 +52,7 @@ export const GanttRow: React.FC<GanttRowProps> = ({
             {children.length > 0 ? (
               <button
                 onClick={() => onToggleExpand(item._id)}
-                className="w-5 h-5 flex items-center justify-center hover:bg-gray-200 dark:hover:bg-zinc-800 rounded text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 transition-colors"
+                className="w-5 h-5 flex items-center justify-center hover:bg-accent rounded text-muted-foreground hover:text-foreground transition-colors"
               >
                 {isExpanded ? (
                   <ChevronDown size={16} strokeWidth={2} />
@@ -70,26 +73,38 @@ export const GanttRow: React.FC<GanttRowProps> = ({
 
             return (
               <span
-                className={`px-2 py-1 rounded text-xs font-semibold flex-shrink-0 flex items-center gap-1 ${typeConfig?.className || 'bg-gray-100 dark:bg-zinc-900 text-gray-700 dark:text-gray-300'
+                className={`px-2 py-1 rounded text-xs font-semibold flex-shrink-0 flex items-center gap-1 ${typeConfig?.className || 'bg-muted text-muted-foreground'
                   }`}
               >
                 {Icon && <Icon className="w-3 h-3" />}
-                <span className="hidden sm:inline">{typeConfig?.label || item.type}</span>
+                <span>{typeConfig?.label || item.type}</span>
               </span>
             );
           })()}
 
           {/* Task title and priority indicator */}
           <div className="flex-1 min-w-0">
-            <span
-              className="truncate font-medium text-gray-900 dark:text-gray-100 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 hover:underline block text-sm"
-              onClick={() => onTaskClick(item._id)}
-              title={item.title}
-            >
-              {item.title}
-            </span>
+            {(() => {
+              const StatusIcon = statusIcons[item.status as keyof typeof statusIcons];
+              const statusColors = statusColorMap[item.status] || statusColorMap[TaskStatusEnum.TO_DO];
+
+              return (
+                <div
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md border ${statusColors.bg} ${statusColors.border} w-fit cursor-pointer`}
+                  onClick={() => onTaskClick(item._id)}
+                >
+                  {StatusIcon && <StatusIcon className={`w-3 h-3 ${statusColors.text}`} />}
+                  <span
+                    className={`text-xs font-semibold ${statusColors.text} truncate block`}
+                    title={item.title}
+                  >
+                    {item.title}
+                  </span>
+                </div>
+              );
+            })()}
             {hasPriority(item.priority) && (
-              <div className="text-xs text-red-600 dark:text-red-400 font-medium">★ {item.priority}</div>
+              <div className="text-xs text-red-600 dark:text-red-400 font-medium ml-7">★ {item.priority}</div>
             )}
           </div>
 
@@ -99,7 +114,7 @@ export const GanttRow: React.FC<GanttRowProps> = ({
             if (!assignee) return null;
 
             return (
-              <Avatar className="w-6 h-6 flex-shrink-0 border border-gray-200 dark:border-zinc-800">
+              <Avatar className="w-6 h-6 flex-shrink-0 border border-border">
                 <AvatarImage src={assignee.profilePicture || assignee.avatar} alt={assignee.name} />
                 <AvatarFallback className={`text-xs ${getAvatarColor(assignee.name || '')}`}>
                   {getAvatarFallbackText(assignee.name)}
@@ -110,7 +125,7 @@ export const GanttRow: React.FC<GanttRowProps> = ({
         </div>
 
         {/* Right section: Gantt bar + estimates */}
-        <div className="flex-1 flex items-center px-4 py-1 relative bg-white dark:bg-zinc-950 hover:bg-blue-50/20 dark:hover:bg-blue-900/10">
+        <div className="flex-1 flex items-center px-4 py-1 relative bg-background hover:bg-muted/50">
           {/* Timeline bar */}
           <GanttBar
             item={item}
@@ -122,7 +137,7 @@ export const GanttRow: React.FC<GanttRowProps> = ({
 
           {/* Estimates (right-aligned) */}
           {item.originalEstimate && (
-            <div className="ml-auto text-xs text-gray-500 dark:text-gray-400 whitespace-nowrap flex-shrink-0 font-medium">
+            <div className="ml-auto text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 font-medium">
               {formatTime(item.timeSpent)} / {formatTime(item.originalEstimate)}
             </div>
           )}

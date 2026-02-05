@@ -24,10 +24,10 @@ export const GanttChartLegend: React.FC<GanttChartLegendProps> = ({
   ];
 
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <div className="flex items-center gap-4 flex-wrap min-w-fit">
         {/* Legend label */}
-        <span className="font-semibold text-gray-900 text-sm">Status:</span>
+        <span className="font-semibold text-foreground text-sm">Status:</span>
 
         {/* Status color indicators */}
         <div className="flex items-center gap-4 flex-wrap">
@@ -38,9 +38,9 @@ export const GanttChartLegend: React.FC<GanttChartLegendProps> = ({
             return (
               <div key={status.key} className="flex items-center gap-2">
                 <div
-                  className={`w-3 h-3 rounded border ${colorConfig.bgColor} ${colorConfig.borderColor}`}
+                  className={`w-3 h-3 rounded border ${colorConfig.bg || colorConfig.bgColor} ${colorConfig.border || colorConfig.borderColor}`}
                 />
-                <span className="text-xs text-gray-700 font-medium">{status.label}</span>
+                <span className="text-xs text-muted-foreground font-medium">{status.label}</span>
               </div>
             );
           })}
