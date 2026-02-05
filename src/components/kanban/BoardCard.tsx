@@ -29,7 +29,7 @@ export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
   const members = membersData?.members || [];
 
   // Determine if this is an Issue or KanbanCard
-  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type).toLowerCase());
+  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type).toLowerCase());
   const issue = isIssue ? (card as Issue) : null;
 
   // Get card properties (handle both Issue and KanbanCard)

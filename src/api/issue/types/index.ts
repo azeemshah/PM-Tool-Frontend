@@ -1,15 +1,15 @@
 /**
  * Issue API Types
- * Unified Issue types for Epic, Story, Task, Bug, Subtask
+ * Unified Issue types for Epic, Story, Task, Bug, Improvement, Subtask
  */
 
 import type { ReactNode } from 'react';
 
-export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
+export type IssueType = 'epic' | 'story' | 'task' | 'bug' | 'subtask' | 'improvement';
 export type IssuePriority = 'lowest' | 'low' | 'medium' | 'high' | 'highest';
 export type IssueStatus = 'to-do' | 'in-progress' | 'in-review' | 'done' | 'blocked' | string;
 
-export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask';
+export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask' | 'improvement';
 export type ItemPriority = 'low' | 'medium' | 'high';
 export type ItemStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog' | string;
 
@@ -109,7 +109,7 @@ export interface Issue {
 	attachments?: IssueAttachment[];
 	comments?: IssueComment[];
 	subtasks?: Issue[];
-	children?: Issue[]; // For Epic: Story/Task/Bug
+	children?: Issue[]; // For Epic: Story/Task/Bug/Improvement
 
 	// Time tracking & estimation
 	storyPoints?: number | null;
@@ -121,7 +121,7 @@ export interface Epic extends Issue {
 	type: 'epic';
 	epicId?: never;
 	parentIssueId?: never;
-	children?: (Story | Task | Bug)[];
+	children?: (Story | Task | Bug | Improvement)[];
 }
 
 // ==================== STORY ====================
@@ -148,11 +148,19 @@ export interface Bug extends Issue {
 	subtasks?: Subtask[];
 }
 
+// ==================== IMPROVEMENT ====================
+export interface Improvement extends Issue {
+	type: 'improvement';
+	epicId: string; // Required (UNDER EPIC)
+	parentIssueId?: never;
+	subtasks?: Subtask[];
+}
+
 // ==================== SUBTASK ====================
 export interface Subtask extends Issue {
 	type: 'subtask';
 	epicId?: never;
-	parentIssueId: string; // Required (parent Story/Task/Bug)
+	parentIssueId: string; // Required (parent Story/Task/Bug/Improvement)
 }
 
 // ==================== ATTACHMENTS ====================
@@ -222,6 +230,17 @@ export interface CreateBugDTO {
 	// epicId comes from URL: POST /issues/epic/:epicId/bug
 }
 
+// Create Improvement DTO
+export interface CreateImprovementDTO {
+	projectId: string;
+	title: string;
+	description?: string;
+	assignedTo?: string;
+	priority?: IssuePriority;
+	tags?: string[];
+	// epicId comes from URL: POST /issues/epic/:epicId/improvement
+}
+
 // Create Subtask DTO
 export interface CreateSubtaskDTO {
 	projectId: string;
@@ -258,7 +277,7 @@ export interface GetEpicsResponse {
 }
 
 export interface GetChildrenResponse {
-	data: (Story | Task | Bug)[];
+	data: (Story | Task | Bug | Improvement)[];
 	total: number;
 }
 

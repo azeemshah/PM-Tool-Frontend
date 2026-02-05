@@ -182,7 +182,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   };
 
   const handleCardClick = (card: KanbanCard | Issue) => {
-    if ('type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type))) {
+    if ('type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type))) {
       setSelectedCard(card);
       setIsCardDialogOpen(true);
     }

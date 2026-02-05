@@ -324,9 +324,17 @@ export function IssueCreateDialog({
                         onOpenChange(false);
                         onSuccess?.();
                     },
+                    onError: (error: any) => {
+                        console.error('Error creating epic:', error);
+                        toast({
+                            title: 'Error',
+                            description: error?.response?.data?.message || 'Failed to create epic',
+                            variant: 'destructive',
+                        });
+                    },
                 }
             );
-        } else if (['story', 'task', 'bug'].includes(issueType)) {
+        } else if (['story', 'task', 'bug', 'improvement'].includes(issueType)) {
             const itemPriority = mapPriorityToItemPriority(priority);
 
             const data: CreateItemDto = {
@@ -377,13 +385,21 @@ export function IssueCreateDialog({
                         onOpenChange(false);
                         onSuccess?.();
                     },
+                    onError: (error: any) => {
+                        console.error('Error creating item:', error);
+                        toast({
+                            title: 'Error',
+                            description: error?.response?.data?.message || `Failed to create ${issueType}`,
+                            variant: 'destructive',
+                        });
+                    },
                 }
             );
         } else if (issueType === 'subtask') {
             if (!parentIssueId) {
                 toast({
                     title: 'Error',
-                    description: 'Subtask must be assigned to a parent issue (Story/Task/Bug)',
+                    description: 'Subtask must be assigned to a parent issue (Story/Task/Bug/Improvement)',
                     variant: 'destructive',
                 });
                 return;
@@ -442,6 +458,14 @@ export function IssueCreateDialog({
                         onOpenChange(false);
                         onSuccess?.();
                     },
+                    onError: (error: any) => {
+                        console.error('Error creating subtask:', error);
+                        toast({
+                            title: 'Error',
+                            description: error?.response?.data?.message || 'Failed to create subtask',
+                            variant: 'destructive',
+                        });
+                    },
                 }
             );
         }
@@ -477,7 +501,7 @@ export function IssueCreateDialog({
                         </div>
                     )}
 
-                    {['story', 'task', 'bug'].includes(issueType as string) && (
+                    {['story', 'task', 'bug', 'improvement'].includes(issueType as string) && (
                         <ParentSelector
                             issueType={issueType}
                             parentId={epicId}
@@ -490,23 +514,23 @@ export function IssueCreateDialog({
 
                     {issueType === 'subtask' && (
                         <div className="space-y-2">
-                            <label className="text-sm font-medium">Parent Issue (Story/Task/Bug) *</label>
+                            <label className="text-sm font-medium">Parent Issue (Story/Task/Bug/Improvement) *</label>
                             <Select
                                 value={parentIssueId}
                                 onValueChange={setParentIssueId}
-                                disabled={isLoading || workspaceItems.filter((item) => ['story', 'task', 'bug'].includes(item.type)).length === 0}
+                                disabled={isLoading || workspaceItems.filter((item) => ['story', 'task', 'bug', 'improvement'].includes(item.type)).length === 0}
                             >
                                 <SelectTrigger>
                                     <SelectValue placeholder="Select parent issue..." />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {workspaceItems.filter((item) => ['story', 'task', 'bug'].includes(item.type)).length === 0 ? (
+                                    {workspaceItems.filter((item) => ['story', 'task', 'bug', 'improvement'].includes(item.type)).length === 0 ? (
                                         <div className="p-2 text-sm text-gray-500">
-                                            No parent issues available. Create a Story, Task, or Bug first.
+                                            No parent issues available. Create a Story, Task, Bug, or Improvement first.
                                         </div>
                                     ) : (
                                         workspaceItems
-                                            .filter((item) => ['story', 'task', 'bug'].includes(item.type))
+                                            .filter((item) => ['story', 'task', 'bug', 'improvement'].includes(item.type))
                                             .map((item) => (
                                                 <SelectItem key={item._id} value={item._id}>
                                                     {item.type.toUpperCase()} - {item.title}
@@ -515,9 +539,9 @@ export function IssueCreateDialog({
                                     )}
                                 </SelectContent>
                             </Select>
-                            {workspaceItems.filter((item) => ['story', 'task', 'bug'].includes(item.type)).length === 0 && (
+                            {workspaceItems.filter((item) => ['story', 'task', 'bug', 'improvement'].includes(item.type)).length === 0 && (
                                 <div className="text-xs text-amber-600 dark:text-amber-400">
-                                    Create a Story, Task, or Bug first to add subtasks.
+                                    Create a Story, Task, Bug, or Improvement first to add subtasks.
                                 </div>
                             )}
                         </div>

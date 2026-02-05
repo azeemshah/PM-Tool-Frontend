@@ -1,6 +1,6 @@
 /**
  * IssueTypeSelector Component
- * Select issue type: Epic, Story, Task, Bug, Subtask
+ * Select issue type: Epic, Story, Task, Bug, Improvement, Subtask
  */
 
 import React from 'react';
@@ -27,7 +27,8 @@ const ISSUE_DESCRIPTIONS: Record<string, string> = {
     story: 'User story',
     task: 'Task under Epic',
     bug: 'Bug under Epic',
-    subtask: 'Subtask under Story/Task/Bug',
+    improvement: 'Improvement under Epic',
+    subtask: 'Subtask under Story/Task/Bug/Improvement',
 };
 
 const ISSUE_TYPES = ISSUE_TYPES_LIST.map(item => ({

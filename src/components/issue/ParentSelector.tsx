@@ -1,6 +1,6 @@
 /**
  * ParentSelector Component
- * Select parent issue based on type (Epic for Story/Task/Bug, Story/Task/Bug for Subtask)
+ * Select parent issue based on type (Epic for Story/Task/Bug/Improvement, Story/Task/Bug/Improvement for Subtask)
  */
 
 import React, { useMemo } from 'react';
@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { IssueType, Epic, Story, Task, Bug } from '@/api/issue/types';
+import { IssueType, Epic, Story, Task, Bug, Improvement } from '@/api/issue/types';
 import { useGetEpics } from '@/api/issue/hooks';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -21,13 +21,13 @@ interface ParentSelectorProps {
 	onChange: (parentId: string) => void;
 	projectId: string | null;
 	disabled?: boolean;
-	optional?: boolean; // For Story/Task/Bug, Epic is optional
-	epicChildren?: (Story | Task | Bug)[]; // For subtask parent selection
+	optional?: boolean; // For Story/Task/Bug/Improvement, Epic is optional
+	epicChildren?: (Story | Task | Bug | Improvement)[]; // For subtask parent selection
 	showLabel?: boolean; // Whether to show the internal label (default: true)
 }
 import { IssueTypeIcon } from './IssueTypeIcon';
 
-type ParentIssue = Epic | Story | Task | Bug;
+type ParentIssue = Epic | Story | Task | Bug | Improvement;
 
 export function ParentSelector({
 	issueType,
@@ -43,7 +43,7 @@ export function ParentSelector({
 
 	// Determine what to show based on issue type
 	const parentLabel = issueType === 'subtask' ? 'Parent Issue' : 'Epic';
-	const showSelector = ['story', 'task', 'bug', 'subtask'].includes(issueType as string);
+	const showSelector = ['story', 'task', 'bug', 'improvement', 'subtask'].includes(issueType as string);
 
 	// Debug logging
 	console.log('🔍 ParentSelector Debug:', {
@@ -55,7 +55,7 @@ export function ParentSelector({
 		epicCount: epics?.length ?? 0,
 	});
 
-	// For Subtask: show Story/Task/Bug; for Story/Task/Bug: show Epics
+	// For Subtask: show Story/Task/Bug/Improvement; for Story/Task/Bug/Improvement: show Epics
 	const parentOptions: ParentIssue[] = useMemo(() => {
 		if (issueType === 'subtask') {
 			return epicChildren; // Story/Task/Bug from epic

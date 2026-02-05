@@ -35,7 +35,7 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId }) =
   }, [boardLabels]);
 
   // Determine if this is an Issue or KanbanCard
-  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type));
+  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type));
   const issue = isIssue ? (card as Issue) : null;
 
   // Get card properties (handle both Issue and KanbanCard)
@@ -84,7 +84,9 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId }) =
               ? 'Task'
               : parentType === 'bug'
                 ? 'Bug'
-                : 'Parent';
+                : parentType === 'improvement'
+                  ? 'Improvement'
+                  : 'Parent';
         hierarchyLabel = `${prefix}: ${meta.parentTitle}`;
       }
     }

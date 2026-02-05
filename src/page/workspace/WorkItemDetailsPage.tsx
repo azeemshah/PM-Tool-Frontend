@@ -36,7 +36,7 @@ interface WorkItem {
   key: string;
   title: string;
   description?: string;
-  type: 'epic' | 'story' | 'task' | 'bug' | 'subtask';
+  type: 'epic' | 'story' | 'task' | 'bug' | 'improvement' | 'subtask';
   priority?: string;
   status?: string;
   assignee?: {
