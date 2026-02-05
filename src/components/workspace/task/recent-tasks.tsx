@@ -32,53 +32,53 @@ const RecentTasks = () => {
     [TaskPriorityEnum.HIGH]: ArrowUp,
   };
 
- const { data: recentTasksData = { tasks: [] }, isLoading, isError, error, refetch } = useQuery({
-  queryKey: ["recent-tasks", workspaceId],
-  queryFn: async () => {
-    console.log('[recent-tasks] Query started, workspaceId:', workspaceId);
+  const { data: recentTasksData = { tasks: [] }, isLoading, isError, error, refetch } = useQuery({
+    queryKey: ["recent-tasks", workspaceId],
+    queryFn: async () => {
+      console.log('[recent-tasks] Query started, workspaceId:', workspaceId);
 
-    if (!workspaceId) {
-      console.log('[recent-tasks] No workspaceId, returning empty');
-      return { tasks: [] };
-    }
+      if (!workspaceId) {
+        console.log('[recent-tasks] No workspaceId, returning empty');
+        return { tasks: [] };
+      }
 
-    try {
-      console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
+      try {
+        console.log('[recent-tasks] Fetching tasks for workspace:', workspaceId);
 
-      const response = await issueApiService.getTasksByWorkspace(workspaceId);
+        const response = await issueApiService.getTasksByWorkspace(workspaceId);
 
-      // Ensure we have an array
-      const tasksArray = Array.isArray(response)
-        ? response
-        : Array.isArray(response?.data)
-        ? response.data
-        : [];
+        // Ensure we have an array
+        const tasksArray = Array.isArray(response)
+          ? response
+          : Array.isArray(response?.data)
+            ? response.data
+            : [];
 
-      console.log('[recent-tasks] Tasks fetched:', tasksArray.length);
+        console.log('[recent-tasks] Tasks fetched:', tasksArray.length);
 
-      if (tasksArray.length === 0) return { tasks: [] };
+        if (tasksArray.length === 0) return { tasks: [] };
 
-      // Sort by createdAt descending and pick top 5
-      const recent = [...tasksArray]
-        .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
-        .slice(0, 5);
+        // Sort by createdAt descending and pick top 5
+        const recent = [...tasksArray]
+          .sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime())
+          .slice(0, 5);
 
-      console.log('[recent-tasks] Recent tasks after sort/slice:', recent.length);
+        console.log('[recent-tasks] Recent tasks after sort/slice:', recent.length);
 
-      return { tasks: recent };
-    } catch (err: any) {
-      console.error('[recent-tasks] Error fetching tasks:', err);
-      // Return empty array for failures (unless 401)
-      if (err?.response?.status === 401) throw err;
-      return { tasks: [] };
-    }
-  },
-  staleTime: 0,
-  enabled: !!workspaceId,
-});
+        return { tasks: recent };
+      } catch (err: any) {
+        console.error('[recent-tasks] Error fetching tasks:', err);
+        // Return empty array for failures (unless 401)
+        if (err?.response?.status === 401) throw err;
+        return { tasks: [] };
+      }
+    },
+    staleTime: 0,
+    enabled: !!workspaceId,
+  });
 
-// Ensure tasks is always an array
-const tasks: TaskType[] = Array.isArray(recentTasksData?.tasks) ? recentTasksData.tasks : [];
+  // Ensure tasks is always an array
+  const tasks: TaskType[] = Array.isArray(recentTasksData?.tasks) ? recentTasksData.tasks : [];
 
 
   return (
@@ -105,13 +105,14 @@ const tasks: TaskType[] = Array.isArray(recentTasksData?.tasks) ? recentTasksDat
       {tasks && tasks.length > 0 && (
         <ul role="list" className="divide-y divide-gray-200 dark:divide-border">
           {tasks.map((task) => {
-            const name = task?.assignedTo?.name || "";
+            const assignee = task?.assignedTo || task?.reporter || null;
+            const name = assignee?.name || "";
             const initials = getAvatarFallbackText(name);
             const avatarColor = getAvatarColor(name);
             return (
               <li
                 key={task._id}
-                className="p-4 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors"
+                className="px-4 py-2 flex items-center justify-between hover:bg-gray-50 dark:hover:bg-muted/50 transition-colors"
               >
                 {/* Task Info */}
                 <div className="flex flex-col space-y-1 flex-grow">
@@ -179,8 +180,8 @@ const tasks: TaskType[] = Array.isArray(recentTasksData?.tasks) ? recentTasksDat
                 <div className="flex items-center space-x-2 ml-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={task.assignedTo?.profilePicture || ""}
-                      alt={task.assignedTo?.name}
+                      src={assignee?.profilePicture || ""}
+                      alt={assignee?.name}
                     />
                     <AvatarFallback className={avatarColor}>
                       {initials}

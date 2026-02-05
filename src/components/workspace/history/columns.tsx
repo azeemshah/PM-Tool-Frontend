@@ -218,7 +218,7 @@ export const columns: ColumnDef<Activity>[] = [
 
       const name = user.name || "Unknown";
       const initials = getAvatarFallbackText(name);
-      const color = getAvatarColor(initials);
+      const color = getAvatarColor(name);
 
       return (
         <div className="flex items-center gap-2">

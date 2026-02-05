@@ -18,6 +18,7 @@ import { Button } from '@/components/ui/button';
 import { Sprint } from '@/api/scrumboard/types';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
 
 interface CompleteSprintDialogProps {
   open: boolean;
@@ -67,11 +68,12 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
         <div className="space-y-4">
           {/* Backlog Option */}
           <div
-            className="p-4 rounded-lg border-2 cursor-pointer transition-colors"
-            style={{
-              borderColor: sendToBacklog ? '#3b82f6' : '#e5e7eb',
-              backgroundColor: sendToBacklog ? '#eff6ff' : undefined,
-            }}
+            className={cn(
+              "p-4 rounded-lg border-2 cursor-pointer transition-colors",
+              sendToBacklog
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
+                : "border-gray-200 dark:border-gray-800"
+            )}
             onClick={() => setSendToBacklog(true)}
           >
             <div className="flex items-start gap-3">
@@ -87,11 +89,12 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
 
           {/* Sprint Option */}
           <div
-            className="p-4 rounded-lg border-2 cursor-pointer transition-colors"
-            style={{
-              borderColor: !sendToBacklog ? '#3b82f6' : '#e5e7eb',
-              backgroundColor: !sendToBacklog ? '#eff6ff' : undefined,
-            }}
+            className={cn(
+              "p-4 rounded-lg border-2 cursor-pointer transition-colors",
+              !sendToBacklog
+                ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
+                : "border-gray-200 dark:border-gray-800"
+            )}
             onClick={() => setSendToBacklog(false)}
           >
             <div className="flex items-start gap-3">
@@ -108,7 +111,7 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
                     </SelectTrigger>
                     <SelectContent>
                       {otherSprints.length === 0 ? (
-                        <div className="p-2 text-sm text-gray-500">
+                        <div className="p-2 text-sm text-muted-foreground">
                           No other sprints available
                         </div>
                       ) : (

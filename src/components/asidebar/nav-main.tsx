@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Clock,
   BarChart3,
+  Kanban,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -55,7 +56,7 @@ export function NavMain() {
     {
       title: boardLabel,
       url: `/workspace/${workspaceId}/board`,
-      icon: LayoutDashboard,
+      icon: Kanban,
     },
     {
       title: "Gantt Chart",
