@@ -35,8 +35,8 @@ const Header = () => {
 
   const pageHeading = getPageLabel(pathname);
   return (
-    <header className="flex sticky top-0 z-50 bg-background h-12 shrink-0 items-center border-b px-3">
-      <div className="flex flex-1 items-center gap-2">
+    <header className="flex sticky top-0 z-50 bg-background h-12 shrink-0 items-center border-b px-3 justify-center">
+      <div className="flex items-center gap-2 absolute left-3">
         <SidebarTrigger />
         <Separator orientation="vertical" className="mr-2 h-4" />
         <Breadcrumb>
@@ -66,12 +66,10 @@ const Header = () => {
           </BreadcrumbList>
         </Breadcrumb>
       </div>
-      <div className="flex items-center gap-4 flex-1 justify-center">
-        <div className="w-full max-w-md">
-          <GlobalSearchBar />
-        </div>
+      <div className="w-full max-w-2xl">
+        <GlobalSearchBar />
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 absolute right-3">
         <Popover>
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
