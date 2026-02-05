@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { io, Socket } from "socket.io-client";
 import useAuth from "@/hooks/api/use-auth";
-import { getNotifications, markAsRead, markAllAsRead, deleteNotification } from "@/api/notification/services/notificationApiService";
+import { getNotifications, markAsRead, markAllAsRead, deleteNotification, deleteAllNotifications } from "@/api/notification/services/notificationApiService";
 import { Notification } from "@/api/notification/types";
 import { baseURL } from "@/lib/base-url";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,7 @@ interface NotificationContextType {
   isLoading: boolean;
   markRead: (id: string) => Promise<void>;
   markAllRead: () => Promise<void>;
+  clearAllNotifications: () => Promise<void>;
   removeNotification: (id: string) => Promise<void>;
   refetch: () => Promise<void>;
   socket: Socket | null;
@@ -29,22 +30,22 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   const fetchNotifications = useCallback(async () => {
     if (!user?._id) {
-        setNotifications([]);
-        return;
+      setNotifications([]);
+      return;
     }
-    
+
     setIsLoading(true);
     try {
-        const data = await getNotifications(user._id);
-        // Sort by newest first
-        const sorted = Array.isArray(data) ? data.sort((a: Notification, b: Notification) => 
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-        ) : [];
-        setNotifications(sorted);
+      const data = await getNotifications(user._id);
+      // Sort by newest first
+      const sorted = Array.isArray(data) ? data.sort((a: Notification, b: Notification) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      ) : [];
+      setNotifications(sorted);
     } catch (err) {
-        console.error('NotificationContext: fetch error', err);
+      console.error('NotificationContext: fetch error', err);
     } finally {
-        setIsLoading(false);
+      setIsLoading(false);
     }
   }, [user?._id]);
 
@@ -62,11 +63,11 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     // We want http://localhost:5000/notifications
     let socketUrl = baseURL;
     try {
-        const url = new URL(baseURL);
-        socketUrl = `${url.origin}/notifications`;
+      const url = new URL(baseURL);
+      socketUrl = `${url.origin}/notifications`;
     } catch (e) {
-        console.warn("Invalid baseURL for socket connection, falling back to /notifications", e);
-        socketUrl = '/notifications';
+      console.warn("Invalid baseURL for socket connection, falling back to /notifications", e);
+      socketUrl = '/notifications';
     }
 
     const newSocket = io(socketUrl, {
@@ -87,7 +88,7 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     newSocket.on('notification', (notification: Notification) => {
       console.log('NotificationContext: New notification received', notification);
       setNotifications((prev) => [notification, ...prev]);
-      
+
       toast({
         title: "New Notification",
         description: notification.message,
@@ -110,44 +111,61 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
   const markRead = async (id: string) => {
     try {
-        // Optimistic update
-        setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
-        await markAsRead(id);
+      // Optimistic update
+      setNotifications(prev => prev.map(n => n._id === id ? { ...n, isRead: true } : n));
+      await markAsRead(id);
     } catch (error) {
-        console.error("Failed to mark notification as read", error);
-        // Revert if needed, but for read status it's usually fine
+      console.error("Failed to mark notification as read", error);
+      // Revert if needed, but for read status it's usually fine
     }
   };
 
   const markAllRead = async () => {
     if (!user?._id) return;
     try {
-        setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
-        await markAllAsRead(user._id);
+      setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+      await markAllAsRead(user._id);
     } catch (error) {
-        console.error("Failed to mark all as read", error);
+      console.error("Failed to mark all as read", error);
+    }
+  };
+
+  const clearAllNotifications = async () => {
+    if (!user?._id) return;
+    try {
+      setNotifications([]);
+      await deleteAllNotifications(user._id);
+      toast({
+        title: "Success",
+        description: "All notifications cleared",
+      });
+    } catch (error) {
+      console.error("Failed to clear all notifications", error);
+      // Refetch to restore state in case of error
+      fetchNotifications();
     }
   };
 
   const removeNotification = async (id: string) => {
     try {
-        setNotifications(prev => prev.filter(n => n._id !== id));
-        await deleteNotification(id);
+      setNotifications(prev => prev.filter(n => n._id !== id));
+      await deleteNotification(id);
     } catch (error) {
-        console.error("Failed to delete notification", error);
+      console.error("Failed to delete notification", error);
     }
   };
 
   return (
-    <NotificationContext.Provider value={{ 
-        notifications, 
-        unreadCount, 
-        isLoading, 
-        markRead, 
-        markAllRead, 
-        removeNotification,
-        refetch: fetchNotifications,
-        socket 
+    <NotificationContext.Provider value={{
+      notifications,
+      unreadCount,
+      isLoading,
+      markRead,
+      markAllRead,
+      clearAllNotifications,
+      removeNotification,
+      refetch: fetchNotifications,
+      socket
     }}>
       {children}
     </NotificationContext.Provider>

@@ -16,6 +16,11 @@ export const markAllAsRead = async (userId: string) => {
   return response.data;
 };
 
+export const deleteAllNotifications = async (userId: string) => {
+  const response = await API.delete(`/kanban/notifications/user/${userId}/clear-all`);
+  return response.data;
+};
+
 export const deleteNotification = async (notificationId: string) => {
   const response = await API.delete(`/kanban/notifications/${notificationId}`);
   return response.data;
