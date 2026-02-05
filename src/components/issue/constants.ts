@@ -4,6 +4,7 @@ import {
     CheckSquare,
     Bug as BugIcon,
     GitBranch,
+    Lightbulb,
 } from "lucide-react";
 import { IssueType } from "@/api/issue/types";
 
@@ -27,6 +28,11 @@ export const ISSUE_TYPES_CONFIG: Record<IssueType, { label: string; icon: any; c
         label: "Bug",
         icon: BugIcon,
         className: "bg-red-100 text-red-700",
+    },
+    improvement: {
+        label: "Improvement",
+        icon: Lightbulb,
+        className: "bg-yellow-100 text-yellow-700",
     },
     subtask: {
         label: "Subtask",

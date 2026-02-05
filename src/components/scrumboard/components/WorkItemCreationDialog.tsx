@@ -45,7 +45,7 @@ import { TagInput } from '@/components/tag/TagInput';
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
   description: z.string().optional(),
-  type: z.enum(['Task', 'Bug', 'Story', 'Epic']).default('Task'),
+  type: z.enum(['Task', 'Bug', 'Story', 'Epic', 'Improvement']).default('Task'),
   priority: z.enum(['Low', 'Medium', 'High']).default('Medium'),
   status: z.string().min(1, 'Status is required'),
   reporterId: z.string().min(1, 'Reporter is required'),

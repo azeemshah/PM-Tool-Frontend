@@ -280,7 +280,7 @@ export const issueApiService = {
 	// ==================== SUBTASKS ====================
 
 	/**
-	 * Create Subtask under Story/Task/Bug
+	 * Create Subtask under Story/Task/Bug/Improvement
 	 * POST /issues/:parentId/subtask
 	 */
 	async createSubtask(parentIssueId: string, data: CreateSubtaskDTO): Promise<Subtask> {
@@ -318,10 +318,10 @@ export const issueApiService = {
 	// ==================== QUERIES ====================
 
 	/**
-	 * Get Story/Task/Bug children under Epic
+	 * Get Story/Task/Bug/Improvement children under Epic
 	 * GET /issues/epic/:epicId/children
 	 */
-	async getEpicChildren(epicId: string): Promise<(Story | Task | Bug)[]> {
+	async getEpicChildren(epicId: string): Promise<(Story | Task | Bug | Improvement)[]> {
 		const response = await API.get(`${ISSUES_ENDPOINT}/epic/${epicId}/children`);
 		const data = response.data.data || response.data;
 		return Array.isArray(data) ? data : [];

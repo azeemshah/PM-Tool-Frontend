@@ -1,6 +1,6 @@
 /**
  * Hook: useGetSubtasks
- * Fetch Subtasks under a parent (Story/Task/Bug)
+ * Fetch Subtasks under a parent (Story/Task/Bug/Improvement)
  */
 
 import { useQuery } from '@tanstack/react-query';

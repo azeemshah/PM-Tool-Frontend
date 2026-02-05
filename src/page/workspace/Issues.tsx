@@ -31,7 +31,7 @@ interface Issue {
   key: string;
   title: string;
   description?: string;
-  type: "epic" | "story" | "task" | "bug" | "subtask";
+  type: "epic" | "story" | "task" | "bug" | "improvement" | "subtask";
   priority?: string;
   status?: string;
   assignee?: {
@@ -100,6 +100,8 @@ const getTypeColor = (type: string) => {
       return "bg-green-100 text-green-800";
     case "bug":
       return "bg-red-100 text-red-800";
+    case "improvement":
+      return "bg-yellow-100 text-yellow-800";
     case "subtask":
       return "bg-gray-100 text-gray-800";
     default:

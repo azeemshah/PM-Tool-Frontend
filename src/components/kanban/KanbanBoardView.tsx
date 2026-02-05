@@ -202,7 +202,7 @@ export function KanbanBoardView() {
   // Handle card click - accepts both KanbanCard and Issue types
   const handleCardClick = useCallback((card: KanbanCard | Issue) => {
     // Only open dialog for Issues, not KanbanCards
-    if ('type' in card && ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((card as any).type))) {
+    if ('type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type))) {
       setSelectedCard(card);
       setIsCardDialogOpen(true);
     }

@@ -74,7 +74,7 @@ export function BoardCardDialog() {
 
   // Check if selectedCard is actually an Issue (has 'type' field that's an issue type)
   const isIssue = selectedCard && ('type' in selectedCard) &&
-    ['epic', 'story', 'task', 'bug', 'subtask'].includes(String((selectedCard as any).type));
+    ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((selectedCard as any).type));
 
   const issue = isIssue ? (selectedCard as Issue) : null;
 
@@ -889,7 +889,7 @@ export function BoardCardDialog() {
           </div>
 
           {/* Parent / Epic */}
-          {(['story', 'task', 'bug', 'subtask'].includes(issue.type)) && (
+          {(['story', 'task', 'bug', 'improvement', 'subtask'].includes(issue.type)) && (
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 {issue.type === 'subtask' ? 'Parent Issue' : 'Epic'}
@@ -901,7 +901,7 @@ export function BoardCardDialog() {
                     onValueChange={setParentId}
                     disabled={
                       ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
-                        .filter((item: any) => ['story', 'task', 'bug'].includes(item.type)).length === 0
+                        .filter((item: any) => ['story', 'task', 'bug', 'improvement'].includes(item.type)).length === 0
                     }
                   >
                     <SelectTrigger className="w-full">

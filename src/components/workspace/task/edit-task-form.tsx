@@ -399,7 +399,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
             )} />
 
             {/* Parent/Epic Selection */}
-            {['story', 'task', 'bug', 'subtask'].includes(String(task.type).toLowerCase()) && (
+            {['story', 'task', 'bug', 'improvement', 'subtask'].includes(String(task.type).toLowerCase()) && (
               <FormField
                 control={form.control}
                 name="parent"
@@ -415,7 +415,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                           onValueChange={field.onChange}
                           disabled={
                             ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
-                              .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase())).length === 0
+                              .filter((item: any) => ['story', 'task', 'bug', 'improvement'].includes(String(item.type).toLowerCase())).length === 0
                           }
                         >
                           <SelectTrigger>
@@ -423,13 +423,13 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                           </SelectTrigger>
                           <SelectContent>
                             {((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
-                              .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase())).length === 0 ? (
+                              .filter((item: any) => ['story', 'task', 'bug', 'improvement'].includes(String(item.type).toLowerCase())).length === 0 ? (
                               <div className="p-2 text-sm text-gray-500">
                                 No parent issues available.
                               </div>
                             ) : (
                               ((Array.isArray(workspaceItems) ? workspaceItems : (workspaceItems as any)?.data || []) as any[])
-                                .filter((item: any) => ['story', 'task', 'bug'].includes(String(item.type).toLowerCase()) && item._id !== task._id)
+                                .filter((item: any) => ['story', 'task', 'bug', 'improvement'].includes(String(item.type).toLowerCase()) && item._id !== task._id)
                                 .map((item) => (
                                   <SelectItem key={item._id} value={item._id}>
                                     <div className="flex items-center gap-2">
