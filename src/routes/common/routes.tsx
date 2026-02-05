@@ -18,6 +18,7 @@ import CheckEmail from "@/page/auth/CheckEmail";
 import OtpVerification from "@/page/auth/OtpVerification";
 import SprintEdit from "@/page/workspace/SprintEdit";
 import History from "@/page/workspace/History";
+import WorkItemDetailsPage from "@/page/workspace/WorkItemDetailsPage";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
@@ -41,6 +42,7 @@ export const protectedRoutePaths = [
   { path: PROTECTED_ROUTES.MEMBERS, element: <Members /> },
   { path: PROTECTED_ROUTES.SETTINGS, element: <Settings /> },
   { path: PROTECTED_ROUTES.GANTT, element: <GanttPage /> },
+  { path: "/workspace/:workspaceId/work-item/:workItemId", element: <WorkItemDetailsPage /> },
 ];
 
 export const baseRoutePaths = [

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Bell } from "lucide-react";
 import { useNotifications } from "@/contexts/notification-context";
 import { NotificationList } from "./notification/notification-list";
+import { GlobalSearchBar } from "./search/GlobalSearchBar";
 
 const Header = () => {
   const location = useLocation();
@@ -64,6 +65,11 @@ const Header = () => {
             )}
           </BreadcrumbList>
         </Breadcrumb>
+      </div>
+      <div className="flex items-center gap-4 flex-1 justify-center">
+        <div className="w-full max-w-md">
+          <GlobalSearchBar />
+        </div>
       </div>
       <div className="flex items-center gap-2">
         <Popover>

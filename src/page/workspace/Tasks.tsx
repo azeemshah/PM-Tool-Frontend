@@ -53,6 +53,7 @@ export default function Tasks() {
           </Button>
         </div>
       </div>
+
       <IssueCreateDialog
         isOpen={dialogState.isOpen}
         onOpenChange={(open) => open ? dialogState.open(workspaceId) : dialogState.close()}

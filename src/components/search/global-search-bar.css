@@ -1,0 +1,117 @@
+/* Global Search Bar Styles */
+
+.global-search-container {
+  position: relative;
+  width: 100%;
+}
+
+.global-search-input {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  padding-left: 2.25rem;
+  padding-right: 2.25rem;
+  border: 1px solid rgb(209, 213, 219);
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.global-search-input:focus {
+  outline: none;
+  ring: 2px;
+  ring-color: rgb(59, 130, 246);
+  border-color: rgb(59, 130, 246);
+}
+
+.dark .global-search-input {
+  background-color: rgb(31, 41, 55);
+  border-color: rgb(75, 85, 99);
+  color: white;
+}
+
+.global-search-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 0.5rem;
+  background-color: white;
+  border: 1px solid rgb(209, 213, 219);
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),
+    0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  z-index: 50;
+  max-height: 24rem;
+  overflow-y: auto;
+}
+
+.dark .global-search-dropdown {
+  background-color: rgb(31, 41, 55);
+  border-color: rgb(75, 85, 99);
+}
+
+.search-result-item {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgb(229, 231, 235);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.search-result-item:hover {
+  background-color: rgb(249, 250, 251);
+}
+
+.dark .search-result-item {
+  border-bottom-color: rgb(75, 85, 99);
+}
+
+.dark .search-result-item:hover {
+  background-color: rgb(55, 65, 81);
+}
+
+.search-result-key {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: rgb(107, 114, 128);
+}
+
+.dark .search-result-key {
+  color: rgb(156, 163, 175);
+}
+
+.search-result-title {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(17, 24, 39);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.dark .search-result-title {
+  color: rgb(243, 244, 246);
+}
+
+.search-result-description {
+  font-size: 0.75rem;
+  color: rgb(107, 114, 128);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 0.25rem;
+}
+
+.dark .search-result-description {
+  color: rgb(156, 163, 175);
+}
+
+.search-no-results {
+  padding: 2rem;
+  text-align: center;
+  color: rgb(107, 114, 128);
+}
+
+.dark .search-no-results {
+  color: rgb(156, 163, 175);
+}
