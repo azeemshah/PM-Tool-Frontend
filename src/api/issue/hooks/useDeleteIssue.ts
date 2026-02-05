@@ -22,6 +22,7 @@ export function useDeleteIssue() {
 			queryClient.invalidateQueries({ queryKey: ['tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['bugs'] });
 			queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
 			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
 			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({

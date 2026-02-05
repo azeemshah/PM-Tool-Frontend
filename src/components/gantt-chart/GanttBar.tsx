@@ -1,6 +1,7 @@
 import React from 'react';
 import type { GanttItem } from './types/gantt';
 import { statusColorMap, issueTypeBarColors } from './utils/colorMaps';
+import { statusIcons } from '@/components/workspace/task/table/data';
 import { formatTime } from './utils/ganttCalculations';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
@@ -87,7 +88,7 @@ export const GanttBar: React.FC<GanttBarProps> = ({
                 if (!assignee) return null;
 
                 return (
-                  <Avatar className="absolute left-1 w-3.5 h-3.5 z-20 ring-1 ring-white/50 dark:ring-zinc-950/50">
+                  <Avatar className="absolute left-1 w-3.5 h-3.5 z-20 ring-1 ring-background/50">
                     <AvatarImage src={assignee.profilePicture || assignee.avatar} alt={assignee.name} />
                     <AvatarFallback className={`text-[6px] font-bold ${getAvatarColor(assignee.name || '')}`}>
                       {getAvatarFallbackText(assignee.name)}
@@ -103,41 +104,52 @@ export const GanttBar: React.FC<GanttBarProps> = ({
             </div>
 
             {/* Label outside the bar */}
-            <div className="ml-2 text-sm font-medium text-gray-900 dark:text-gray-100 truncate whitespace-nowrap">
-              {item.title}
+            <div className="ml-2 flex items-center gap-2">
+              {(() => {
+                const StatusIcon = statusIcons[item.status as keyof typeof statusIcons];
+                const statusColors = statusColorMap[item.status] || statusColorMap['To Do'];
+                return (
+                  <div className={`flex items-center gap-1.5 px-2 py-0 rounded-md border ${statusColors.bg} ${statusColors.border}`}>
+                    {StatusIcon && <StatusIcon className={`w-3 h-3 ${statusColors.text}`} />}
+                    <span className={`text-xs font-semibold ${statusColors.text} whitespace-nowrap`}>
+                      {item.title}
+                    </span>
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </TooltipTrigger>
         <TooltipContent
           side="bottom"
           align="start"
-          className="bg-white dark:bg-zinc-950 text-gray-900 dark:text-gray-100 border border-gray-200 dark:border-zinc-800 shadow-xl p-3 w-64 z-[100]"
+          className="bg-popover text-popover-foreground border border-border shadow-xl p-3 w-64 z-[100]"
         >
           <div className="font-semibold text-sm mb-2">{item.title}</div>
           <div className="text-xs space-y-1.5">
-            <div className="flex justify-between text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between text-muted-foreground">
               <span>Start{isCreatedDate ? ' (Created)' : ''}:</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{startDateStr}</span>
+              <span className="font-medium text-foreground">{startDateStr}</span>
             </div>
-            <div className="flex justify-between text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between text-muted-foreground">
               <span>Due:</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{dueDateStr}</span>
+              <span className="font-medium text-foreground">{dueDateStr}</span>
             </div>
             {item.originalEstimate && (
-              <div className="flex justify-between text-gray-500 dark:text-gray-400">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Time:</span>
-                <span className="font-medium text-gray-900 dark:text-gray-100">
+                <span className="font-medium text-foreground">
                   {formatTime(item.timeSpent)} / {formatTime(item.originalEstimate)}
                 </span>
               </div>
             )}
-            <div className="flex justify-between text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between text-muted-foreground">
               <span>Progress:</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100">{Math.round(progressPercent)}%</span>
+              <span className="font-medium text-foreground">{Math.round(progressPercent)}%</span>
             </div>
-            <div className="flex justify-between text-gray-500 dark:text-gray-400">
+            <div className="flex justify-between text-muted-foreground">
               <span>Status:</span>
-              <span className="font-medium text-gray-900 dark:text-gray-100 capitalize">{item.status}</span>
+              <span className="font-medium text-foreground capitalize">{item.status}</span>
             </div>
           </div>
         </TooltipContent>

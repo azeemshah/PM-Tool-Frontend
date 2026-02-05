@@ -146,6 +146,7 @@ export default function EditSubtaskForm(props: {
         queryClient.invalidateQueries({
           queryKey: ["subtasks", taskId],
         });
+        queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
 
         toast({
           title: "Success",

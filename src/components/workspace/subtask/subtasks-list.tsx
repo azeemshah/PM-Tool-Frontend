@@ -63,6 +63,7 @@ export default function SubtasksList({ taskId }: { taskId: string }) {
     mutationFn: deleteSubtaskMutationFn,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
+      queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
       toast({
         title: "Success",
         description: "Subtask deleted successfully",

@@ -21,6 +21,7 @@ export function useCreateBug() {
 			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
 			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
 			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({

@@ -51,6 +51,11 @@ export function calculateBarPosition(
   let itemStart = item.startDate ? new Date(item.startDate) : new Date(item.createdAt);
   let itemEnd = item.dueDate ? new Date(item.dueDate) : new Date(item.updatedAt);
 
+  // Check if item is completely outside the range
+  if (itemEnd < range.start || itemStart > range.end) {
+    return { start: 0, width: 0 };
+  }
+
   // Clamp to timeline range
   if (itemStart < range.start) itemStart = range.start;
   if (itemEnd > range.end) itemEnd = range.end;

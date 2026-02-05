@@ -217,6 +217,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
           queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
           queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
           toast({
             title: "Success",
             description: "Task updated successfully",
@@ -240,9 +241,11 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               });
               await issueApiService.moveItemToColumn(taskId, targetColumnId);
               queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+              queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
             } catch (error) {
               console.error("Failed to move item column after task update:", error);
               queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
+              queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
             }
           }
         }, 300);
@@ -504,7 +507,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 <span className="inline-block bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">8.2</span>
                 <div className="font-bold text-sm text-blue-900 dark:text-blue-100">Time Tracking</div>
               </div>
-              
+
               {/* Time Tracking Summary */}
               <TimeTrackingSummary
                 originalEstimate={(task as any)?.originalEstimate}
@@ -516,7 +519,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               {/* Timer Control */}
               <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                 <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">⏱️ Timer Control</div>
-                <TimerButton 
+                <TimerButton
                   issueId={String(task._id)}
                   userId={task.assignedTo?._id || (typeof task.assignedTo === 'string' ? task.assignedTo : '')}
                   onTimerStop={() => setRefreshTrigger(prev => prev + 1)}
@@ -538,7 +541,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               {timeLogs.length > 0 && (
                 <div className="border-t border-gray-200 dark:border-gray-700 pt-3">
                   <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2">📋 Recent Time Logs ({timeLogs.length})</div>
-                  <TimeLogsList 
+                  <TimeLogsList
                     logs={timeLogs}
                     isLoading={loadingLogs}
                     currentUserId={task.assignedTo?._id}
