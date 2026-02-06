@@ -29,6 +29,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   const [comment, setComment] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [activeOtherTask, setActiveOtherTask] = useState<{ title: string; key: string } | null>(null);
   const { toast } = useToast();
 
   // Load active timer on mount
@@ -51,11 +52,24 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
     try {
       const timer = await issueApiService.getActiveTimer(userId);
       if (timer && timer._id) {
-        setIsActive(true);
-        const elapsed = timer.startedAt
-          ? Math.round((Date.now() - new Date(timer.startedAt).getTime()) / 1000)
-          : 0;
-        setElapsedSeconds(elapsed);
+        // Check if the timer is for the current issue
+        const timerIssueId = typeof timer.workItemId === 'object' ? timer.workItemId._id : timer.workItemId;
+        
+        if (timerIssueId === issueId) {
+          setIsActive(true);
+          const elapsed = timer.startedAt
+            ? Math.round((Date.now() - new Date(timer.startedAt).getTime()) / 1000)
+            : 0;
+          setElapsedSeconds(elapsed);
+          setActiveOtherTask(null);
+        } else {
+          // It's active elsewhere
+          const taskInfo = typeof timer.workItemId === 'object' 
+            ? { title: timer.workItemId.title, key: timer.workItemId.key }
+            : { title: 'Unknown Task', key: 'Unknown' };
+            
+          setActiveOtherTask(taskInfo);
+        }
       }
     } catch (_e) {
       // No active timer
@@ -158,15 +172,22 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   }
 
   return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={handleStart}
-      disabled={isLoading}
-      className="gap-2 w-full"
-    >
-      <Play size={16} />
-      Start Timer
-    </Button>
+    <div className="space-y-2">
+      {activeOtherTask && (
+        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
+          Timer active on <strong>{activeOtherTask.key}</strong>. Starting this will stop the other timer.
+        </div>
+      )}
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={handleStart}
+        disabled={isLoading}
+        className="gap-2 w-full"
+      >
+        <Play size={16} />
+        {activeOtherTask ? 'Switch Timer to This' : 'Start Timer'}
+      </Button>
+    </div>
   );
 };

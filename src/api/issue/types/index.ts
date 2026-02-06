@@ -13,6 +13,25 @@ export type ItemType = 'epic' | 'story' | 'task' | 'bug' | 'subtask' | 'improvem
 export type ItemPriority = 'low' | 'medium' | 'high';
 export type ItemStatus = 'To Do' | 'In Progress' | 'In Review' | 'Done' | 'Blocked' | 'Backlog' | string;
 
+export enum CustomFieldType {
+  TEXT = 'text',
+  NUMBER = 'number',
+  DROPDOWN = 'dropdown',
+  MULTI_SELECT = 'multi-select',
+  CHECKBOX = 'checkbox',
+  DATE = 'date',
+  USER = 'user',
+  URL = 'url',
+}
+
+export interface CustomFieldDto {
+  name: string;
+  fieldType: CustomFieldType;
+  value?: any;
+  options?: string[];
+  userValue?: string;
+}
+
 type IssueFormValues = {
 	title: string;
 	description?: string;
@@ -75,15 +94,14 @@ export interface CreateItemDto {
 	column?: string;       // MongoDB ObjectId
 	parent?: string;       // MongoDB ObjectId
 	workspace: string;     // MongoDB ObjectId
-	column?: string;       // MongoDB ObjectId
-	parent?: string;       // MongoDB ObjectId
-	labels?: string[];
-	tags?: string[];
+
 	storyPoints?: number;
 	originalEstimate?: number;
+	customFields?: CustomFieldDto[];
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
+  customFields: any[];
 	issueId: ReactNode;
 	tags?: string[];
 	_id: string;
@@ -194,6 +212,7 @@ export interface CreateEpicDTO {
 	status?: ItemStatus;
 	dueDate?: string;
 	labels?: string[];
+	customFields?: CustomFieldDto[];
 	tags?: string[];
 }
 
@@ -216,6 +235,7 @@ export interface CreateTaskDTO {
 	assignedTo: string;
 	priority?: IssuePriority;
 	tags?: string[];
+	customFields?: CustomFieldDto[];
 	// epicId comes from URL: POST /issues/epic/:epicId/task
 }
 
@@ -266,6 +286,7 @@ export interface UpdateIssueDTO {
 	reporter?: string;
 	parent?: string | null;
 	epicId?: string | null;
+	customFields?: CustomFieldDto[];
 }
 
 // ==================== QUERY RESPONSE TYPES ====================

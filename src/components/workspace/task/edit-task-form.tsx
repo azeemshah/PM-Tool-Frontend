@@ -4,7 +4,7 @@ import { cn } from "@/lib/utils";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { CalendarIcon, Loader, Trash2, Download } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
   Form,
   FormControl,
@@ -79,6 +79,63 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
   const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+
+  // Custom fields state
+  const [customFields, setCustomFields] = useState<any[]>((task as any).customFields || []);
+  const [newlyAddedIndex, setNewlyAddedIndex] = useState<number | null>(null);
+  const customFieldsSectionRef = useRef<HTMLDivElement | null>(null);
+  const newFieldNameRef = useRef<HTMLInputElement | null>(null);
+
+  const CustomFieldTypes = [
+    'text',
+    'number',
+    'dropdown',
+    'multi-select',
+    'checkbox',
+    'date',
+    'user',
+    'url',
+  ];
+
+  const handleTopToolbarClick = (type: string) => {
+    // create a new empty custom field of given type and focus its name input
+    const idx = customFields.length;
+    const field: any = { id: `field-${Date.now()}-${Math.random()}`, name: '', fieldType: type, isEditing: true };
+    if (type === 'dropdown' || type === 'multi-select') field.options = [];
+    if (type === 'checkbox') field.value = false; else field.value = '';
+    setCustomFields((s) => [...s, field]);
+    setNewlyAddedIndex(idx);
+
+    setTimeout(() => {
+      if (customFieldsSectionRef.current) {
+        customFieldsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }, 100);
+  };
+
+  const updateCustomFieldValue = (idx: number, value: any) => {
+    setCustomFields((s) => {
+      const copy = [...s];
+      copy[idx] = { ...copy[idx], value };
+      if (copy[idx].fieldType === 'user') copy[idx].userValue = value;
+      return copy;
+    });
+  };
+
+  const removeCustomField = (idx: number) => {
+    setCustomFields((s) => s.filter((_, i) => i !== idx));
+  };
+
+  // focus newly added field name input when inserted
+  useEffect(() => {
+    if (newlyAddedIndex === null) return;
+    setTimeout(() => {
+      try {
+        if (newFieldNameRef.current) newFieldNameRef.current.focus();
+      } catch (_) {}
+      setNewlyAddedIndex(null);
+    }, 150);
+  }, [newlyAddedIndex]);
 
   // Members Dropdown Options
   const membersOptions = members.map((member) => {
@@ -155,6 +212,20 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     },
   });
 
+  // Fetch detailed issue to get custom fields and latest data
+  const { data: detailedIssue } = useQuery({
+    queryKey: ['issue', String(task._id)],
+    queryFn: () => issueApiService.getIssue(String(task._id)),
+    enabled: !!task._id,
+    staleTime: 0,
+  });
+
+  useEffect(() => {
+    if (detailedIssue && detailedIssue.customFields) {
+      setCustomFields(detailedIssue.customFields);
+    }
+  }, [detailedIssue]);
+
   const { data: workspaceItems = [] } = useQuery({
     queryKey: ['workspace-items', workspaceId],
     queryFn: () => issueApiService.getTasksByWorkspace(workspaceId),
@@ -203,6 +274,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       parent: values.parent || null,
       storyPoints: values.storyPoints,
       originalEstimate: values.originalEstimate ? Math.round(values.originalEstimate * 60) : undefined,
+      customFields: customFields.length > 0 ? customFields : undefined,
     };
 
     mutate({ issueId: taskId, data: payload }, {
@@ -220,6 +292,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
           queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
+          queryClient.invalidateQueries({ queryKey: ["issue", String(task._id)] });
           toast({
             title: "Success",
             description: "Task updated successfully",
@@ -331,6 +404,20 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
         </div>
         <Form {...form}>
           <form className="space-y-3" onSubmit={form.handleSubmit(onSubmit)}>
+            {/* Custom Fields Toolbar */}
+            <div className="flex flex-wrap gap-2 mb-4">
+                {CustomFieldTypes.map((type) => (
+                    <button
+                        key={type}
+                        type="button"
+                        onClick={() => handleTopToolbarClick(type)}
+                        className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm capitalize"
+                    >
+                        {type}
+                    </button>
+                ))}
+            </div>
+
             {/* Title */}
             <FormField control={form.control} name="title" render={({ field }) => (
               <FormItem>
@@ -348,6 +435,139 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 <FormMessage />
               </FormItem>
             )} />
+
+            {/* Custom Fields Rendering */}
+            <div className="space-y-2" ref={customFieldsSectionRef}>
+                <div className="space-y-2">
+                    {customFields.map((f, idx) => {
+                        const isNew = (f.name === '' || newlyAddedIndex === idx);
+                        const key = f.id || `${f.fieldType}-${idx}`;
+                        return (
+                        <div key={key} className="space-y-2 p-3 border rounded-md bg-white dark:bg-card relative group">
+                            <div className="flex items-center justify-between">
+                                <div className="text-sm font-medium flex items-center gap-2 flex-1">
+                                    {f.isEditing !== false ? (
+                                        <div className="flex items-center gap-2">
+                                            <input
+                                                ref={(el) => { if (newlyAddedIndex === idx) newFieldNameRef.current = el; }}
+                                                placeholder="Field name"
+                                                value={f.name}
+                                                onChange={(e) => setCustomFields((s) => { const c=[...s]; c[idx]={...c[idx], name: e.target.value}; return c; })}
+                                                className="px-2 py-1 border rounded bg-background text-foreground border-input w-full max-w-[200px]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setCustomFields((s) => { const c=[...s]; c[idx]={...c[idx], isEditing: false}; return c; })}
+                                                className="px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 rounded"
+                                            >
+                                                Add
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <>{f.name}</>
+                                    )}
+                                </div>
+                                <button type="button" className="text-red-500 text-xs ml-2" onClick={() => removeCustomField(idx)}>Remove</button>
+                            </div>
+                            <div>
+                                {(f.fieldType === 'dropdown' || f.fieldType === 'multi-select') && f.isEditing !== false && (
+                                    <div className="mb-3 p-2 bg-muted/50 rounded border border-dashed border-border">
+                                        <div className="text-xs font-medium mb-1 text-muted-foreground">Add Options</div>
+                                        <div className="flex gap-2 mb-2">
+                                            <input
+                                                placeholder="Type option & press Enter"
+                                                className="flex-1 px-2 py-1 text-xs border rounded bg-background text-foreground border-input"
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        const val = e.currentTarget.value.trim();
+                                                        if (val) {
+                                                            setCustomFields(s => {
+                                                                const c = [...s];
+                                                                const opts = c[idx].options || [];
+                                                                if (!opts.includes(val)) {
+                                                                    c[idx] = { ...c[idx], options: [...opts, val] };
+                                                                }
+                                                                return c;
+                                                            });
+                                                            e.currentTarget.value = '';
+                                                        }
+                                                    }
+                                                }}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                                {f.fieldType === 'text' && (
+                                    <Input value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter text" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" />
+                                )}
+                                {f.fieldType === 'number' && (
+                                    <input type="number" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? Number(e.target.value) : '')} placeholder="Enter number" />
+                                )}
+                                {f.fieldType === 'dropdown' && (
+                                    <Select value={f.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {(f.options || []).map((opt: string) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                {f.fieldType === 'multi-select' && (
+                                    <div className="space-y-1">
+                                        {(!f.value || f.value.length === 0) && <div className="text-gray-400 text-sm">Select multi</div>}
+                                        <div className="flex flex-wrap gap-2">
+                                            {(f.options || []).map((opt: string) => {
+                                                const selected = Array.isArray(f.value) && f.value.includes(opt);
+                                                return (
+                                                    <button key={opt} type="button" onClick={() => {
+                                                        const arr = Array.isArray(f.value) ? [...f.value] : [];
+                                                        const i = arr.indexOf(opt);
+                                                        if (i === -1) arr.push(opt); else arr.splice(i, 1);
+                                                        updateCustomFieldValue(idx, arr);
+                                                    }} className={`px-2 py-1 rounded ${selected ? 'bg-primary text-primary-foreground' : 'bg-background border border-input hover:bg-accent hover:text-accent-foreground'}`}>
+                                                        {opt}
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                                {f.fieldType === 'checkbox' && (
+                                    <label className="inline-flex items-center gap-2">
+                                        <input type="checkbox" checked={!!f.value} onChange={(e) => updateCustomFieldValue(idx, !!e.target.checked)} />
+                                        <span className="text-sm">Checked</span>
+                                    </label>
+                                )}
+                                {f.fieldType === 'date' && (
+                                    <input type="date" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={f.value ? new Date(f.value).toISOString().split('T')[0] : ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? new Date(e.target.value).toISOString() : '')} />
+                                )}
+                                {f.fieldType === 'user' && (
+                                    <Select value={f.userValue ?? f.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                                        <SelectTrigger>
+                                            <SelectValue />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {members.map((m: any) => {
+                                                const u = m.user || m.userId;
+                                                const id = u?._id || u || '';
+                                                const name = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+                                                return <SelectItem key={id} value={id}>{name}</SelectItem>;
+                                            })}
+                                        </SelectContent>
+                                    </Select>
+                                )}
+                                {f.fieldType === 'url' && (
+                                    <Input type="url" value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter URL" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" />
+                                )}
+                            </div>
+                        </div>
+                    )})}
+                </div>
+
+                <div ref={customFieldsSectionRef} />
+            </div>
 
             {/* Assigned To */}
             <FormField control={form.control} name="assignedTo" render={({ field }) => (

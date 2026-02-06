@@ -69,6 +69,10 @@ export function IssueCreateDialog({
 }: IssueCreateDialogProps) {
     const queryClient = useQueryClient();
 
+    const customFieldsSectionRef = React.useRef<HTMLDivElement | null>(null);
+    const newFieldNameRef = React.useRef<HTMLInputElement | null>(null);
+    const [newlyAddedIndex, setNewlyAddedIndex] = React.useState<number | null>(null);
+
     // Form state
     const [issueType, setIssueType] = useState<IssueType | ''>('');
     const [title, setTitle] = useState('');
@@ -86,6 +90,8 @@ export function IssueCreateDialog({
     const [originalEstimateHours, setOriginalEstimateHours] = useState<number | ''>('');
     const [storyPoints, setStoryPoints] = useState<number | ''>('');
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
+    // Custom fields state
+    const [customFields, setCustomFields] = useState<any[]>([]);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
 
     const { statuses: dynamicStatuses, isLoading: isLoadingStatuses } = useGetWorkspaceStatuses(workspaceId);
@@ -127,23 +133,16 @@ export function IssueCreateDialog({
         workspaceItemsRaw,
         workspaceItemsCount: workspaceItems.length
     });
-
-    // Format options for reporter display
-    const reporterOptions = members.map((member) => {
-        if (!member) return { label: 'Unknown', value: '' };
-
-        // Handle both new (user object) and old (userId object) structures
-        const userObj = member.user || member.userId;
-
-        // Safety check if userObj is just an ID string or null
-        if (!userObj || typeof userObj === 'string') {
-             return { 
-                 label: <span className="text-muted-foreground">Unknown User</span>, 
-                 value: typeof userObj === 'string' ? userObj : "" 
-             };
+    // Reporter options for select
+    const reporterOptions = members.map((m: any) => {
+        const userObj = m.user || m.userId;
+        if (!userObj) {
+            return { label: <span className="text-muted-foreground">Unknown User</span>, value: '' };
         }
-
-        const name = userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
+        if (typeof userObj === 'string') {
+            return { label: <span className="text-muted-foreground">Unknown User</span>, value: userObj };
+        }
+        const name = userObj.name || (userObj.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown');
         const initials = getAvatarFallbackText(name);
         const avatarColor = getAvatarColor(name);
         return {
@@ -225,6 +224,7 @@ export function IssueCreateDialog({
             // revoke object URLs
             attachments.forEach(att => URL.revokeObjectURL(att.url));
             setAttachments([]);
+            setCustomFields([]);
         } else {
             // If a default type is provided and no type is selected yet, apply it
             if (defaultType && !issueType) {
@@ -242,6 +242,57 @@ export function IssueCreateDialog({
             setReporterId(id);
         }
     }, [members, reporterId]);
+
+    const CustomFieldTypes = [
+        'text',
+        'number',
+        'dropdown',
+        'multi-select',
+        'checkbox',
+        'date',
+        'user',
+        'url',
+    ];
+
+    const handleTopToolbarClick = (type: string) => {
+        // create a new empty custom field of given type and focus its name input
+        const idx = customFields.length;
+        const field: any = { id: `field-${Date.now()}-${Math.random()}`, name: '', fieldType: type, isEditing: true };
+        if (type === 'dropdown' || type === 'multi-select') field.options = [];
+        if (type === 'checkbox') field.value = false; else field.value = '';
+        setCustomFields((s) => [...s, field]);
+        setNewlyAddedIndex(idx);
+
+        setTimeout(() => {
+            if (customFieldsSectionRef.current) {
+                customFieldsSectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        }, 100);
+    };
+
+    const updateCustomFieldValue = (idx: number, value: any) => {
+        setCustomFields((s) => {
+            const copy = [...s];
+            copy[idx] = { ...copy[idx], value };
+            if (copy[idx].fieldType === 'user') copy[idx].userValue = value;
+            return copy;
+        });
+    };
+
+    // focus newly added field name input when inserted
+    React.useEffect(() => {
+        if (newlyAddedIndex === null) return;
+        setTimeout(() => {
+            try {
+                if (newFieldNameRef.current) newFieldNameRef.current.focus();
+            } catch (_) {}
+            setNewlyAddedIndex(null);
+        }, 150);
+    }, [newlyAddedIndex]);
+
+    const removeCustomField = (idx: number) => {
+        setCustomFields((s) => s.filter((_, i) => i !== idx));
+    };
 
     const handleCreate = async () => {
         // Validate required fields
@@ -300,7 +351,14 @@ export function IssueCreateDialog({
                     dueDate: dueDate?.toISOString(),
                     status: status ? (statusMap[status] || status) : undefined,
                     labels: labels.length > 0 ? labels : undefined,
-                    tags: tags.length > 0 ? tags : undefined,
+                            tags: tags.length > 0 ? tags : undefined,
+                            customFields: customFields.length > 0 ? customFields.map(f => ({
+                                name: f.name,
+                                fieldType: f.fieldType,
+                                value: f.value,
+                                options: f.options,
+                                userValue: f.userValue
+                            })) : undefined,
                 },
                 {
                     onSuccess: async (created: any) => {
@@ -348,7 +406,8 @@ export function IssueCreateDialog({
                 status: status ? (statusMap[status] || status) : undefined,
                 parent: epicId || undefined,
                 labels: labels.length > 0 ? labels : undefined,
-                tags: tags.length > 0 ? tags : undefined,
+                    tags: tags.length > 0 ? tags : undefined,
+                    customFields: customFields.length > 0 ? customFields : undefined,
             };
 
             // attach estimates (frontend uses hours input; backend expects minutes)
@@ -419,6 +478,7 @@ export function IssueCreateDialog({
                 parent: parentIssueId,
                 labels: labels.length > 0 ? labels : undefined,
                 tags: tags.length > 0 ? tags : undefined,
+                customFields: customFields.length > 0 ? customFields : undefined,
             };
 
             if (originalEstimateHours && Number(originalEstimateHours) > 0) {
@@ -487,6 +547,20 @@ export function IssueCreateDialog({
                 </DialogHeader>
 
                 <div className="space-y-4">
+                    {/* Top toolbar showing all custom field types (click to add/scroll to add area) */}
+                    <div className="flex flex-wrap gap-2 mt-2 mb-2">
+                        {CustomFieldTypes.map((t) => (
+                            <button
+                                key={t}
+                                type="button"
+                                onClick={() => handleTopToolbarClick(t)}
+                                className="px-3 py-1 rounded bg-secondary hover:bg-secondary/80 text-secondary-foreground text-sm"
+                            >
+                                {t.charAt(0).toUpperCase() + t.slice(1)}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Issue Type Selection */}
                     <IssueTypeSelector
                         value={issueType}
@@ -556,6 +630,138 @@ export function IssueCreateDialog({
                             onChange={(e) => setTitle(e.target.value)}
                             disabled={isLoading}
                         />
+                    </div>
+
+                    {/* Custom Fields (placed high in the form) */}
+                    <div className="space-y-2">
+                        <div className="space-y-2">
+                            {customFields.map((f, idx) => {
+                                const isNew = (f.name === '' || newlyAddedIndex === idx);
+                                return (
+                                <div key={f.id || `${f.fieldType}-${idx}`} className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm font-medium flex items-center gap-2 flex-1">
+                                            {f.isEditing !== false ? (
+                                                <div className="flex items-center gap-2">
+                                                    <input
+                                                        ref={(el) => { if (newlyAddedIndex === idx) newFieldNameRef.current = el; }}
+                                                        placeholder="Field name"
+                                                        value={f.name}
+                                                        onChange={(e) => setCustomFields((s) => { const c=[...s]; c[idx]={...c[idx], name: e.target.value}; return c; })}
+                                                        className="px-2 py-1 border rounded bg-background text-foreground border-input w-full max-w-[200px]"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setCustomFields((s) => { const c=[...s]; c[idx]={...c[idx], isEditing: false}; return c; })}
+                                                        className="px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 rounded"
+                                                    >
+                                                        Add
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>{f.name}</>
+                                            )}
+                                        </div>
+                                        <button type="button" className="text-red-500 text-xs ml-2" onClick={() => removeCustomField(idx)}>Remove</button>
+                                    </div>
+                                    <div>
+                                        {(f.fieldType === 'dropdown' || f.fieldType === 'multi-select') && f.isEditing !== false && (
+                                            <div className="mb-3 p-2 bg-muted/50 rounded border border-dashed border-border">
+                                                <div className="text-xs font-medium mb-1 text-muted-foreground">Add Options</div>
+                                                <div className="flex gap-2 mb-2">
+                                                    <input
+                                                        placeholder="Type option & press Enter"
+                                                        className="flex-1 px-2 py-1 text-xs border rounded bg-background text-foreground border-input"
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === 'Enter') {
+                                                                e.preventDefault();
+                                                                const val = e.currentTarget.value.trim();
+                                                                if (val) {
+                                                                    setCustomFields(s => {
+                                                                        const c = [...s];
+                                                                        const opts = c[idx].options || [];
+                                                                        if (!opts.includes(val)) {
+                                                                            c[idx] = { ...c[idx], options: [...opts, val] };
+                                                                        }
+                                                                        return c;
+                                                                    });
+                                                                    e.currentTarget.value = '';
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                </div>
+                                            </div>
+                                        )}
+                                        {f.fieldType === 'text' && (
+                                            <Input value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter text" />
+                                        )}
+                                        {f.fieldType === 'number' && (
+                                            <input type="number" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? Number(e.target.value) : '')} placeholder="Enter number" />
+                                        )}
+                                        {f.fieldType === 'dropdown' && (
+                                            <Select value={f.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                                                <SelectTrigger>
+                                                    <SelectValue placeholder="Select" />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {(f.options || []).map((opt: string) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                        {f.fieldType === 'multi-select' && (
+                                            <div className="space-y-1">
+                                                {(!f.value || f.value.length === 0) && <div className="text-gray-400 text-sm">Select multi</div>}
+                                                <div className="flex flex-wrap gap-2">
+                                                    {(f.options || []).map((opt: string) => {
+                                                        const selected = Array.isArray(f.value) && f.value.includes(opt);
+                                                        return (
+                                                            <button key={opt} type="button" onClick={() => {
+                                                                const arr = Array.isArray(f.value) ? [...f.value] : [];
+                                                                const i = arr.indexOf(opt);
+                                                                if (i === -1) arr.push(opt); else arr.splice(i, 1);
+                                                                updateCustomFieldValue(idx, arr);
+                                                            }} className={`px-2 py-1 rounded ${selected ? 'bg-primary text-primary-foreground' : 'bg-background border border-input hover:bg-accent hover:text-accent-foreground'}`}>
+                                                                {opt}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            </div>
+                                        )}
+                                        {f.fieldType === 'checkbox' && (
+                                            <label className="inline-flex items-center gap-2">
+                                                <input type="checkbox" checked={!!f.value} onChange={(e) => updateCustomFieldValue(idx, !!e.target.checked)} />
+                                                <span className="text-sm">Checked</span>
+                                            </label>
+                                        )}
+                                        {f.fieldType === 'date' && (
+                                            <input type="date" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={f.value ? new Date(f.value).toISOString().split('T')[0] : ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? new Date(e.target.value).toISOString() : '')} />
+                                        )}
+                                        {f.fieldType === 'user' && (
+                                            <Select value={f.userValue ?? f.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                                                <SelectTrigger>
+                                                    <SelectValue />
+                                                </SelectTrigger>
+                                                <SelectContent>
+                                                    {members.map((m: any) => {
+                                                        const u = m.user || m.userId;
+                                                        const id = u?._id || u || '';
+                                                        const name = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+                                                        return <SelectItem key={id} value={id}>{name}</SelectItem>;
+                                                    })}
+                                                </SelectContent>
+                                            </Select>
+                                        )}
+                                        {f.fieldType === 'url' && (
+                                            <Input type="url" value={f.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter URL" />
+                                        )}
+                                    </div>
+                                </div>
+                            )})}
+                        </div>
+
+                        <div ref={customFieldsSectionRef} />
                     </div>
 
                     {/* Description */}
