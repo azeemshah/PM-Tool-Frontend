@@ -198,6 +198,7 @@ export function BoardCardDialog() {
   const [assigneeId, setAssigneeId] = useState(initialAssignee.id);
   const [reporterId, setReporterId] = useState(initialReporter.id);
   const [dueDate, setDueDate] = useState<string | null>(issue?.dueDate || null);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const getParentId = (item: any) => {
     if (!item) return '';
     if (item.parentIssueId) return item.parentIssueId;
@@ -1334,7 +1335,7 @@ export function BoardCardDialog() {
                 Due Date
               </label>
               {isEditing ? (
-                <Popover modal={true}>
+                <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
                   <PopoverTrigger asChild>
                     <Button
                       variant={"outline"}
@@ -1351,7 +1352,10 @@ export function BoardCardDialog() {
                     <Calendar
                       mode="single"
                       selected={dueDate ? new Date(dueDate) : undefined}
-                      onSelect={(date) => setDueDate(date ? date.toISOString() : null)}
+                      onSelect={(date) => {
+                        setDueDate(date ? date.toISOString() : null);
+                        setIsCalendarOpen(false);
+                      }}
                       initialFocus
                     />
                     <div className="p-3 border-t border-border flex justify-between">
