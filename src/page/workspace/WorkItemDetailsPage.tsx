@@ -24,6 +24,8 @@ import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from '@/components/kanban/dialogs/CommentSection';
 import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
+import { TimerButton } from '@/components/time-tracking/TimerButton';
+import { TimerContext } from '@/components/workspace/task/timer-context';
 import { TimeTrackingSummary } from '@/components/time-tracking/TimeTrackingSummary';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
@@ -79,6 +81,7 @@ export const WorkItemDetailsPage: React.FC = () => {
   const workspaceId = paramWorkspaceId || useWorkspaceId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { activeTimer } = React.useContext(TimerContext);
 
   // Use location state if available, otherwise fetch
   const initialWorkItem = location.state?.workItem;
@@ -91,8 +94,6 @@ export const WorkItemDetailsPage: React.FC = () => {
   const [dueDate, setDueDate] = useState<Date | null>(null);
   const [tags, setTags] = useState<string[]>([]);
   const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
-  const [timeLogs, setTimeLogs] = useState<any[]>([]);
-  const [loadingTimeLogs, setLoadingTimeLogs] = useState(false);
 
   // Fetch work item details
   const { data: workItem, isLoading: isLoadingWorkItem } = useQuery({
@@ -140,21 +141,15 @@ export const WorkItemDetailsPage: React.FC = () => {
   const currentUserId = currentUserData?.user?._id || '';
 
   // Load time logs
-  React.useEffect(() => {
-    const loadTimeLogs = async () => {
-      if (!workItemId) return;
-      try {
-        setLoadingTimeLogs(true);
-        const logs = await issueApiService.getIssueLogs(workItemId);
-        setTimeLogs(logs || []);
-      } catch (e) {
-        // Ignore errors
-      } finally {
-        setLoadingTimeLogs(false);
-      }
-    };
-    loadTimeLogs();
-  }, [workItemId]);
+  const { data: timeLogs = [], isLoading: loadingTimeLogs } = useQuery({
+    queryKey: ['issue-logs', workItemId],
+    queryFn: async () => {
+      if (!workItemId) return [];
+      const logs = await issueApiService.getIssueLogs(workItemId);
+      return logs || [];
+    },
+    enabled: !!workItemId,
+  });
 
   // Update form when workItem loads
   React.useEffect(() => {
@@ -186,6 +181,29 @@ export const WorkItemDetailsPage: React.FC = () => {
       setSelectedLabels(detailedWorkItem.labels || []);
     }
   }, [detailedWorkItem]);
+
+  // Watch for external timer stops (e.g. from sidebar or other tabs)
+  const prevActiveTimerRef = React.useRef(activeTimer);
+  React.useEffect(() => {
+    const prev = prevActiveTimerRef.current;
+    const current = activeTimer;
+
+    const getIssueId = (timer: any) => {
+      if (!timer || !timer.workItemId) return null;
+      return typeof timer.workItemId === 'object' ? timer.workItemId._id : timer.workItemId;
+    };
+
+    const prevIssueId = getIssueId(prev);
+    const currentIssueId = getIssueId(current);
+
+    // If we were tracking this issue, and now we are not (stopped or switched)
+    if (prevIssueId === workItemId && currentIssueId !== workItemId) {
+      queryClient.invalidateQueries({ queryKey: ['issue-logs', workItemId] });
+      queryClient.invalidateQueries({ queryKey: ['detailedWorkItem', workItemId] });
+    }
+
+    prevActiveTimerRef.current = current;
+  }, [activeTimer, workItemId, queryClient]);
 
   // Helper to get reporter info
   const getReporterInfo = (i: any) => {
@@ -319,10 +337,21 @@ export const WorkItemDetailsPage: React.FC = () => {
                 Time Tracking
               </h2>
               <TimeTrackingSummary
-                originalEstimate={workItem.originalEstimate}
-                timeSpent={workItem.timeSpent}
-                remainingEstimate={workItem.remainingEstimate}
+                issue={(detailedWorkItem as any) || workItem}
+                originalEstimate={detailedWorkItem?.originalEstimate ?? workItem.originalEstimate}
+                timeSpent={detailedWorkItem?.timeSpent ?? workItem.timeSpent}
+                remainingEstimate={detailedWorkItem?.remainingEstimate ?? workItem.remainingEstimate}
               />
+              <div className="mt-4">
+                <TimerButton
+                  issueId={workItemId || ''}
+                  userId={currentUserId}
+                  onTimerStop={() => {
+                    queryClient.invalidateQueries({ queryKey: ['detailedWorkItem', workItemId] });
+                    queryClient.invalidateQueries({ queryKey: ['issue-logs', workItemId] });
+                  }}
+                />
+              </div>
               {timeLogs.length > 0 && (
                 <div className="pt-2">
                   <div className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-2 uppercase tracking-wide">
@@ -334,9 +363,11 @@ export const WorkItemDetailsPage: React.FC = () => {
                     currentUserId={currentUserId}
                     onLogDeleted={() => {
                       queryClient.invalidateQueries({ queryKey: ['detailedWorkItem', workItemId] });
+                      queryClient.invalidateQueries({ queryKey: ['issue-logs', workItemId] });
                     }}
                     onLogUpdated={() => {
                       queryClient.invalidateQueries({ queryKey: ['detailedWorkItem', workItemId] });
+                      queryClient.invalidateQueries({ queryKey: ['issue-logs', workItemId] });
                     }}
                   />
                 </div>

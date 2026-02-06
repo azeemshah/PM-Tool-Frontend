@@ -37,6 +37,7 @@ import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from './CommentSection';
 import { TimerButton } from '@/components/time-tracking/TimerButton';
+import { TimerContext } from '@/components/workspace/task/timer-context';
 import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
 import { TimeTrackingSummary } from '@/components/time-tracking/TimeTrackingSummary';
 import { LabelsSelector } from './LabelsSelector';
@@ -73,6 +74,7 @@ export function BoardCardDialog() {
   });
 
   const currentUserId = currentUserData?.user?._id || '';
+  const { activeTimer } = React.useContext(TimerContext);
 
   const members = Array.isArray(membersData) ? membersData : (membersData?.members || []);
 
@@ -242,8 +244,6 @@ export function BoardCardDialog() {
   const [tags, setTags] = useState<string[]>(getTagIds(issue?.tags));
   const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
   const [deletingAttachmentId, setDeletingAttachmentId] = useState<string | null>(null);
-  const [timeLogs, setTimeLogs] = useState<any[]>([]);
-  const [loadingTimeLogs, setLoadingTimeLogs] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Custom fields state (Edit Mode)
@@ -290,7 +290,7 @@ export function BoardCardDialog() {
     setTimeout(() => {
       try {
         if (newFieldNameRef.current) newFieldNameRef.current.focus();
-      } catch (_) {}
+      } catch (_) { }
       setNewlyAddedIndex(null);
     }, 150);
   }, [newlyAddedIndex]);
@@ -437,21 +437,38 @@ export function BoardCardDialog() {
   };
 
   // Load time logs
-  useEffect(() => {
-    const loadTimeLogs = async () => {
-      if (!issueIdStr) return;
-      try {
-        setLoadingTimeLogs(true);
-        const logs = await issueApiService.getIssueLogs(issueIdStr);
-        setTimeLogs(logs || []);
-      } catch (e) {
-        // Ignore errors
-      } finally {
-        setLoadingTimeLogs(false);
-      }
+  const { data: timeLogs = [], isLoading: loadingTimeLogs } = useQuery({
+    queryKey: ['issue-logs', issueIdStr],
+    queryFn: async () => {
+      if (!issueIdStr) return [];
+      const logs = await issueApiService.getIssueLogs(issueIdStr);
+      return logs || [];
+    },
+    enabled: !!issueIdStr,
+  });
+
+  // Watch for external timer stops (e.g. from sidebar or other tabs)
+  const prevActiveTimerRef = React.useRef(activeTimer);
+  React.useEffect(() => {
+    const prev = prevActiveTimerRef.current;
+    const current = activeTimer;
+
+    const getIssueId = (timer: any) => {
+      if (!timer || !timer.workItemId) return null;
+      return typeof timer.workItemId === 'object' ? timer.workItemId._id : timer.workItemId;
     };
-    loadTimeLogs();
-  }, [issueIdStr]);
+
+    const prevIssueId = getIssueId(prev);
+    const currentIssueId = getIssueId(current);
+
+    // If we were tracking this issue, and now we are not (stopped or switched)
+    if (prevIssueId === issueIdStr && currentIssueId !== issueIdStr) {
+      queryClient.invalidateQueries({ queryKey: ['issue-logs', issueIdStr] });
+      queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+    }
+
+    prevActiveTimerRef.current = current;
+  }, [activeTimer, issueIdStr, queryClient]);
 
   // Debug logging for data flow
   useEffect(() => {
@@ -1143,10 +1160,10 @@ export function BoardCardDialog() {
 
               {(isEditing ? customFields : getCustomFields()).map((field: any, idx: number) => {
                 const key = field.id || `${String(issue._id)}-cf-${idx}-${field.name}`;
-                
+
                 // Read Mode Rendering
                 if (!isEditing) {
-                   const displayValue = (() => {
+                  const displayValue = (() => {
                     if (field.fieldType === 'user') {
                       const u = field.userValue || field.value;
                       if (!u) return '—';
@@ -1159,12 +1176,12 @@ export function BoardCardDialog() {
                     return field.value ?? '—';
                   })();
                   return (
-                     <div key={key} className="flex items-center justify-between p-2 border rounded-md bg-gray-50 dark:bg-muted/50">
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{field.name}</div>
-                          <div className="text-sm text-gray-500 mt-1">{displayValue}</div>
-                        </div>
-                     </div>
+                    <div key={key} className="flex items-center justify-between p-2 border rounded-md bg-gray-50 dark:bg-muted/50">
+                      <div className="flex-1">
+                        <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{field.name}</div>
+                        <div className="text-sm text-gray-500 mt-1">{displayValue}</div>
+                      </div>
+                    </div>
                   );
                 }
 
@@ -1173,130 +1190,130 @@ export function BoardCardDialog() {
                 return (
                   <div key={key} className="space-y-2 p-3 border rounded-md bg-white dark:bg-card relative group">
                     <div className="flex items-center justify-between">
-                        <div className="text-sm font-medium flex items-center gap-2 flex-1">
-                            {field.isEditing !== false ? (
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        ref={isNew ? newFieldNameRef : null}
-                                        placeholder="Field name"
-                                        value={field.name}
-                                        onChange={(e) => {
-                                            const copy = [...customFields];
-                                            copy[idx] = { ...copy[idx], name: e.target.value };
-                                            setCustomFields(copy);
-                                        }}
-                                        className="px-2 py-1 border rounded bg-background text-foreground border-input w-full max-w-[200px]"
-                                    />
-                                    <button
-                                        type="button"
-                                        onClick={() => {
-                                            const copy = [...customFields];
-                                            copy[idx] = { ...copy[idx], isEditing: false };
-                                            setCustomFields(copy);
-                                        }}
-                                        className="px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 rounded"
-                                    >
-                                        Add
-                                    </button>
-                                </div>
-                            ) : (
-                                <>{field.name}</>
-                            )}
-                        </div>
-                        <button type="button" className="text-red-500 text-xs ml-2" onClick={() => removeCustomField(idx)}>Remove</button>
+                      <div className="text-sm font-medium flex items-center gap-2 flex-1">
+                        {field.isEditing !== false ? (
+                          <div className="flex items-center gap-2">
+                            <input
+                              ref={isNew ? newFieldNameRef : null}
+                              placeholder="Field name"
+                              value={field.name}
+                              onChange={(e) => {
+                                const copy = [...customFields];
+                                copy[idx] = { ...copy[idx], name: e.target.value };
+                                setCustomFields(copy);
+                              }}
+                              className="px-2 py-1 border rounded bg-background text-foreground border-input w-full max-w-[200px]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const copy = [...customFields];
+                                copy[idx] = { ...copy[idx], isEditing: false };
+                                setCustomFields(copy);
+                              }}
+                              className="px-2 py-1 text-xs bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400 dark:hover:bg-green-900/50 rounded"
+                            >
+                              Add
+                            </button>
+                          </div>
+                        ) : (
+                          <>{field.name}</>
+                        )}
+                      </div>
+                      <button type="button" className="text-red-500 text-xs ml-2" onClick={() => removeCustomField(idx)}>Remove</button>
                     </div>
 
                     <div>
-                        {(field.fieldType === 'dropdown' || field.fieldType === 'multi-select') && field.isEditing !== false && (
-                            <div className="mb-3 p-2 bg-muted/50 rounded border border-dashed border-border">
-                                <div className="text-xs font-medium mb-1 text-muted-foreground">Add Options</div>
-                                <div className="flex gap-2 mb-2">
-                                    <input
-                                        placeholder="Type option & press Enter"
-                                        className="flex-1 px-2 py-1 text-xs border rounded bg-background text-foreground border-input"
-                                        onKeyDown={(e) => {
-                                            if (e.key === 'Enter') {
-                                                e.preventDefault();
-                                                const val = e.currentTarget.value.trim();
-                                                if (val) {
-                                                    const opts = field.options || [];
-                                                    if (!opts.includes(val)) {
-                                                        const copy = [...customFields];
-                                                        copy[idx] = { ...copy[idx], options: [...opts, val] };
-                                                        setCustomFields(copy);
-                                                    }
-                                                    e.currentTarget.value = '';
-                                                }
-                                            }
-                                        }}
-                                    />
-                                </div>
-                            </div>
-                        )}
+                      {(field.fieldType === 'dropdown' || field.fieldType === 'multi-select') && field.isEditing !== false && (
+                        <div className="mb-3 p-2 bg-muted/50 rounded border border-dashed border-border">
+                          <div className="text-xs font-medium mb-1 text-muted-foreground">Add Options</div>
+                          <div className="flex gap-2 mb-2">
+                            <input
+                              placeholder="Type option & press Enter"
+                              className="flex-1 px-2 py-1 text-xs border rounded bg-background text-foreground border-input"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  const val = e.currentTarget.value.trim();
+                                  if (val) {
+                                    const opts = field.options || [];
+                                    if (!opts.includes(val)) {
+                                      const copy = [...customFields];
+                                      copy[idx] = { ...copy[idx], options: [...opts, val] };
+                                      setCustomFields(copy);
+                                    }
+                                    e.currentTarget.value = '';
+                                  }
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
+                      )}
 
-                        {field.fieldType === 'text' && (
-                            <input className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter text" />
-                        )}
-                        {field.fieldType === 'number' && (
-                            <input type="number" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? Number(e.target.value) : '')} placeholder="Enter number" />
-                        )}
-                        {field.fieldType === 'dropdown' && (
-                            <Select value={field.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
-                                <SelectTrigger>
-                                    <SelectValue placeholder="Select" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {(field.options || []).map((opt: string) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        )}
-                        {field.fieldType === 'multi-select' && (
-                            <div className="space-y-1">
-                                {(!field.value || field.value.length === 0) && <div className="text-gray-400 text-sm">Select multi</div>}
-                                <div className="flex flex-wrap gap-2">
-                                    {(field.options || []).map((opt: string) => {
-                                        const selected = Array.isArray(field.value) && field.value.includes(opt);
-                                        return (
-                                            <button key={opt} type="button" onClick={() => {
-                                                const arr = Array.isArray(field.value) ? [...field.value] : [];
-                                                const i = arr.indexOf(opt);
-                                                if (i === -1) arr.push(opt); else arr.splice(i, 1);
-                                                updateCustomFieldValue(idx, arr);
-                                            }} className={`px-2 py-1 rounded ${selected ? 'bg-primary text-primary-foreground' : 'bg-background border border-input hover:bg-accent hover:text-accent-foreground'}`}>
-                                                {opt}
-                                            </button>
-                                        );
-                                    })}
-                                </div>
-                            </div>
-                        )}
-                        {field.fieldType === 'checkbox' && (
-                            <label className="inline-flex items-center gap-2">
-                                <input type="checkbox" checked={!!field.value} onChange={(e) => updateCustomFieldValue(idx, !!e.target.checked)} />
-                                <span className="text-sm">Checked</span>
-                            </label>
-                        )}
-                        {field.fieldType === 'date' && (
-                            <input type="date" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? new Date(e.target.value).toISOString() : '')} />
-                        )}
-                        {field.fieldType === 'user' && (
-                            <Select value={field.userValue?._id || field.userValue || field.value || ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
-                                <SelectTrigger>
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {members.map((m: any) => {
-                                        const u = m.user || m.userId;
-                                        const id = u?._id || u || '';
-                                        const name = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-                                        return <SelectItem key={id} value={id}>{name}</SelectItem>;
-                                    })}
-                                </SelectContent>
-                            </Select>
-                        )}
-                        {field.fieldType === 'url' && (
-                            <input type="url" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter URL" />
-                        )}
+                      {field.fieldType === 'text' && (
+                        <input className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter text" />
+                      )}
+                      {field.fieldType === 'number' && (
+                        <input type="number" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? Number(e.target.value) : '')} placeholder="Enter number" />
+                      )}
+                      {field.fieldType === 'dropdown' && (
+                        <Select value={field.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {(field.options || []).map((opt: string) => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {field.fieldType === 'multi-select' && (
+                        <div className="space-y-1">
+                          {(!field.value || field.value.length === 0) && <div className="text-gray-400 text-sm">Select multi</div>}
+                          <div className="flex flex-wrap gap-2">
+                            {(field.options || []).map((opt: string) => {
+                              const selected = Array.isArray(field.value) && field.value.includes(opt);
+                              return (
+                                <button key={opt} type="button" onClick={() => {
+                                  const arr = Array.isArray(field.value) ? [...field.value] : [];
+                                  const i = arr.indexOf(opt);
+                                  if (i === -1) arr.push(opt); else arr.splice(i, 1);
+                                  updateCustomFieldValue(idx, arr);
+                                }} className={`px-2 py-1 rounded ${selected ? 'bg-primary text-primary-foreground' : 'bg-background border border-input hover:bg-accent hover:text-accent-foreground'}`}>
+                                  {opt}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+                      {field.fieldType === 'checkbox' && (
+                        <label className="inline-flex items-center gap-2">
+                          <input type="checkbox" checked={!!field.value} onChange={(e) => updateCustomFieldValue(idx, !!e.target.checked)} />
+                          <span className="text-sm">Checked</span>
+                        </label>
+                      )}
+                      {field.fieldType === 'date' && (
+                        <input type="date" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ? new Date(field.value).toISOString().split('T')[0] : ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? new Date(e.target.value).toISOString() : '')} />
+                      )}
+                      {field.fieldType === 'user' && (
+                        <Select value={field.userValue?._id || field.userValue || field.value || ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {members.map((m: any) => {
+                              const u = m.user || m.userId;
+                              const id = u?._id || u || '';
+                              const name = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+                              return <SelectItem key={id} value={id}>{name}</SelectItem>;
+                            })}
+                          </SelectContent>
+                        </Select>
+                      )}
+                      {field.fieldType === 'url' && (
+                        <input type="url" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={field.value ?? ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value)} placeholder="Enter URL" />
+                      )}
                     </div>
                   </div>
                 );
@@ -1600,7 +1617,7 @@ export function BoardCardDialog() {
                 {/* Time Tracking Summary */}
                 {issue && (
                   <TimeTrackingSummary
-                    issue={issue}
+                    issue={detailedIssue || issue}
                   />
                 )}
 
@@ -1610,6 +1627,7 @@ export function BoardCardDialog() {
                   userId={currentUserId}
                   onTimerStop={() => {
                     queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                    queryClient.invalidateQueries({ queryKey: ['issue-logs', issueIdStr] });
                   }}
                 />
 
@@ -1625,9 +1643,11 @@ export function BoardCardDialog() {
                       currentUserId={currentUserId}
                       onLogDeleted={() => {
                         queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                        queryClient.invalidateQueries({ queryKey: ['issue-logs', issueIdStr] });
                       }}
                       onLogUpdated={() => {
                         queryClient.invalidateQueries({ queryKey: ['issue', issueIdStr] });
+                        queryClient.invalidateQueries({ queryKey: ['issue-logs', issueIdStr] });
                       }}
                     />
                   </div>
