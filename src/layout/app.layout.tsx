@@ -7,6 +7,7 @@ import Header from "@/components/header";
 import CreateWorkspaceDialog from "@/components/workspace/create-workspace-dialog";
 import { useIssueSubscription } from "@/hooks/useIssueSubscription";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import { NotificationProvider } from "@/contexts/notification-context";
 
 const AppLayout = () => {
   const workspaceId = useWorkspaceId();
@@ -19,7 +20,11 @@ const AppLayout = () => {
 
   return (
     <AuthProvider>
+<<<<<<< HEAD
       <TimerProvider>
+=======
+      <NotificationProvider workspaceId={workspaceId}>
+>>>>>>> e875861af67c4afcd98e58578fc8ae30054bb1d2
         <SidebarProvider>
           <Asidebar />
           <SidebarInset className="overflow-x-hidden">
@@ -34,7 +39,11 @@ const AppLayout = () => {
             </div>
           </SidebarInset>
         </SidebarProvider>
+<<<<<<< HEAD
       </TimerProvider>
+=======
+      </NotificationProvider>
+>>>>>>> e875861af67c4afcd98e58578fc8ae30054bb1d2
     </AuthProvider>
   );
 };
