@@ -20,13 +20,20 @@ interface NotificationContextType {
 
 const NotificationContext = createContext<NotificationContextType | undefined>(undefined);
 
-export const NotificationProvider = ({ children }: { children: ReactNode }) => {
+export const NotificationProvider = ({ children, workspaceId }: { children: ReactNode; workspaceId?: string }) => {
   const { data: authData } = useAuth();
   const user = authData?.user;
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  
+  // Use a ref to keep track of the current workspaceId without triggering socket reconnection
+  const workspaceIdRef = React.useRef(workspaceId);
+
+  useEffect(() => {
+    workspaceIdRef.current = workspaceId;
+  }, [workspaceId]);
 
   const fetchNotifications = useCallback(async () => {
     if (!user?._id) {
@@ -38,16 +45,25 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
     try {
       const data = await getNotifications(user._id);
       // Sort by newest first
-      const sorted = Array.isArray(data) ? data.sort((a: Notification, b: Notification) =>
+      let sorted = Array.isArray(data) ? data.sort((a: Notification, b: Notification) =>
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       ) : [];
+
+      if (workspaceId) {
+        sorted = sorted.filter(n => {
+          const wsId = typeof n.workspace === 'object' ? n.workspace._id : n.workspace;
+          return !wsId || wsId === workspaceId;
+        });
+      }
+
       setNotifications(sorted);
     } catch (err) {
       console.error('NotificationContext: fetch error', err);
     } finally {
       setIsLoading(false);
     }
-  }, [user?._id]);
+  }, [user?._id, workspaceId]);
+
 
   // Initial fetch
   useEffect(() => {
@@ -96,6 +112,16 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
     newSocket.on('notification', (notification: Notification) => {
       console.log('NotificationContext: New notification received', notification);
+      
+      // Filter by workspace if workspaceId is provided
+      const currentWorkspaceId = workspaceIdRef.current;
+      const notifWsId = typeof notification.workspace === 'object' ? notification.workspace._id : notification.workspace;
+      
+      if (currentWorkspaceId && notifWsId && notifWsId !== currentWorkspaceId) {
+        console.log('NotificationContext: Ignoring notification from different workspace', notifWsId);
+        return;
+      }
+
       setNotifications((prev) => {
         // Avoid duplicates if necessary, though simple prepend is usually fine
         // Check if notification already exists (optional but good for safety)

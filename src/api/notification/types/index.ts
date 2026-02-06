@@ -4,7 +4,7 @@ export interface Notification {
   sender?: string;
   type: string;
   message: string;
-  workspace?: string;
+  workspace?: string | { _id: string; name: string };
   workItem?: string;
   isRead: boolean;
   createdAt: string;

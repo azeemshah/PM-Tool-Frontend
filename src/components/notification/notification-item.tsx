@@ -61,9 +61,15 @@ export const NotificationItem = ({ notification, onRead, onDelete }: Notificatio
             <p className={cn("leading-none", !notification.isRead && "font-medium")}>
                 {notification.message}
             </p>
-            <p className="text-xs text-muted-foreground">
-                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-            </p>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                {typeof notification.workspace === 'object' && notification.workspace.name && (
+                    <>
+                        <span className="font-medium">{notification.workspace.name}</span>
+                        <span>•</span>
+                    </>
+                )}
+                <span>{formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}</span>
+            </div>
         </div>
         <button
             onClick={onDelete}

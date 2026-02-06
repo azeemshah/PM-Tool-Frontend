@@ -6,6 +6,7 @@ import Header from "@/components/header";
 import CreateWorkspaceDialog from "@/components/workspace/create-workspace-dialog";
 import { useIssueSubscription } from "@/hooks/useIssueSubscription";
 import useWorkspaceId from "@/hooks/use-workspace-id";
+import { NotificationProvider } from "@/contexts/notification-context";
 
 const AppLayout = () => {
   const workspaceId = useWorkspaceId();
@@ -18,20 +19,22 @@ const AppLayout = () => {
 
   return (
     <AuthProvider>
-      <SidebarProvider>
-        <Asidebar />
-        <SidebarInset className="overflow-x-hidden">
-          <div className="w-full">
-            <>
-              <Header />
-              <div className="px-3 lg:px-20 py-3">
-                <Outlet />
-              </div>
-            </>
-            <CreateWorkspaceDialog />
-          </div>
-        </SidebarInset>
-      </SidebarProvider>
+      <NotificationProvider workspaceId={workspaceId}>
+        <SidebarProvider>
+          <Asidebar />
+          <SidebarInset className="overflow-x-hidden">
+            <div className="w-full">
+              <>
+                <Header />
+                <div className="px-3 lg:px-20 py-3">
+                  <Outlet />
+                </div>
+              </>
+              <CreateWorkspaceDialog />
+            </div>
+          </SidebarInset>
+        </SidebarProvider>
+      </NotificationProvider>
     </AuthProvider>
   );
 };
