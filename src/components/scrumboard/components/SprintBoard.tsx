@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
-import { Calendar, Target, Plus, Clock } from 'lucide-react';
+import { Calendar, Target, Plus, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
@@ -137,6 +137,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
       queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['history'] });
+      queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
     },
   });
 
@@ -201,6 +202,18 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         data: { status: 'To Do' },
       });
     });
+  };
+
+  const scrollLeft = () => {
+    if (scrollableRef.current) {
+      scrollableRef.current.scrollBy({ left: -500, behavior: 'smooth' });
+    }
+  };
+
+  const scrollRight = () => {
+    if (scrollableRef.current) {
+      scrollableRef.current.scrollBy({ left: 500, behavior: 'smooth' });
+    }
   };
 
   const handleDragEnd = (result: DropResult) => {
@@ -311,6 +324,13 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
   const daysRemaining = getDaysRemaining();
   const isOverdue = daysRemaining < 0;
 
+  const sprintStatuses = useMemo(() => {
+    return columnOrder.map(col => ({
+      label: col,
+      value: col
+    }));
+  }, [columnOrder]);
+
   return (
     <div className="flex flex-col h-full bg-gray-50 dark:bg-background">
       {/* Sprint Header */}
@@ -411,7 +431,25 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         onDragEnd={handleDragEnd}
         onBeforeDragStart={() => setDragging(true)}
       >
-        <div className="flex-1 overflow-hidden">
+        <div className="flex-1 overflow-hidden relative group">
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm dark:bg-slate-950/80 border-slate-200 dark:border-slate-800"
+            onClick={scrollLeft}
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </Button>
+
+          <Button
+            variant="outline"
+            size="icon"
+            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm dark:bg-slate-950/80 border-slate-200 dark:border-slate-800"
+            onClick={scrollRight}
+          >
+            <ChevronRight className="h-6 w-6" />
+          </Button>
+
           <div
             ref={scrollableRef}
             className="h-full overflow-x-auto scrollbar"
@@ -426,7 +464,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  className="inline-flex gap-4 p-4 min-w-min"
+                  className="inline-flex gap-4 px-14 py-4 min-w-min"
                 >
                   {columnOrder.map((columnId, index) => {
                     // In sprint board, columnId is the column name/title
@@ -454,6 +492,7 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
                               onCardClick={handleCardClick}
                               onDelete={handleDeleteColumn}
                               boardId={boardId}
+                              availableStatuses={sprintStatuses}
                             />
                           </div>
                         )}

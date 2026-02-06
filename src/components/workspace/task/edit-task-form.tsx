@@ -47,6 +47,8 @@ import { IssueTypeIcon } from "@/components/issue/IssueTypeIcon";
 import { useQuery } from "@tanstack/react-query";
 import { LogWorkDialog } from "@/components/issue/LogWorkDialog";
 import { TimeTrackingSummary, TimerButton, TimeLogsList } from "@/components/time-tracking";
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
+import { getStatusIcon } from "./table/data";
 
 const API_PRIORITY_MAP = {
   LOW: "low",
@@ -217,7 +219,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
           queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
           queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
-          queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
+          queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
           toast({
             title: "Success",
             description: "Task updated successfully",
@@ -241,11 +243,11 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
               });
               await issueApiService.moveItemToColumn(taskId, targetColumnId);
               queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-              queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
+              queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
             } catch (error) {
               console.error("Failed to move item column after task update:", error);
               queryClient.invalidateQueries({ queryKey: ["all-tasks", "kanban"] });
-              queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
+              queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
             }
           }
         }, 300);
@@ -465,9 +467,18 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                 <Select onValueChange={field.onChange} value={field.value} defaultValue={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl>
                   <SelectContent>
-                    {statusOptions.map((status) => (
-                      <SelectItem key={status.value} value={status.value}>{status.label}</SelectItem>
-                    ))}
+                    {statusOptions.map((status) => {
+                      const colors = getGanttStatusColor(status.value);
+                      const StatusIcon = getStatusIcon(status.value);
+                      return (
+                        <SelectItem key={status.value} value={status.value}>
+                          <div className="flex items-center gap-2">
+                            {StatusIcon && <StatusIcon className={`h-4 w-4 ${colors.text}`} />}
+                            <span>{status.label}</span>
+                          </div>
+                        </SelectItem>
+                      );
+                    })}
                   </SelectContent>
                 </Select>
                 <FormMessage />

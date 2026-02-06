@@ -1,7 +1,7 @@
 import React from 'react';
 import type { GanttItem } from './types/gantt';
-import { statusColorMap, issueTypeBarColors } from './utils/colorMaps';
-import { statusIcons } from '@/components/workspace/task/table/data';
+import { issueTypeBarColors, normalizeGanttStatus, getGanttStatusColor } from './utils/colorMaps';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
 import { formatTime } from './utils/ganttCalculations';
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
@@ -29,7 +29,8 @@ export const GanttBar: React.FC<GanttBarProps> = ({
 }) => {
   // Use issue type colors for consistency with the rest of the UI
   const typeColors = issueTypeBarColors[item.type?.toLowerCase() || ''];
-  const statusColors = statusColorMap[item.status] || statusColorMap['To Do'];
+  const normalizedStatus = normalizeGanttStatus(item.status);
+  const statusColors = getGanttStatusColor(item.status);
 
   // Prioritize type colors, fallback to status colors
   const colors = typeColors ? { ...typeColors, text: 'text-gray-900' } : statusColors;
@@ -106,8 +107,8 @@ export const GanttBar: React.FC<GanttBarProps> = ({
             {/* Label outside the bar */}
             <div className="ml-2 flex items-center gap-2">
               {(() => {
-                const StatusIcon = statusIcons[item.status as keyof typeof statusIcons];
-                const statusColors = statusColorMap[item.status] || statusColorMap['To Do'];
+                const StatusIcon = getStatusIcon(item.status);
+                const statusColors = getGanttStatusColor(item.status);
                 return (
                   <div className={`flex items-center gap-1.5 px-2 py-0 rounded-md border ${statusColors.bg} ${statusColors.border}`}>
                     {StatusIcon && <StatusIcon className={`w-3 h-3 ${statusColors.text}`} />}

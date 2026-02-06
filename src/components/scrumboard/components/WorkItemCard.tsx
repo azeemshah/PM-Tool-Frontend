@@ -1,16 +1,29 @@
 import React, { useMemo } from 'react';
 import { KanbanCard } from '@/api/kanban/types';
-import { Issue, TaskType } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap } from 'lucide-react';
+import { Issue, TaskType, UpdateIssueDTO } from '@/api/issue/types';
+import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap, ArrowRight } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanBoardLabels';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { issueApiService } from '@/api/issue/services/issueApiService';
+import { toast } from '@/hooks/use-toast';
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 
 const minutesToHours = (minutes: number): string => {
   if (!minutes) return '0h';
@@ -22,17 +35,43 @@ interface WorkItemCardProps {
   card: KanbanCard | Issue | TaskType;
   onClick?: () => void;
   boardId?: string;
+  availableStatuses?: { label: string; value: string }[];
 }
 
-const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId }) => {
+const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId, availableStatuses }) => {
   const workspaceId = useWorkspaceId();
+  const { statuses: fetchedStatuses } = useGetWorkspaceStatuses(workspaceId, boardId);
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
+
+  const dynamicStatuses = availableStatuses || fetchedStatuses;
 
   const { data: boardLabels = [] } = useGetKanbanBoardLabels(boardId || null);
   const labelsMap = useMemo(() => {
     return new Map(boardLabels.map((l) => [l._id, l]));
   }, [boardLabels]);
+
+  const queryClient = useQueryClient();
+
+  const updateWorkItemMutation = useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status'> }) =>
+      issueApiService.updateItem(itemId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
+      toast({
+        title: 'Success',
+        description: 'Status updated successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to update status',
+        variant: 'destructive',
+      });
+    }
+  });
 
   // Determine if this is an Issue or KanbanCard
   const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type));
@@ -268,51 +307,80 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId }) =
           )}
         </div>
 
-        {/* Reporter Avatar */}
-        {(() => {
-          // For Issue type
-          if (issue?.reporter) {
+        {/* Right side: Reporter + Move Action */}
+        <div className="flex items-center gap-2">
+          {(() => {
+            // For Issue type
+            if (issue?.reporter) {
+              return (
+                <div className="flex items-center">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+                    <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                      {getAvatarFallbackText(issue.reporter?.name || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              );
+            }
+
+            // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
+            const r = (card as any).reporter;
+            let resolved: any = null;
+            if (!r) return null;
+            if (typeof r === 'string') {
+              const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
+              resolved = m?.userId || null;
+            } else if (r.userId) {
+              resolved = r.userId;
+            } else {
+              resolved = r;
+            }
+
+            if (!resolved) {
+              // render empty avatar circle to match styling if needed, or just null
+              return null;
+            }
+
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
-                  <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
-                    {getAvatarFallbackText(issue.reporter?.name || '')}
+                  <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
+                  <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
+                    {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
                   </AvatarFallback>
                 </Avatar>
               </div>
             );
-          }
+          })()}
 
-          // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
-          const r = (card as any).reporter;
-          let resolved: any = null;
-          if (!r) return null;
-          if (typeof r === 'string') {
-            const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
-            resolved = m?.userId || null;
-          } else if (r.userId) {
-            resolved = r.userId;
-          } else {
-            resolved = r;
-          }
-
-          if (!resolved) {
-            // render empty avatar circle to match styling if needed, or just null
-            return null;
-          }
-
-          return (
-            <div className="flex items-center">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
-                <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
-                  {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
-                </AvatarFallback>
-              </Avatar>
-            </div>
-          );
-        })()}
+          {/* Move Icon */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-40">
+                {dynamicStatuses.map((status) => {
+                  const StatusIcon = getStatusIcon(status.value);
+                  const colors = getGanttStatusColor(status.value);
+                  return (
+                    <DropdownMenuItem
+                      key={status.value}
+                      onClick={() => updateWorkItemMutation.mutate({ itemId: (card as any)._id, data: { status: status.value } })}
+                      className="cursor-pointer"
+                    >
+                      {StatusIcon && <StatusIcon className={`mr-2 h-4 w-4 ${colors.text}`} />}
+                      <span>{status.label}</span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
       </div>
     </div >
   );

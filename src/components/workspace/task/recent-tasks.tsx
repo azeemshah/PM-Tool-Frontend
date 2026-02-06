@@ -8,6 +8,8 @@ import {
   transformStatusEnum,
   formatStatusToEnum,
 } from "@/lib/helper";
+import { getStatusIcon } from "@/components/workspace/task/table/data";
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { TaskType } from "@/types/api.type";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
@@ -16,15 +18,6 @@ import { issueApiService } from "@/api/issue/services/issueApiService";
 
 const RecentTasks = () => {
   const workspaceId = useWorkspaceId();
-
-  // Icon mappings for status and priority
-  const statusIcons = {
-    [TaskStatusEnum.BACKLOG]: HelpCircle,
-    [TaskStatusEnum.TO_DO]: Circle,
-    [TaskStatusEnum.IN_PROGRESS]: Timer,
-    [TaskStatusEnum.IN_REVIEW]: View,
-    [TaskStatusEnum.DONE]: CheckCircle,
-  };
 
   const priorityIcons = {
     [TaskPriorityEnum.LOW]: ArrowDown,
@@ -130,27 +123,13 @@ const RecentTasks = () => {
                 {/* Task Status */}
                 <div className="text-sm font-medium ">
                   {(() => {
-                    const statusKey = formatStatusToEnum(task.status) as TaskStatusEnumType;
-                    // Check if the status key exists in the enum
-                    // We cast to any because we are checking if the key exists dynamically
-                    const enumValue = (TaskStatusEnum as any)[statusKey];
+                    const colors = getGanttStatusColor(task.status);
+                    const IconComponent = getStatusIcon(task.status);
 
-                    if (!enumValue) {
-                      return (
-                        <Badge
-                          variant="outline"
-                          className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 dark:bg-secondary text-gray-700 dark:text-secondary-foreground"
-                        >
-                          <span>{task.status}</span>
-                        </Badge>
-                      );
-                    }
-
-                    const IconComponent = statusIcons[enumValue as keyof typeof statusIcons];
                     return (
                       <Badge
-                        variant={enumValue}
-                        className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+                        variant="outline"
+                        className={`flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 ${colors.bg} ${colors.text}`}
                       >
                         {IconComponent && <IconComponent className="h-4 w-4 rounded-full text-inherit" />}
                         <span>{transformStatusEnum(task.status)}</span>

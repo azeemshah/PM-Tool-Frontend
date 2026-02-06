@@ -3,12 +3,12 @@ import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards
 import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { useMemo } from 'react';
 
-export function useGetWorkspaceStatuses(workspaceId: string) {
+export function useGetWorkspaceStatuses(workspaceId: string, boardIdOverride?: string) {
     // 1. Get boards for the workspace
     const { data: boards, isLoading: isLoadingBoards } = useGetKanbanBoards(workspaceId);
 
-    // 2. Assume the first board is the main one (or the only one)
-    const boardId = boards?.[0]?._id || null;
+    // 2. Determine boardId: use override if provided, otherwise fallback to first board
+    const boardId = boardIdOverride || boards?.[0]?._id || null;
 
     // 3. Get lists (columns) for the board
     const { data: lists, isLoading: isLoadingLists } = useGetKanbanBoardLists(boardId);

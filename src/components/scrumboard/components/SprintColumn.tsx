@@ -6,9 +6,8 @@ import { KanbanCard } from '@/api/kanban/types';
 import { Issue, TaskType } from '@/api/issue/types';
 import WorkItemCard from './WorkItemCard';
 import { badgeVariants } from '@/components/ui/badge';
-import { statuses } from '@/components/workspace/task/table/data';
-import { TaskStatusEnum, TaskStatusEnumType } from '@/constant';
-import { formatStatusToEnum } from '@/lib/helper';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 import { cn } from '@/lib/utils';
 
 interface SprintColumnProps {
@@ -20,6 +19,7 @@ interface SprintColumnProps {
   isDeleting?: boolean;
   onCardClick?: (card: KanbanCard | Issue | TaskType) => void;
   boardId?: string;
+  availableStatuses?: { label: string; value: string }[];
 }
 
 const SprintColumn: React.FC<SprintColumnProps> = ({
@@ -30,20 +30,21 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
   onDelete,
   onCardClick,
   boardId,
+  availableStatuses,
 }) => {
   return (
     <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
       {(() => {
-        const statusKey = formatStatusToEnum(title) as TaskStatusEnumType;
-        const statusConfig = statuses.find(s => s.value.toLowerCase() === title.toLowerCase());
-        const StatusIcon = statusConfig?.icon || Circle;
-        const variant = TaskStatusEnum[statusKey] || 'secondary';
+        const colors = getGanttStatusColor(title);
+        const StatusIcon = getStatusIcon(title);
 
         return (
           <div className={cn(
-            badgeVariants({ variant }),
-            "p-3 border-b flex items-center justify-between rounded-t-lg rounded-b-none border-x-0 border-t-0"
+            "p-3 border-b flex items-center justify-between rounded-t-lg rounded-b-none border-x-0 border-t-0",
+            colors.bg,
+            colors.text,
+            colors.border
           )}>
             <div className="flex items-center gap-2">
               <StatusIcon className="h-4 w-4" />
@@ -95,6 +96,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
                             card={workItem}
                             onClick={() => onCardClick && onCardClick(workItem as any)}
                             boardId={boardId}
+                            availableStatuses={availableStatuses}
                           />
                         </div>
                       )}

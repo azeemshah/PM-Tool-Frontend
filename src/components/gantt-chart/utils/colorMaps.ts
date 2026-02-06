@@ -73,6 +73,44 @@ export const statusColorMap: GanttBarColors = {
   },
 };
 
+const DYNAMIC_PALETTE = [
+  { name: 'cyan', bg: 'bg-cyan-500', border: 'border-cyan-600', text: 'text-white', lightBg: 'bg-cyan-100', lightBorder: 'border-cyan-200', lightText: 'text-cyan-700' },
+  { name: 'orange', bg: 'bg-orange-500', border: 'border-orange-600', text: 'text-white', lightBg: 'bg-orange-100', lightBorder: 'border-orange-200', lightText: 'text-orange-700' },
+  { name: 'pink', bg: 'bg-pink-500', border: 'border-pink-600', text: 'text-white', lightBg: 'bg-pink-100', lightBorder: 'border-pink-200', lightText: 'text-pink-700' },
+  { name: 'indigo', bg: 'bg-indigo-500', border: 'border-indigo-600', text: 'text-white', lightBg: 'bg-indigo-100', lightBorder: 'border-indigo-200', lightText: 'text-indigo-700' },
+  { name: 'teal', bg: 'bg-teal-500', border: 'border-teal-600', text: 'text-white', lightBg: 'bg-teal-100', lightBorder: 'border-teal-200', lightText: 'text-teal-700' },
+  { name: 'lime', bg: 'bg-lime-500', border: 'border-lime-600', text: 'text-white', lightBg: 'bg-lime-100', lightBorder: 'border-lime-200', lightText: 'text-lime-700' },
+  { name: 'fuchsia', bg: 'bg-fuchsia-500', border: 'border-fuchsia-600', text: 'text-white', lightBg: 'bg-fuchsia-100', lightBorder: 'border-fuchsia-200', lightText: 'text-fuchsia-700' },
+  { name: 'rose', bg: 'bg-rose-500', border: 'border-rose-600', text: 'text-white', lightBg: 'bg-rose-100', lightBorder: 'border-rose-200', lightText: 'text-rose-700' },
+  { name: 'violet', bg: 'bg-violet-500', border: 'border-violet-600', text: 'text-white', lightBg: 'bg-violet-100', lightBorder: 'border-violet-200', lightText: 'text-violet-700' },
+  { name: 'emerald', bg: 'bg-emerald-500', border: 'border-emerald-600', text: 'text-white', lightBg: 'bg-emerald-100', lightBorder: 'border-emerald-200', lightText: 'text-emerald-700' },
+];
+
+export const getGanttStatusColor = (status: string) => {
+  const normalized = normalizeGanttStatus(status);
+
+  // Check if it's a standard status first
+  if (statusColorMap[normalized]) {
+    return statusColorMap[normalized];
+  }
+
+  // If not found in map (even after normalization), generate dynamic color
+  // Use original status string for hashing to ensure unique colors for different custom statuses
+  const hash = status.toLowerCase().split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const color = DYNAMIC_PALETTE[hash % DYNAMIC_PALETTE.length];
+
+  return {
+    bgColor: `${color.bg} dark:${color.bg.replace('500', '600')}`,
+    borderColor: `${color.border} dark:${color.border.replace('600', '700')}`,
+    textColor: `${color.text} dark:${color.text}`,
+    bg: `${color.lightBg} dark:${color.bg.replace('500', '900')}/30`,
+    border: `${color.lightBorder} dark:${color.border.replace('600', '800')}`,
+    text: `${color.lightText} dark:${color.lightText.replace('700', '300')}`,
+    progressBg: `${color.bg.replace('500', '300')} dark:${color.bg.replace('500', '700')}`,
+    progressText: `${color.lightText.replace('700', '800')} dark:${color.lightText.replace('700', '200')}`,
+  };
+};
+
 export const issueTypeBarColors: Record<string, { bg: string; border: string; borderColor: string; progressBg: string; progressText: string }> = {
   epic: {
     bg: 'bg-purple-100 dark:bg-purple-900/30',
@@ -110,6 +148,26 @@ export const issueTypeBarColors: Record<string, { bg: string; border: string; bo
     progressText: 'text-gray-700 dark:text-gray-300',
   },
 };
+
+export function normalizeGanttStatus(status: string): string {
+  if (!status) return 'To Do';
+
+  const s = status.toLowerCase().replace(/[\s-_]+/g, '');
+
+  if (s === 'todo') return 'To Do';
+  if (s === 'inprogress') return 'In Progress';
+  if (s === 'inreview') return 'In Review';
+  if (s === 'done') return 'Done';
+  if (s === 'blocked') return 'Blocked';
+  if (s === 'backlog') return 'Backlog';
+  if (s === 'closed') return 'Closed';
+
+  // Fallback for partial matches
+  if (s.includes('review')) return 'In Review';
+  if (s.includes('progress')) return 'In Progress';
+
+  return status;
+}
 
 export const typeColorBadge: Record<string, string> = {
   epic: 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 font-semibold',

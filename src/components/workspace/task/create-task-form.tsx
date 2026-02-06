@@ -43,6 +43,9 @@ import { createTaskMutationFn, createTaskWithoutEpicMutationFn } from "@/lib/api
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { TagInput } from '@/components/tag/TagInput';
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
+import { getStatusIcon } from "./table/data";
+import { Badge } from "@/components/ui/badge";
 
 export default function CreateTaskForm(props: {
   workspaceId?: string;
@@ -374,11 +377,18 @@ export default function CreateTaskForm(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {dynamicStatuses.map((s) => (
-                          <SelectItem key={s.value} value={s.value}>
-                            {s.label}
-                          </SelectItem>
-                        ))}
+                        {dynamicStatuses.map((s) => {
+                          const colors = getGanttStatusColor(s.value);
+                          const StatusIcon = getStatusIcon(s.value);
+                          return (
+                            <SelectItem key={s.value} value={s.value}>
+                              <div className="flex items-center gap-2">
+                                {StatusIcon && <StatusIcon className={`h-4 w-4 ${colors.text}`} />}
+                                <span>{s.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

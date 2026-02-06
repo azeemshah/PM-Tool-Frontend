@@ -4,8 +4,10 @@ import { Activity } from "@/hooks/api/use-history";
 import { DataTableColumnHeader } from "../task/table/table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarColor, getAvatarFallbackText, formatDuration } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, formatDuration, transformStatusEnum } from "@/lib/helper";
 import { ArrowRight, Clock, CheckCircle2, Circle, AlertCircle, Move, Activity as ActivityIcon, Edit, Trash2, MessageSquare } from "lucide-react";
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
+import { getStatusIcon } from "../task/table/data";
 
 const getActivityIcon = (type: string) => {
   switch (type) {
@@ -30,39 +32,6 @@ const getActivityColor = (type: string) => {
     case 'delete': return 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300 border-red-200 dark:border-red-800';
     default: return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-700';
   }
-};
-
-const getStatusBadgeVariant = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized.includes('done') || normalized.includes('complete')) return 'success'; // You might need to define these variants or use custom classes
-  if (normalized.includes('progress')) return 'warning';
-  if (normalized.includes('review')) return 'secondary';
-  return 'default';
-};
-
-const getStatusIcon = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized.includes('done') || normalized.includes('complete')) return <CheckCircle2 className="mr-1 h-3 w-3" />;
-  if (normalized.includes('progress')) return <Clock className="mr-1 h-3 w-3" />;
-  if (normalized.includes('review')) return <AlertCircle className="mr-1 h-3 w-3" />;
-  return <Circle className="mr-1 h-3 w-3" />;
-};
-
-const getStatusStyle = (status: string) => {
-  const normalized = status.toLowerCase();
-  if (normalized.includes('done') || normalized.includes('complete')) {
-    return "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border-green-200 dark:border-green-800";
-  }
-  if (normalized.includes('progress')) {
-    return "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400 border-yellow-200 dark:border-yellow-800";
-  }
-  if (normalized.includes('review')) {
-    return "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400 border-purple-200 dark:border-purple-800";
-  }
-  if (normalized.includes('todo') || normalized.includes('to do')) {
-    return "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400 border-blue-200 dark:border-blue-800";
-  }
-  return "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700";
 };
 
 export const columns: ColumnDef<Activity>[] = [
@@ -148,13 +117,16 @@ export const columns: ColumnDef<Activity>[] = [
         status = row.original.taskId?.status || "Unknown";
       }
 
+      const colors = getGanttStatusColor(status);
+      const StatusIcon = getStatusIcon(status);
+
       return (
         <Badge
           variant="outline"
-          className={`capitalize whitespace-nowrap ${getStatusStyle(status)}`}
+          className={`capitalize whitespace-nowrap gap-1 px-2 py-1 flex items-center ${colors.bg} ${colors.text} border-0`}
         >
-          {getStatusIcon(status)}
-          {status}
+          {StatusIcon && <StatusIcon className="h-3 w-3 rounded-full text-inherit" />}
+          <span>{transformStatusEnum(status)}</span>
         </Badge>
       );
     },
@@ -186,11 +158,11 @@ export const columns: ColumnDef<Activity>[] = [
         // timeSpent is stored in minutes
         const timeSpentMinutes = activity.details?.timeSpent || 0;
         const duration = formatDuration(timeSpentMinutes);
-        
+
         // Detect if it was from timer based on description (legacy or new)
         const isTimer = activity.details?.description?.includes('timer');
         const baseText = isTimer ? 'Logged time from timer' : 'Logged time';
-        
+
         content = <span className="text-sm">{`${baseText} (${duration})`}</span>;
       } else if (activity.type === 'comment') {
         content = <span className="text-sm">Comment: {activity.details?.description || 'No content'}</span>;

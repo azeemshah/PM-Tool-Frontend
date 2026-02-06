@@ -17,8 +17,10 @@ import {
   getAvatarColor,
   getAvatarFallbackText,
   formatDuration,
+  transformStatusEnum,
 } from "@/lib/helper";
-import { priorities, statuses, issueTypes } from "./data";
+import { priorities, issueTypes, getStatusIcon } from "./data";
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { TaskType } from "@/api/issue/types";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -185,33 +187,18 @@ export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[
       cell: ({ row }) => {
         const rawStatus = row.getValue("status");
         const statusValue = typeof rawStatus === "string" ? rawStatus : String(rawStatus);
-        const status = statuses.find((s) => s.value.toLowerCase() === statusValue.toLowerCase());
 
-        if (!status) {
-          return (
-            <div className="flex lg:w-[120px] items-center">
-              <Badge
-                variant="outline"
-                className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 bg-gray-100 text-gray-700"
-              >
-                <span>{statusValue}</span>
-              </Badge>
-            </div>
-          );
-        }
-
-        const statusKey = formatStatusToEnum(status.value) as TaskStatusEnumType;
-        const Icon = status.icon;
-        const displayLabel = status.label;
+        const colors = getGanttStatusColor(statusValue);
+        const Icon = getStatusIcon(statusValue);
 
         return (
           <div className="flex lg:w-[120px] items-center">
             <Badge
-              variant={TaskStatusEnum[statusKey]}
-              className="flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0"
+              variant="outline"
+              className={`flex w-auto p-1 px-2 gap-1 font-medium shadow-sm uppercase border-0 ${colors.bg} ${colors.text}`}
             >
               <Icon className="h-4 w-4 rounded-full text-inherit" />
-              <span>{displayLabel}</span>
+              <span>{transformStatusEnum(statusValue)}</span>
             </Badge>
           </div>
         );

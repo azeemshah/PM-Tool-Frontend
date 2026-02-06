@@ -10,7 +10,8 @@ import { BoardCard } from './BoardCard';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { useGetKanbanBoardCards } from '@/api/kanban/hooks/cards/useGetKanbanBoardCards';
 import { badgeVariants } from '@/components/ui/badge';
-import { statuses } from '@/components/workspace/task/table/data';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 import { TaskStatusEnum, TaskStatusEnumType } from '@/constant';
 import { formatStatusToEnum } from '@/lib/helper';
 import { cn } from '@/lib/utils';
@@ -184,15 +185,15 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, la
       {(() => {
         const rawName = (list && (list.name || (list as any).label || ''));
         const displayName = rawName && String(rawName).trim() ? String(rawName).trim() : 'Untitled';
-        const statusKey = formatStatusToEnum(displayName) as TaskStatusEnumType;
-        const statusConfig = statuses.find(s => s.value.toLowerCase() === displayName.toLowerCase());
-        const StatusIcon = statusConfig?.icon || Circle;
-        const variant = TaskStatusEnum[statusKey] || 'secondary';
+
+        const colors = getGanttStatusColor(displayName);
+        const StatusIcon = getStatusIcon(displayName);
 
         return (
           <div className={cn(
-            badgeVariants({ variant }),
-            "p-3 border-b flex items-center justify-between rounded-t-lg rounded-b-none border-x-0 border-t-0"
+            "p-3 border-b flex items-center justify-between rounded-t-lg rounded-b-none border-x-0 border-t-0 font-medium",
+            colors.bg,
+            colors.text
           )}>
             <div className="flex items-center gap-2">
               <StatusIcon className="h-4 w-4" />
@@ -242,7 +243,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, la
                           className={`mb-2 ${snapshot.isDragging ? 'opacity-50' : ''}`}
                           onClick={() => onCardClick(card)}
                         >
-                          <BoardCard card={card} tagsMap={tagsMap} labelsMap={labelsMap} />
+                          <BoardCard card={card} tagsMap={tagsMap} labelsMap={labelsMap} boardId={boardId} />
                         </div>
                       )}
                     </Draggable>

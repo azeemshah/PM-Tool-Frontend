@@ -1,20 +1,34 @@
 import { KanbanCard } from '@/api/kanban/types';
-import { Issue } from '@/api/issue/types';
-import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap } from 'lucide-react';
+import { Issue, UpdateIssueDTO } from '@/api/issue/types';
+import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap, ArrowRight, Circle } from 'lucide-react';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
+import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import React, { useMemo } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { issueApiService } from '@/api/issue/services/issueApiService';
+import { toast } from '@/hooks/use-toast';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 
 interface BoardCardProps {
   card: KanbanCard | Issue;
   tagsMap?: Map<string, string>;
   labelsMap?: Map<string, { name: string; color: string }>;
+  boardId?: string;
 }
 
 const minutesToHours = (minutes: number): string => {
@@ -23,10 +37,53 @@ const minutesToHours = (minutes: number): string => {
   return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
 };
 
-export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
+export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
+
+  const { data: lists } = useGetKanbanBoardLists(boardId || null);
+  const queryClient = useQueryClient();
+
+  const updateIssueMutation = useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status' | 'column'> }) =>
+      issueApiService.updateItem(itemId, data),
+    onSuccess: () => {
+      // Invalidate queries to refresh the board
+      queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-board-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
+      toast({
+        title: 'Success',
+        description: 'Card moved successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to move card',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const getStatusForList = (listName: string) => {
+    const name = listName.toLowerCase().trim().replace(/[\s-_]+/g, '');
+    const map: Record<string, string> = {
+      todo: 'to-do',
+      backlog: 'to-do',
+      inprogress: 'in-progress',
+      inreview: 'in-review',
+      done: 'done',
+      blocked: 'blocked',
+    };
+    if (map[name]) return map[name];
+    if (name.includes('review')) return 'in-review';
+    if (name.includes('progress')) return 'in-progress';
+    if (name.includes('todo')) return 'to-do';
+    if (name.includes('done')) return 'done';
+    return name;
+  };
 
   // Determine if this is an Issue or KanbanCard
   const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type).toLowerCase());
@@ -254,51 +311,89 @@ export function BoardCard({ card, tagsMap, labelsMap }: BoardCardProps) {
           )}
         </div>
 
-        {/* Reporter Avatar */}
-        {(() => {
-          // For Issue type
-          if (issue?.reporter) {
+        {/* Right side: Reporter + Move Action */}
+        <div className="flex items-center gap-2">
+          {(() => {
+            // For Issue type
+            if (issue?.reporter) {
+              return (
+                <div className="flex items-center">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+                    <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                      {getAvatarFallbackText(issue.reporter?.name || '')}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              );
+            }
+
+            // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
+            const r = (card as any).reporter;
+            let resolved: any = null;
+            if (!r) return null;
+            if (typeof r === 'string') {
+              const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
+              resolved = m?.userId || null;
+            } else if (r.userId) {
+              resolved = r.userId;
+            } else {
+              resolved = r;
+            }
+
+            if (!resolved) {
+              // render empty avatar circle to match styling if needed, or just null
+              return null;
+            }
+
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
-                  <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
-                    {getAvatarFallbackText(issue.reporter?.name || '')}
+                  <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
+                  <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
+                    {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
                   </AvatarFallback>
                 </Avatar>
               </div>
             );
-          }
+          })()}
 
-          // Resolve reporter when backend returns id only or wrapped object (for KanbanCard)
-          const r = (card as any).reporter;
-          let resolved: any = null;
-          if (!r) return null;
-          if (typeof r === 'string') {
-            const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
-            resolved = m?.userId || null;
-          } else if (r.userId) {
-            resolved = r.userId;
-          } else {
-            resolved = r;
-          }
-
-          if (!resolved) {
-            // render empty avatar circle to match styling if needed, or just null
-            return null;
-          }
-
-          return (
-            <div className="flex items-center">
-              <Avatar className="h-7 w-7">
-                <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
-                <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
-                  {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
-                </AvatarFallback>
-              </Avatar>
+          {/* Move Icon */}
+          {lists && lists.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  {lists.map((list) => {
+                    const StatusIcon = getStatusIcon(list.name);
+                    const colors = getGanttStatusColor(list.name);
+                    
+                    return (
+                      <DropdownMenuItem
+                        key={list._id}
+                        onClick={() => {
+                          const newStatus = getStatusForList(list.name);
+                          updateIssueMutation.mutate({
+                            itemId: (card as any)._id || (card as any).id,
+                            data: { column: list._id, status: newStatus }
+                          });
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {StatusIcon && <StatusIcon className={`mr-2 h-4 w-4 ${colors.text}`} />}
+                        <span>{list.name}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          );
-        })()}
+          )}
+        </div>
       </div>
     </div >
   );

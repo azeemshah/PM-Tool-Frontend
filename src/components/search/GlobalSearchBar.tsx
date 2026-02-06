@@ -5,9 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import API from '@/lib/axios-client';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, transformStatusEnum } from '@/lib/helper';
 import { Badge } from '@/components/ui/badge';
 import { TaskStatusEnum, TaskPriorityEnum } from '@/constant';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 import './global-search-bar.css';
 
 interface SearchResult {
@@ -115,32 +117,6 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
     searchInputRef.current?.focus();
   };
 
-  const getStatusVariant = (status?: string) => {
-    const statusMap: { [key: string]: string } = {
-      'To Do': TaskStatusEnum.TO_DO,
-      'In Progress': TaskStatusEnum.IN_PROGRESS,
-      'In Review': TaskStatusEnum.IN_REVIEW,
-      'Done': TaskStatusEnum.DONE,
-      'Backlog': TaskStatusEnum.BACKLOG,
-      'Blocked': TaskStatusEnum.BLOCKED,
-      'Closed': TaskStatusEnum.CLOSED,
-    };
-    return statusMap[status || ''] || 'outline';
-  };
-
-  const getStatusIcon = (status?: string) => {
-    const iconMap: { [key: string]: React.ComponentType<any> } = {
-      'Backlog': HelpCircle,
-      'To Do': Circle,
-      'In Progress': Timer,
-      'In Review': View,
-      'Blocked': AlertCircle,
-      'Done': CheckCircle,
-      'Closed': XCircle,
-    };
-    return iconMap[status || ''];
-  };
-
   const getPriorityVariant = (priority?: string) => {
     if (!priority) return 'outline';
     const priorityMap: { [key: string]: string } = {
@@ -228,15 +204,19 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                           ? result.workspace
                           : result.workspace?.name}
                       </span>
-                      {result.status && (
-                        <Badge
-                          variant={getStatusVariant(result.status) as any}
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0"
-                        >
-                          {getStatusIcon(result.status) && React.createElement(getStatusIcon(result.status)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
-                          <span>{result.status}</span>
-                        </Badge>
-                      )}
+                      {result.status && (() => {
+                        const colors = getGanttStatusColor(result.status);
+                        const StatusIcon = getStatusIcon(result.status);
+                        return (
+                          <Badge
+                            variant="outline"
+                            className={`flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0 ${colors.bg} ${colors.text}`}
+                          >
+                            {StatusIcon && <StatusIcon className="h-4 w-4 rounded-full text-inherit" />}
+                            <span>{transformStatusEnum(result.status)}</span>
+                          </Badge>
+                        );
+                      })()}
                       {result.priority && (
                         <Badge
                           variant={getPriorityVariant(result.priority) as any}

@@ -42,6 +42,9 @@ import { updateTaskMutationFn, deleteAttachmentById, deleteAttachmentByUrl, getW
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import FileUpload from "@/components/ui/file-upload";
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
+import { getStatusIcon } from "./table/data";
 
 interface Task {
   _id: string;
@@ -70,6 +73,7 @@ export default function EditTaskForm(props: {
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
+  const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId);
   const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
   const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
 
@@ -108,12 +112,9 @@ export default function EditTaskForm(props: {
       message: "Title is required",
     }),
     description: z.string().trim().optional(),
-    status: z.enum(
-      Object.values(TaskStatusEnum) as [string, ...string[]],
-      {
-        required_error: "Status is required",
-      }
-    ),
+    status: z.string().min(1, {
+      message: "Status is required",
+    }),
     priority: z.enum(
       Object.values(TaskPriorityEnum) as [string, ...string[]],
       {
@@ -143,7 +144,6 @@ export default function EditTaskForm(props: {
   const taskStatusList = Object.values(TaskStatusEnum);
   const taskPriorityList = Object.values(TaskPriorityEnum);
 
-  const statusOptions = transformOptions(taskStatusList);
   const priorityOptions = transformOptions(taskPriorityList);
 
   useEffect(() => {
@@ -180,6 +180,8 @@ export default function EditTaskForm(props: {
             queryKey: ["tasks", invalidateKey],
           });
         }
+        queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
 
         toast({
           title: "Success",
@@ -386,7 +388,7 @@ export default function EditTaskForm(props: {
                           disabled={
                             (date) =>
                               date >
-                                new Date("2100-12-31") //Prevent selection beyond a far future date
+                              new Date("2100-12-31") //Prevent selection beyond a far future date
                           }
                           initialFocus
                           defaultMonth={field.value || new Date()}
@@ -421,15 +423,22 @@ export default function EditTaskForm(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {statusOptions?.map((status) => (
-                          <SelectItem
-                            className="!capitalize"
-                            key={status.value}
-                            value={status.value}
-                          >
-                            {status.label}
-                          </SelectItem>
-                        ))}
+                        {dynamicStatuses?.map((status) => {
+                          const colors = getGanttStatusColor(status.value);
+                          const StatusIcon = getStatusIcon(status.value);
+                          return (
+                            <SelectItem
+                              className="!capitalize"
+                              key={status.value}
+                              value={status.value}
+                            >
+                              <div className="flex items-center gap-2">
+                                {StatusIcon && <StatusIcon className={`h-4 w-4 ${colors.text}`} />}
+                                <span>{status.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />

@@ -6,8 +6,8 @@ import { formatTime } from './utils/ganttCalculations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ISSUE_TYPES_CONFIG } from '@/components/issue/constants';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
-import { statusIcons } from '@/components/workspace/task/table/data';
-import { statusColorMap } from './utils/colorMaps';
+import { statusIcons, getStatusIcon } from '@/components/workspace/task/table/data';
+import { statusColorMap, normalizeGanttStatus, getGanttStatusColor } from './utils/colorMaps';
 import { TaskStatusEnum } from '@/constant';
 
 interface GanttRowProps {
@@ -85,8 +85,8 @@ export const GanttRow: React.FC<GanttRowProps> = ({
           {/* Task title and priority indicator */}
           <div className="flex-1 min-w-0">
             {(() => {
-              const StatusIcon = statusIcons[item.status as keyof typeof statusIcons];
-              const statusColors = statusColorMap[item.status] || statusColorMap[TaskStatusEnum.TO_DO];
+              const StatusIcon = getStatusIcon(item.status);
+              const statusColors = getGanttStatusColor(item.status);
 
               return (
                 <div
@@ -103,62 +103,64 @@ export const GanttRow: React.FC<GanttRowProps> = ({
                 </div>
               );
             })()}
-            {hasPriority(item.priority) && (
-              <div className="text-xs text-red-600 dark:text-red-400 font-medium ml-7">★ {item.priority}</div>
-            )}
           </div>
-
-          {/* Assignee avatar */}
-          {(() => {
-            const assignee = item.assignedTo || (item as any).assignee || (item as any).reporter;
-            if (!assignee) return null;
-
-            return (
-              <Avatar className="w-6 h-6 flex-shrink-0 border border-border">
-                <AvatarImage src={assignee.profilePicture || assignee.avatar} alt={assignee.name} />
-                <AvatarFallback className={`text-xs ${getAvatarColor(assignee.name || '')}`}>
-                  {getAvatarFallbackText(assignee.name)}
-                </AvatarFallback>
-              </Avatar>
-            );
-          })()}
-        </div>
-
-        {/* Right section: Gantt bar + estimates */}
-        <div className="flex-1 flex items-center px-4 py-1 relative bg-background hover:bg-muted/50">
-          {/* Timeline bar */}
-          <GanttBar
-            item={item}
-            barStart={barStart}
-            barWidth={barWidth}
-            progressPercent={progressPercent}
-            onClick={() => onTaskClick(item._id)}
-          />
-
-          {/* Estimates (right-aligned) */}
-          {item.originalEstimate && (
-            <div className="ml-auto text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 font-medium">
-              {formatTime(item.timeSpent)} / {formatTime(item.originalEstimate)}
-            </div>
+          {hasPriority(item.priority) && (
+            <div className="text-xs text-red-600 dark:text-red-400 font-medium ml-7">★ {item.priority}</div>
           )}
         </div>
-      </div>
 
-      {/* Render children if expanded */}
-      {isExpanded &&
-        children.length > 0 &&
-        children.map((child, idx) => (
-          <GanttRow
-            key={child.item._id}
-            node={child}
-            isExpanded={false}
-            onToggleExpand={onToggleExpand}
-            onTaskClick={onTaskClick}
-            pixelsPerDay={pixelsPerDay}
-            level={level + 1}
-            isLastRow={idx === children.length - 1}
-          />
-        ))}
+        {/* Assignee avatar */}
+        {(() => {
+          const assignee = item.assignedTo || (item as any).assignee || (item as any).reporter;
+          if (!assignee) return null;
+
+          return (
+            <Avatar className="w-6 h-6 flex-shrink-0 border border-border">
+              <AvatarImage src={assignee.profilePicture || assignee.avatar} alt={assignee.name} />
+              <AvatarFallback className={`text-xs ${getAvatarColor(assignee.name || '')}`}>
+                {getAvatarFallbackText(assignee.name)}
+              </AvatarFallback>
+            </Avatar>
+          );
+        })()}
+
+      {/* Right section: Gantt bar + estimates */}
+      <div className="flex-1 flex items-center px-4 py-1 relative bg-background hover:bg-muted/50">
+        {/* Timeline bar */}
+        <GanttBar
+          item={item}
+          barStart={barStart}
+          barWidth={barWidth}
+          progressPercent={progressPercent}
+          onClick={() => onTaskClick(item._id)}
+        />
+
+        {/* Estimates (right-aligned) */}
+        {item.originalEstimate && (
+          <div className="ml-auto text-xs text-muted-foreground whitespace-nowrap flex-shrink-0 font-medium">
+            {formatTime(item.timeSpent)} / {formatTime(item.originalEstimate)}
+          </div>
+        )}
+      </div>
+    </div>
+
+      {/* Render children if expanded */ }
+  {
+    isExpanded &&
+      children.length > 0 &&
+      children.map((child, idx) => (
+        <GanttRow
+          key={child.item._id}
+          node={child}
+          isExpanded={false}
+          onToggleExpand={onToggleExpand}
+          onTaskClick={onTaskClick}
+          pixelsPerDay={pixelsPerDay}
+          level={level + 1}
+          isLastRow={idx === children.length - 1}
+        />
+      ))
+  }
     </>
   );
 };

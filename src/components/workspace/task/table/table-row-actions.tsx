@@ -52,6 +52,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
           queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
           queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
           queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
           toast({ title: "Success", description: `Task ${taskCode} deleted successfully`, variant: "success" });
         }, 300);
       },
