@@ -58,6 +58,43 @@ interface IssueCreateDialogProps {
 
 const PRIORITIES: IssuePriority[] = ['low', 'medium', 'high'];
 
+function CustomFieldDatePicker({ value, onChange }: { value: any, onChange: (val: string) => void }) {
+    const [open, setOpen] = useState(false);
+    const dateValue = value ? new Date(value) : undefined;
+
+    return (
+        <Popover open={open} onOpenChange={setOpen} modal={true}>
+            <PopoverTrigger asChild>
+                <Button
+                    variant={"outline"}
+                    className={cn(
+                        "w-full pl-3 text-left font-normal border rounded bg-background text-foreground border-input",
+                        !value && "text-muted-foreground"
+                    )}
+                >
+                    {dateValue ? (
+                        format(dateValue, "PPP")
+                    ) : (
+                        <span>Pick a date</span>
+                    )}
+                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0 z-[100]" align="start">
+                <Calendar
+                    mode="single"
+                    selected={dateValue}
+                    onSelect={(e) => {
+                        onChange(e ? e.toISOString() : '');
+                        setOpen(false);
+                    }}
+                    initialFocus
+                />
+            </PopoverContent>
+        </Popover>
+    );
+}
+
 export function IssueCreateDialog({
     isOpen,
     onOpenChange,
@@ -407,7 +444,13 @@ export function IssueCreateDialog({
                 parent: epicId || undefined,
                 labels: labels.length > 0 ? labels : undefined,
                     tags: tags.length > 0 ? tags : undefined,
-                    customFields: customFields.length > 0 ? customFields : undefined,
+                    customFields: customFields.length > 0 ? customFields.map(f => ({
+                        name: f.name,
+                        fieldType: f.fieldType,
+                        value: f.value,
+                        options: f.options,
+                        userValue: f.userValue
+                    })) : undefined,
             };
 
             // attach estimates (frontend uses hours input; backend expects minutes)
@@ -478,7 +521,13 @@ export function IssueCreateDialog({
                 parent: parentIssueId,
                 labels: labels.length > 0 ? labels : undefined,
                 tags: tags.length > 0 ? tags : undefined,
-                customFields: customFields.length > 0 ? customFields : undefined,
+                customFields: customFields.length > 0 ? customFields.map(f => ({
+                    name: f.name,
+                    fieldType: f.fieldType,
+                    value: f.value,
+                    options: f.options,
+                    userValue: f.userValue
+                })) : undefined,
             };
 
             if (originalEstimateHours && Number(originalEstimateHours) > 0) {
@@ -736,7 +785,10 @@ export function IssueCreateDialog({
                                             </label>
                                         )}
                                         {f.fieldType === 'date' && (
-                                            <input type="date" className="w-full px-3 py-2 border rounded bg-background text-foreground border-input" value={f.value ? new Date(f.value).toISOString().split('T')[0] : ''} onChange={(e) => updateCustomFieldValue(idx, e.target.value ? new Date(e.target.value).toISOString() : '')} />
+                                            <CustomFieldDatePicker 
+                                                value={f.value} 
+                                                onChange={(val) => updateCustomFieldValue(idx, val)} 
+                                            />
                                         )}
                                         {f.fieldType === 'user' && (
                                             <Select value={f.userValue ?? f.value ?? ''} onValueChange={(v) => updateCustomFieldValue(idx, v)}>

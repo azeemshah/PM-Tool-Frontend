@@ -58,24 +58,33 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
   useEffect(() => {
     if (!user?._id || !baseURL) return;
 
-    // Connect to the 'notifications' namespace
-    // Assuming baseURL is like http://localhost:5000/api/v1
-    // We want http://localhost:5000/notifications
-    let socketUrl = baseURL;
-    try {
-      const url = new URL(baseURL);
-      socketUrl = `${url.origin}/notifications`;
-    } catch (e) {
-      console.warn("Invalid baseURL for socket connection, falling back to /notifications", e);
-      socketUrl = '/notifications';
+    // Construct socket URL
+    // We need the base origin (e.g., http://localhost:5000) and append the namespace
+    let socketUrl = import.meta.env.VITE_SOCKET_URL;
+    
+    if (socketUrl) {
+        socketUrl = `${socketUrl}/notifications`;
+    } else {
+        try {
+            const url = new URL(baseURL);
+            // If baseURL has a path (like /api/v1), we want just the origin
+            socketUrl = `${url.origin}/notifications`;
+        } catch (e) {
+            console.warn("Invalid baseURL for socket connection, falling back to /notifications", e);
+            socketUrl = '/notifications';
+        }
     }
+
+    console.log('NotificationContext: Connecting to socket', socketUrl, 'with userId:', user._id);
 
     const newSocket = io(socketUrl, {
       query: { userId: user._id },
-      transports: ['websocket'], // Force WebSocket to avoid polling issues
+      transports: ['websocket', 'polling'], // Allow polling as fallback
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      forceNew: true,
     });
-
-    console.log('NotificationContext: Connecting to socket', socketUrl, user._id);
 
     newSocket.on('connect', () => {
       console.log('NotificationContext: Connected to notification socket', newSocket.id);
@@ -87,22 +96,24 @@ export const NotificationProvider = ({ children }: { children: ReactNode }) => {
 
     newSocket.on('notification', (notification: Notification) => {
       console.log('NotificationContext: New notification received', notification);
-      setNotifications((prev) => [notification, ...prev]);
-
-      toast({
-        title: "New Notification",
-        description: notification.message,
-        duration: 5000,
+      setNotifications((prev) => {
+        // Avoid duplicates if necessary, though simple prepend is usually fine
+        // Check if notification already exists (optional but good for safety)
+        if (prev.some(n => n._id === notification._id)) {
+            return prev;
+        }
+        return [notification, ...prev];
       });
     });
 
-    newSocket.on('disconnect', () => {
-      console.log('Disconnected from notification socket');
+    newSocket.on('disconnect', (reason) => {
+      console.log('Disconnected from notification socket:', reason);
     });
 
     setSocket(newSocket);
 
     return () => {
+      console.log('NotificationContext: Cleaning up socket');
       newSocket.disconnect();
     };
   }, [user?._id]);
