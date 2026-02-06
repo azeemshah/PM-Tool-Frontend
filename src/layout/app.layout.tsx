@@ -20,12 +20,9 @@ const AppLayout = () => {
 
   return (
     <AuthProvider>
-<<<<<<< HEAD
-      <TimerProvider>
-=======
       <NotificationProvider workspaceId={workspaceId}>
->>>>>>> e875861af67c4afcd98e58578fc8ae30054bb1d2
-        <SidebarProvider>
+        <TimerProvider>
+          <SidebarProvider>
           <Asidebar />
           <SidebarInset className="overflow-x-hidden">
             <div className="w-full">
@@ -38,12 +35,9 @@ const AppLayout = () => {
               <CreateWorkspaceDialog />
             </div>
           </SidebarInset>
-        </SidebarProvider>
-<<<<<<< HEAD
-      </TimerProvider>
-=======
+          </SidebarProvider>
+        </TimerProvider>
       </NotificationProvider>
->>>>>>> e875861af67c4afcd98e58578fc8ae30054bb1d2
     </AuthProvider>
   );
 };
