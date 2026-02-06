@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { priorities, issueTypes } from '@/components/workspace/task/table/data';
-import { formatStatusToEnum } from '@/lib/helper';
+import { formatStatusToEnum, formatDuration } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
 import React, { useMemo } from 'react';
@@ -30,12 +30,6 @@ interface BoardCardProps {
   labelsMap?: Map<string, { name: string; color: string }>;
   boardId?: string;
 }
-
-const minutesToHours = (minutes: number): string => {
-  if (!minutes) return '0h';
-  const hours = minutes / 60;
-  return hours % 1 === 0 ? `${Math.floor(hours)}h` : `${hours.toFixed(2)}h`;
-};
 
 export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
@@ -198,7 +192,7 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
           {(card as any)?.timeSpent > 0 && (
             <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 border-0">
               <Clock className="h-3 w-3" />
-              {minutesToHours((card as any).timeSpent)}
+              {formatDuration((card as any).timeSpent)}
             </Badge>
           )}
         </div>

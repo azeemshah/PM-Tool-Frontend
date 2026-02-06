@@ -101,6 +101,8 @@ export interface CreateItemDto {
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
+  originalEstimate: number;
+  remainingEstimate: number;
   customFields: any[];
 	issueId: ReactNode;
 	tags?: string[];
