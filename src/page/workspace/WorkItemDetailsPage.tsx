@@ -76,12 +76,22 @@ export const WorkItemDetailsPage: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const workspaceId = paramWorkspaceId || useWorkspaceId();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-
+  
   // Use location state if available, otherwise fetch
   const initialWorkItem = location.state?.workItem;
+  
+  // Determine workspace ID with multiple fallbacks
+  const getWorkspaceId = () => {
+    if (paramWorkspaceId) return paramWorkspaceId;
+    if (initialWorkItem?.workspaceId) return initialWorkItem.workspaceId;
+    // Last resort: use the hook that reads from URL params
+    const hookWorkspaceId = useWorkspaceId();
+    return hookWorkspaceId;
+  };
+  
+  const workspaceId = getWorkspaceId();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -169,7 +179,7 @@ export const WorkItemDetailsPage: React.FC = () => {
           '') as string
       );
       setDueDate(workItem.dueDate ? new Date(workItem.dueDate) : null);
-      setTags(workItem.tags?.map((t: any) => (typeof t === 'string' ? t : t._id)) || []);
+      setTags(workItem.tags || []);
       setSelectedLabels(workItem.labels || []);
     }
   }, [workItem]);
@@ -182,7 +192,7 @@ export const WorkItemDetailsPage: React.FC = () => {
       setPriority(detailedWorkItem.priority || '');
       setStatus(detailedWorkItem.status || '');
       setDueDate(detailedWorkItem.dueDate ? new Date(detailedWorkItem.dueDate) : null);
-      setTags(detailedWorkItem.tags?.map((t: any) => (typeof t === 'string' ? t : t._id)) || []);
+      setTags(detailedWorkItem.tags || []);
       setSelectedLabels(detailedWorkItem.labels || []);
     }
   }, [detailedWorkItem]);
@@ -414,11 +424,20 @@ export const WorkItemDetailsPage: React.FC = () => {
               </label>
               {selectedLabels.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedLabels.map((labelId) => {
-                    const label = boardLabels.find((l) => l._id === labelId);
+                  {selectedLabels.map((label) => {
+                    const labelName = typeof label === 'string' ? label : label?.name;
+                    const labelColor = typeof label === 'object' ? label?.color : undefined;
+                    const labelId = typeof label === 'string' ? label : label?._id;
                     return (
-                      <Badge key={labelId} variant="secondary">
-                        {label?.name || labelId}
+                      <Badge 
+                        key={labelId} 
+                        variant="secondary"
+                        style={{
+                          backgroundColor: labelColor || '#e5e7eb',
+                          color: '#374151'
+                        }}
+                      >
+                        {labelName}
                       </Badge>
                     );
                   })}

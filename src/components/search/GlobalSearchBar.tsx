@@ -19,6 +19,7 @@ interface SearchResult {
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask';
   priority?: string;
   status?: string;
+  workspaceId?: string;
   assignedTo?: {
     _id: string;
     name: string;
@@ -106,9 +107,15 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, []);
 
   const handleSelectResult = (result: SearchResult) => {
-    const workspaceId = typeof result.workspace === 'string'
-      ? result.workspace
-      : result.workspace?._id;
+    // Try to get workspace ID from multiple sources
+    const workspaceId = 
+      result.workspaceId || 
+      (typeof result.workspace === 'string' ? result.workspace : result.workspace?._id);
+
+    if (!workspaceId) {
+      console.warn('No workspace ID found for work item:', result._id);
+      return;
+    }
 
     navigate(`/workspace/${workspaceId}/work-item/${result._id}`, {
       state: { workItem: result },
@@ -234,19 +241,6 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                             <span>{result.priority}</span>
                           </Badge>
                         )}
-                        {result.tags && result.tags.length > 0 && result.tags.map((tag) => (
-                          <Badge
-                            key={tag._id}
-                            variant="secondary"
-                            className="px-2 py-1 text-xs font-medium"
-                            style={{
-                              backgroundColor: tag.color || '#e5e7eb',
-                              color: '#000'
-                            }}
-                          >
-                            {tag.name}
-                          </Badge>
-                        ))}
                       </div>
                     </div>
 
