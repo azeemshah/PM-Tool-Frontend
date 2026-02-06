@@ -52,9 +52,15 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId, ava
   const updateWorkItemMutation = useMutation({
     mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status'> }) =>
       issueApiService.updateItem(itemId, data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
+    onSuccess: (updatedItem) => {
+      // Update the cache with the actual server response for workspace-items
+      queryClient.setQueryData<any[]>(['workspace-items', workspaceId], (old) => {
+        if (!old) return [updatedItem];
+        return old.map((item) => item._id === updatedItem._id ? updatedItem : item);
+      });
+      
       queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
+      queryClient.refetchQueries({ queryKey: ['sprints', workspaceId] });
       toast({
         title: 'Success',
         description: 'Status updated successfully',

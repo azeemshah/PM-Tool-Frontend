@@ -28,6 +28,8 @@ export const useUpdateSprintStatus = () => {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['sprints', variables.workspaceId] });
+      // Also invalidate backlog items when sprint status changes (e.g., items moved from completed sprint to backlog)
+      queryClient.invalidateQueries({ queryKey: ['workspace-items', variables.workspaceId, 'backlog'] });
     },
   });
 };
