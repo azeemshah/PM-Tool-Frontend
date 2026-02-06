@@ -78,15 +78,7 @@ export const WorkItemDetailsPage: React.FC = () => {
   }>();
   const navigate = useNavigate();
   const location = useLocation();
-<<<<<<< HEAD
-  const workspaceId = paramWorkspaceId || useWorkspaceId();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const { activeTimer } = React.useContext(TimerContext);
-
-=======
   
->>>>>>> 6d6b9dd6bb53bfc436672366b0d6b21c87d15f8e
   // Use location state if available, otherwise fetch
   const initialWorkItem = location.state?.workItem;
   
@@ -102,6 +94,7 @@ export const WorkItemDetailsPage: React.FC = () => {
   const workspaceId = getWorkspaceId();
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { activeTimer } = React.useContext(TimerContext);
 
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
