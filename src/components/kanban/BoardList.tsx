@@ -180,7 +180,7 @@ export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, la
   const cardsForThisList = getCardsForList();
 
   return (
-    <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
+    <div className="w-96 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
       {(() => {
         const rawName = (list && (list.name || (list as any).label || ''));
