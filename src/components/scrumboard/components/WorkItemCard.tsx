@@ -36,9 +36,10 @@ interface WorkItemCardProps {
   onClick?: () => void;
   boardId?: string;
   availableStatuses?: { label: string; value: string }[];
+  hideMoveIcon?: boolean;
 }
 
-const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId, availableStatuses }) => {
+const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId, availableStatuses, hideMoveIcon }) => {
   const workspaceId = useWorkspaceId();
   const { statuses: fetchedStatuses } = useGetWorkspaceStatuses(workspaceId, boardId);
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
@@ -355,31 +356,33 @@ const WorkItemCard: React.FC<WorkItemCardProps> = ({ card, onClick, boardId, ava
           })()}
 
           {/* Move Icon */}
-          <div onClick={(e) => e.stopPropagation()}>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
-                  <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-40">
-                {dynamicStatuses.map((status) => {
-                  const StatusIcon = getStatusIcon(status.value);
-                  const colors = getGanttStatusColor(status.value);
-                  return (
-                    <DropdownMenuItem
-                      key={status.value}
-                      onClick={() => updateWorkItemMutation.mutate({ itemId: (card as any)._id, data: { status: status.value } })}
-                      className="cursor-pointer"
-                    >
-                      {StatusIcon && <StatusIcon className={`mr-2 h-4 w-4 ${colors.text}`} />}
-                      <span>{status.label}</span>
-                    </DropdownMenuItem>
-                  );
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          {!hideMoveIcon && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  {dynamicStatuses.map((status) => {
+                    const StatusIcon = getStatusIcon(status.value);
+                    const colors = getGanttStatusColor(status.value);
+                    return (
+                      <DropdownMenuItem
+                        key={status.value}
+                        onClick={() => updateWorkItemMutation.mutate({ itemId: (card as any)._id, data: { status: status.value } })}
+                        className="cursor-pointer"
+                      >
+                        {StatusIcon && <StatusIcon className={`mr-2 h-4 w-4 ${colors.text}`} />}
+                        <span>{status.label}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
         </div>
       </div>
     </div >

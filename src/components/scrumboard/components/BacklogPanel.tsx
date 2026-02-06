@@ -214,7 +214,7 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
             <div className="space-y-3">
               {filteredItems.map((item: any) => (
                 <div key={item._id} className="relative group">
-                  <WorkItemCard card={item} boardId={defaultBoard?._id} />
+                  <WorkItemCard card={item} boardId={defaultBoard?._id} hideMoveIcon={true} />
 
                   {/* Actions Dropdown */}
                   <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
