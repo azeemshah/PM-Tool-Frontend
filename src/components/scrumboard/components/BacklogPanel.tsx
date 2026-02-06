@@ -101,10 +101,11 @@ const BacklogPanel: React.FC<BacklogPanelProps> = ({ workspaceId }) => {
   const backlogItems = allWorkItems || [];
 
 
-  // Filter by search term
+  // Filter by search term and exclude Epic items
   const filteredItems = backlogItems.filter((item: any) =>
-    item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    item.description?.toLowerCase().includes(searchTerm.toLowerCase())
+    (item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    item.description?.toLowerCase().includes(searchTerm.toLowerCase())) &&
+    item.type?.toLowerCase() !== 'epic'
   );
 
   if (isLoading) {
