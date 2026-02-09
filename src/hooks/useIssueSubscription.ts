@@ -52,6 +52,11 @@ export function useIssueSubscription({
       // Invalidate relevant queries to refetch data
       queryClient.invalidateQueries({ queryKey: ['all-tasks', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['workspace-analytics', workspaceId] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['gantt-data', workspaceId],
+        refetchType: 'active' // Force immediate refetch for active queries
+      });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: ['project-analytics', projectId] });
       }
@@ -63,6 +68,11 @@ export function useIssueSubscription({
       // Invalidate queries to refetch
       queryClient.invalidateQueries({ queryKey: ['all-tasks', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['workspace-analytics', workspaceId] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['gantt-data', workspaceId],
+        refetchType: 'active' // Force immediate refetch for active queries
+      });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: ['project-analytics', projectId] });
       }
@@ -74,9 +84,20 @@ export function useIssueSubscription({
       // Invalidate queries to refetch
       queryClient.invalidateQueries({ queryKey: ['all-tasks', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['workspace-analytics', workspaceId] });
+      queryClient.invalidateQueries({ 
+        queryKey: ['gantt-data', workspaceId],
+        refetchType: 'active' // Force immediate refetch for active queries
+      });
+      queryClient.invalidateQueries({ queryKey: ['history'] });
       if (projectId) {
         queryClient.invalidateQueries({ queryKey: ['project-analytics', projectId] });
       }
+    });
+
+    // Listen for activity/history events
+    socket.on('activity.created', (payload) => {
+      console.log('📝 New activity logged:', payload);
+      queryClient.invalidateQueries({ queryKey: ['history'] });
     });
 
     // Handle connection errors
