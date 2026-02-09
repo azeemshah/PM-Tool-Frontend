@@ -26,7 +26,7 @@ const InviteMember = () => {
   const { workspace, workspaceLoading } = useAuthContext();
 
   const [email, setEmail] = useState("");
-  const [role, setRole] = useState<"ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER">("MEMBER");
+  const [role, setRole] = useState<"ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER" | "WATCHER">("MEMBER");
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -170,7 +170,7 @@ const InviteMember = () => {
               <Label className="text-sm font-medium">Role</Label>
               <Select
                 value={role}
-                onValueChange={(value: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER") =>
+                onValueChange={(value: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER" | "WATCHER") =>
                   setRole(value)
                 }
                 disabled={loading}
@@ -184,6 +184,7 @@ const InviteMember = () => {
                   <SelectItem value="PROJECT_MANAGER">Project Manager</SelectItem>
                   <SelectItem value="MEMBER">Member</SelectItem>
                   <SelectItem value="VIEWER">Viewer</SelectItem>
+                  <SelectItem value="WATCHER">Watcher</SelectItem>
                 </SelectContent>
               </Select>
             </div>

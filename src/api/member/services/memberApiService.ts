@@ -38,7 +38,7 @@ export const memberApiService = {
   /**
    * Invite a member to a workspace
    */
-  async inviteMember(data: { email: string; role: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER"; workspaceId: string }): Promise<Member> {
+  async inviteMember(data: { email: string; role: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER" | "WATCHER"; workspaceId: string }): Promise<Member> {
     try {
       const response = await API.post(
         `${MEMBER_ENDPOINT}/invite`,
