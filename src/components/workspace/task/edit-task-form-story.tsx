@@ -32,6 +32,7 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   getAvatarColor,
   getAvatarFallbackText,
+  getProfileImageUrl,
   transformOptions,
 } from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
@@ -97,7 +98,7 @@ export default function EditTaskForm(props: {
       label: (
         <div className="flex items-center space-x-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={userObj?.profilePicture || ""} alt={name} />
+            <AvatarImage src={getProfileImageUrl(userObj?.profilePicture)} alt={name} />
             <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
           </Avatar>
           <span>{name}</span>

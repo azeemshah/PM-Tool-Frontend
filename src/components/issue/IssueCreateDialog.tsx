@@ -38,7 +38,7 @@ import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards
 import { useToast } from '@/hooks/use-toast';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { getAllAttachments, uploadWorkItemAttachment } from '@/lib/api';
@@ -186,7 +186,7 @@ export function IssueCreateDialog({
             label: (
                 <div className="flex items-center space-x-2">
                     <Avatar className="h-6 w-6">
-                        <AvatarImage src={userObj.profilePicture || ''} alt={name} />
+                        <AvatarImage src={getProfileImageUrl(userObj.profilePicture || userObj.avatar)} alt={name} />
                         <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
                     </Avatar>
                     <span>{name}</span>
@@ -800,7 +800,20 @@ export function IssueCreateDialog({
                                                         const u = m.user || m.userId;
                                                         const id = u?._id || u || '';
                                                         const name = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
-                                                        return <SelectItem key={id} value={id}>{name}</SelectItem>;
+                                                        const initials = getAvatarFallbackText(name);
+                                                        const avatarColor = getAvatarColor(name);
+
+                                                        return (
+                                                            <SelectItem key={id} value={id}>
+                                                                <div className="flex items-center space-x-2">
+                                                                    <Avatar className="h-6 w-6">
+                                                                        <AvatarImage src={getProfileImageUrl(u?.profilePicture || u?.avatar)} alt={name} />
+                                                                        <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
+                                                                    </Avatar>
+                                                                    <span>{name}</span>
+                                                                </div>
+                                                            </SelectItem>
+                                                        );
                                                     })}
                                                 </SelectContent>
                                             </Select>

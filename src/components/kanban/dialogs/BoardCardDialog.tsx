@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus, getProfileImageUrl } from '@/lib/helper';
 
 import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
@@ -1408,7 +1408,7 @@ export function BoardCardDialog() {
                           <SelectItem key={id} value={id}>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
-                                <AvatarImage src={userObj.profilePicture || ''} />
+                                <AvatarImage src={getProfileImageUrl(userObj.profilePicture)} />
                                 <AvatarFallback className={getAvatarColor(name)}>
                                   {getAvatarFallbackText(name)}
                                 </AvatarFallback>
@@ -1439,7 +1439,7 @@ export function BoardCardDialog() {
                   return (
                     <>
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={profilePicture || ''} />
+                        <AvatarImage src={getProfileImageUrl(profilePicture)} />
                         <AvatarFallback className={getAvatarColor(name)}>
                           {getAvatarFallbackText(name)}
                         </AvatarFallback>

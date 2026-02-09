@@ -16,7 +16,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from "@/lib/helper";
 import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
@@ -127,7 +127,7 @@ const AllMembers = () => {
             <div className="flex items-center space-x-4">
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={userObj?.profilePicture || ""}
+                  src={getProfileImageUrl(userObj?.profilePicture) || ""}
                   alt="Image"
                 />
                 <AvatarFallback className={avatarColor}>

@@ -35,6 +35,7 @@ import { Textarea } from "../../ui/textarea";
 import {
   getAvatarColor,
   getAvatarFallbackText,
+  getProfileImageUrl,
 } from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
@@ -84,7 +85,7 @@ export default function CreateTaskForm(props: {
       label: (
         <div className="flex items-center space-x-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={userObj?.profilePicture || ""} alt={name} />
+            <AvatarImage src={getProfileImageUrl(userObj?.profilePicture)} alt={name} />
             <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
           </Avatar>
           <span>{name}</span>

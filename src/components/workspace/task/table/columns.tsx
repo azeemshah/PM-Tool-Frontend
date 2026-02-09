@@ -18,6 +18,7 @@ import {
   getAvatarFallbackText,
   formatDuration,
   transformStatusEnum,
+  getProfileImageUrl,
 } from "@/lib/helper";
 import { priorities, issueTypes, getStatusIcon } from "./data";
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
@@ -153,7 +154,7 @@ export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[
         return (
           <div className="flex items-center gap-1">
             <Avatar className="h-6 w-6">
-              <AvatarImage src={assignee?.profilePicture || ""} alt={name} />
+              <AvatarImage src={getProfileImageUrl(assignee?.profilePicture) || ""} alt={name} />
               <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
             </Avatar>
             <span className="block text-ellipsis w-[100px] truncate">{assignee?.name}</span>

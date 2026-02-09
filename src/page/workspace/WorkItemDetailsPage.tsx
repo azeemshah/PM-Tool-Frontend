@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from '@/components/kanban/dialogs/CommentSection';
 import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
@@ -207,27 +207,72 @@ export const WorkItemDetailsPage: React.FC = () => {
     return { id: '', name: '' };
   };
 
-  // Build reporter object from detailedWorkItem or workItem
-  const reporterObj = (() => {
-    const r = (detailedWorkItem as any)?.reporter ?? (workItem as any)?.reporter;
-    if (!r) return null;
-    if (typeof r === 'object') {
-      return {
-        _id: String(r._id || r.id || ''),
-        name: r.name || 'Unknown',
-        profilePicture: r.profilePicture ?? null,
-      };
+  const reporterObj = useMemo(() => {
+    const currentItem = detailedWorkItem || workItem;
+    const info = getReporterInfo(currentItem);
+    
+    const member = members.find((m: any) => {
+      const u = m.user || m.userId;
+      return (u?._id === info.id || u === info.id);
+    });
+
+    const u = member?.user || member?.userId;
+    // Prioritize member profile picture, fallback to item's reporter object if available and is object
+    let profilePicture = u?.profilePicture;
+    
+    if (!profilePicture && currentItem?.reporter && typeof currentItem.reporter === 'object') {
+        profilePicture = (currentItem.reporter as any).profilePicture;
     }
-    if (typeof r === 'string') {
-      const member = members.find((m: any) => (m.userId?._id === r || m.userId === r));
-      return {
-        _id: r,
-        name: member?.userId?.name || member?.name || 'Unknown',
-        profilePicture: member?.userId?.profilePicture ?? null,
-      };
+
+    return { 
+        name: info.name, 
+        profilePicture,
+        _id: info.id 
+    };
+  }, [detailedWorkItem, workItem, members]);
+
+  const assigneeObj = useMemo(() => {
+    const currentItem = detailedWorkItem || workItem;
+    const assigneeData = (currentItem as any)?.assignee ?? (currentItem as any)?.assignedTo;
+    
+    if (!assigneeData) return null;
+
+    let id = '';
+    let name = 'Unknown';
+    let initialProfilePicture = null;
+
+    if (typeof assigneeData === 'object') {
+      id = assigneeData._id || assigneeData.id || '';
+      name = assigneeData.name || name;
+      initialProfilePicture = assigneeData.profilePicture;
+    } else {
+      id = String(assigneeData);
     }
-    return null;
-  })();
+
+    if (!id) return null;
+
+    const member = members.find((m: any) => {
+      const u = m.user || m.userId;
+      return (u?._id === id || u === id);
+    });
+
+    const u = member?.user || member?.userId;
+    
+    let profilePicture = u?.profilePicture;
+    if (!profilePicture && initialProfilePicture) {
+        profilePicture = initialProfilePicture;
+    }
+
+    if (u) {
+        name = u.name || (u.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : name);
+    }
+
+    return { 
+        _id: id,
+        name, 
+        profilePicture 
+    };
+  }, [detailedWorkItem, workItem, members]);
 
   const getStatusOptions = () => {
     return [
@@ -363,20 +408,40 @@ export const WorkItemDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Assignee (Reporter) */}
+            {/* Assignee */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                 Assignee
               </label>
+              {assigneeObj ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={getProfileImageUrl(assigneeObj.profilePicture)} />
+                    <AvatarFallback className={getAvatarColor(assigneeObj.name)}>
+                      {getAvatarFallbackText(assigneeObj.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {assigneeObj.name}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Unassigned
+                </p>
+              )}
+            </div>
+
+            {/* Reporter */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                Reporter
+              </label>
               {reporterObj ? (
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={reporterObj.profilePicture || ''} />
-                    <AvatarFallback
-                      style={{
-                        backgroundColor: getAvatarColor(reporterObj.name),
-                      }}
-                    >
+                    <AvatarImage src={getProfileImageUrl(reporterObj.profilePicture)} />
+                    <AvatarFallback className={getAvatarColor(reporterObj.name)}>
                       {getAvatarFallbackText(reporterObj.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -386,7 +451,7 @@ export const WorkItemDetailsPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Unassigned
+                  No reporter
                 </p>
               )}
             </div>

@@ -10,7 +10,7 @@ import { Button } from '@/components/ui/button';
 import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum, formatDuration } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import React, { useMemo } from 'react';
 import {
   DropdownMenu,
@@ -313,7 +313,7 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
               return (
                 <div className="flex items-center">
                   <Avatar className="h-7 w-7">
-                    <AvatarImage src={(issue.reporter as any)?.profilePicture || ''} alt={issue.reporter?.name} />
+                    <AvatarImage src={getProfileImageUrl((issue.reporter as any)?.profilePicture) || ''} alt={issue.reporter?.name} />
                     <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
                       {getAvatarFallbackText(issue.reporter?.name || '')}
                     </AvatarFallback>
@@ -343,7 +343,7 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
             return (
               <div className="flex items-center">
                 <Avatar className="h-7 w-7">
-                  <AvatarImage src={resolved?.profilePicture || ''} alt={resolved?.name || 'User'} />
+                  <AvatarImage src={getProfileImageUrl(resolved?.profilePicture) || ''} alt={resolved?.name || 'User'} />
                   <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
                     {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
                   </AvatarFallback>

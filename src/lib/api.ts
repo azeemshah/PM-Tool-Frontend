@@ -66,6 +66,15 @@ export const getCurrentUserQueryFn =
     return response.data;
   };
 
+export const uploadProfilePictureMutationFn = async (file: File) => {
+  const form = new FormData();
+  form.append('file', file);
+  const response = await API.post(`/user/profile-picture`, form, {
+    headers: { 'Content-Type': 'multipart/form-data' },
+  });
+  return response.data;
+};
+
 //********* WORKSPACE ****************
 //************* */
 

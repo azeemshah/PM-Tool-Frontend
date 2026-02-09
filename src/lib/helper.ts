@@ -1,5 +1,15 @@
 //THE UPDATED ONE BECAUSE OF THE FILTERS ->  Take Note ->
 import { IssueStatus } from '@/api/issue/types';
+import { baseURL } from './base-url';
+
+export const getProfileImageUrl = (path: string | null | undefined) => {
+  if (!path) return "";
+  if (path.startsWith("http")) return path;
+  const host = baseURL.replace("/api/v1", "");
+  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  return `${host}${cleanPath}`;
+};
+
 export const transformOptions = (
   options: string[],
   iconMap?: Record<string, React.ComponentType<{ className?: string }>>
