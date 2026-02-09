@@ -11,7 +11,7 @@ interface TimerContextType {
 
 export const TimerContext = createContext<TimerContextType>({
   activeTimer: null,
-  refetchActiveTimer: () => {},
+  refetchActiveTimer: () => { },
   isLoading: false,
 });
 

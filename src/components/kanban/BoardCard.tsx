@@ -365,7 +365,7 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
                   {lists.map((list) => {
                     const StatusIcon = getStatusIcon(list.name);
                     const colors = getGanttStatusColor(list.name);
-                    
+
                     return (
                       <DropdownMenuItem
                         key={list._id}

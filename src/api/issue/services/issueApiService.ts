@@ -364,9 +364,9 @@ export const issueApiService = {
 	 */
 	async updateIssue(issueId: string, data: UpdateIssueDTO): Promise<Issue> {
 		const payload: any = { ...data };
-        // Backend expects 'assignedTo' and 'parent' directly, no mapping needed.
-        // And use /items endpoint which matches ItemController
-		
+		// Backend expects 'assignedTo' and 'parent' directly, no mapping needed.
+		// And use /items endpoint which matches ItemController
+
 		const response = await API.patch(`/items/${issueId}`, payload);
 		return response.data.data || response.data;
 	},
