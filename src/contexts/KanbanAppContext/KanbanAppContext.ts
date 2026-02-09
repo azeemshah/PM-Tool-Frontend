@@ -18,6 +18,8 @@ export interface KanbanAppContextType {
   // Issue Create Dialog state
   isIssueCreateDialogOpen: boolean;
   setIsIssueCreateDialogOpen: (open: boolean) => void;
+  selectedColumnName: string | null;
+  setSelectedColumnName: (columnName: string | null) => void;
 
   // Filter and search
   searchQuery: string;

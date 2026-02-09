@@ -27,14 +27,15 @@ interface BoardListProps {
 
 export function BoardList({ list, boardId, onCardClick, issues = [], tagsMap, labelsMap }: BoardListProps) {
   const workspaceId = useWorkspaceId();
-  const { setIsIssueCreateDialogOpen } = useKanbanAppContext();
+  const { setIsIssueCreateDialogOpen, setSelectedColumnName } = useKanbanAppContext();
 
   const { mutate: deleteList } = useDeleteKanbanBoardList();
   const { data: cards } = useGetKanbanBoardCards(boardId);
 
   const handleCreateCard = useCallback(() => {
+    setSelectedColumnName(list.name);
     setIsIssueCreateDialogOpen(true);
-  }, [setIsIssueCreateDialogOpen]);
+  }, [setIsIssueCreateDialogOpen, setSelectedColumnName, list.name]);
 
   const normalizeId = useCallback((v: unknown): string => {
     if (!v) return '';

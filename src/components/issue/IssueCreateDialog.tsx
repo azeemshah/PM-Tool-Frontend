@@ -45,6 +45,7 @@ import { getAllAttachments, uploadWorkItemAttachment } from '@/lib/api';
 
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
+import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -105,6 +106,19 @@ export function IssueCreateDialog({
     boardType = 'kanban',
 }: IssueCreateDialogProps) {
     const queryClient = useQueryClient();
+    
+    // Try to get context if available, but don't fail if not wrapped in provider
+    let selectedColumnName: string | null = null;
+    let setSelectedColumnName: (name: string | null) => void = () => {};
+    
+    try {
+        const context = useKanbanAppContext();
+        selectedColumnName = context.selectedColumnName;
+        setSelectedColumnName = context.setSelectedColumnName;
+    } catch (e) {
+        // Context not available (e.g., when used outside KanbanAppContextProvider)
+        // This is OK - just use empty defaults
+    }
 
     const customFieldsSectionRef = React.useRef<HTMLDivElement | null>(null);
     const newFieldNameRef = React.useRef<HTMLInputElement | null>(null);
@@ -279,6 +293,16 @@ export function IssueCreateDialog({
             setReporterId(id);
         }
     }, [members, reporterId]);
+
+    // Pre-fill status from selected column
+    useEffect(() => {
+        if (isOpen && selectedColumnName && !status) {
+            // Set status to the column name directly since that's what dynamicStatuses uses as values
+            setStatus(selectedColumnName);
+            // Clear the selectedColumnName after using it
+            setSelectedColumnName(null);
+        }
+    }, [isOpen, selectedColumnName, status, setSelectedColumnName]);
 
     const CustomFieldTypes = [
         'text',
