@@ -74,9 +74,11 @@ export function useGanttData(workspaceId: string) {
         totalCount: items.length,
       };
     },
-    staleTime: 1 * 60 * 1000,
+    staleTime: 0, // Enable instant real-time updates
     gcTime: 5 * 60 * 1000,
     enabled: !!workspaceId,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 
   return {

@@ -133,11 +133,18 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
         variant: 'destructive',
       });
     },
-    onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['workspace-items', workspaceId] });
+    onSuccess: (updatedItem) => {
+      // Update the cache with the actual server response
+      queryClient.setQueryData<TaskType[]>(['workspace-items', workspaceId], (old) => {
+        if (!old) return [updatedItem];
+        return old.map((item) => item._id === updatedItem._id ? updatedItem : item);
+      });
+      
+      // Also invalidate and refetch related queries
       queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
       queryClient.invalidateQueries({ queryKey: ['history'] });
       queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
+      queryClient.refetchQueries({ queryKey: ['sprints', workspaceId] });
     },
   });
 

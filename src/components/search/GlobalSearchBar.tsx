@@ -19,6 +19,7 @@ interface SearchResult {
   type: 'story' | 'bug' | 'task' | 'epic' | 'subtask';
   priority?: string;
   status?: string;
+  workspaceId?: string;
   assignedTo?: {
     _id: string;
     name: string;
@@ -28,6 +29,11 @@ interface SearchResult {
     _id: string;
     name: string;
   };
+  tags?: Array<{
+    _id: string;
+    name: string;
+    color?: string;
+  }>;
   createdAt?: string;
 }
 
@@ -101,9 +107,15 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
   }, []);
 
   const handleSelectResult = (result: SearchResult) => {
-    const workspaceId = typeof result.workspace === 'string'
-      ? result.workspace
-      : result.workspace?._id;
+    // Try to get workspace ID from multiple sources
+    const workspaceId = 
+      result.workspaceId || 
+      (typeof result.workspace === 'string' ? result.workspace : result.workspace?._id);
+
+    if (!workspaceId) {
+      console.warn('No workspace ID found for work item:', result._id);
+      return;
+    }
 
     navigate(`/workspace/${workspaceId}/work-item/${result._id}`, {
       state: { workItem: result },
@@ -195,37 +207,41 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                       <IssueTypeIcon type={result.type} size={16} />
                     </div>
 
-                    <div className="flex-grow min-w-0 flex items-center gap-3">
-                      <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                        {result.title}
-                      </h3>
-                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
-                        {typeof result.workspace === 'string'
-                          ? result.workspace
-                          : result.workspace?.name}
-                      </span>
-                      {result.status && (() => {
-                        const colors = getGanttStatusColor(result.status);
-                        const StatusIcon = getStatusIcon(result.status);
-                        return (
+                    <div className="flex-grow min-w-0">
+                      <div className="flex items-center gap-3 mb-2">
+                        <h3 className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                          {result.title}
+                        </h3>
+                        <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                          {typeof result.workspace === 'string'
+                            ? result.workspace
+                            : result.workspace?.name}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        {result.status && (() => {
+                          const colors = getGanttStatusColor(result.status);
+                          const StatusIcon = getStatusIcon(result.status);
+                          return (
+                            <Badge
+                              variant="outline"
+                              className={`flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 ${colors.bg} ${colors.text}`}
+                            >
+                              {StatusIcon && <StatusIcon className="h-4 w-4 rounded-full text-inherit" />}
+                              <span>{transformStatusEnum(result.status)}</span>
+                            </Badge>
+                          );
+                        })()}
+                        {result.priority && (
                           <Badge
-                            variant="outline"
-                            className={`flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0 ${colors.bg} ${colors.text}`}
+                            variant={getPriorityVariant(result.priority) as any}
+                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0"
                           >
-                            {StatusIcon && <StatusIcon className="h-4 w-4 rounded-full text-inherit" />}
-                            <span>{transformStatusEnum(result.status)}</span>
+                            {getPriorityIcon(result.priority) && React.createElement(getPriorityIcon(result.priority)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
+                            <span>{result.priority}</span>
                           </Badge>
-                        );
-                      })()}
-                      {result.priority && (
-                        <Badge
-                          variant={getPriorityVariant(result.priority) as any}
-                          className="flex items-center gap-1 px-2 py-1 text-xs font-medium shadow-sm uppercase border-0 flex-shrink-0"
-                        >
-                          {getPriorityIcon(result.priority) && React.createElement(getPriorityIcon(result.priority)!, { className: 'h-4 w-4 rounded-full text-inherit' })}
-                          <span>{result.priority}</span>
-                        </Badge>
-                      )}
+                        )}
+                      </div>
                     </div>
 
                     {/* Right: Assignee Avatar */}

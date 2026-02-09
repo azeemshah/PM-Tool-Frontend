@@ -213,6 +213,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       queryClient.invalidateQueries({ queryKey: ['all-tasks', 'kanban', workspaceId] });
       queryClient.invalidateQueries({ queryKey: ['issues'] });
       queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+      queryClient.invalidateQueries({ queryKey: ['sprints', workspaceId] });
 
       toast({
         title: 'Success',

@@ -33,7 +33,7 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
   availableStatuses,
 }) => {
   return (
-    <div className="w-80 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
+    <div className="w-96 bg-white dark:bg-muted/50 rounded-lg shadow-sm border border-gray-200 dark:border-border flex flex-col max-h-full">
       {/* Header */}
       {(() => {
         const colors = getGanttStatusColor(title);

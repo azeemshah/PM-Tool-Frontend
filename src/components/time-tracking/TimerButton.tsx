@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Play, Square, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from '@/hooks/use-toast';
 import { formatDuration } from '@/lib/helper';
+import { TimerContext } from '../workspace/task/timer-context';
 
 export interface TimerButtonProps {
   issueId: string;
@@ -24,6 +25,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   onTimerStart,
   onTimerStop,
 }) => {
+  const { activeTimer, refetchActiveTimer } = useContext(TimerContext);
   const [isActive, setIsActive] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [comment, setComment] = useState('');
@@ -32,10 +34,33 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   const [activeOtherTask, setActiveOtherTask] = useState<{ title: string; key: string } | null>(null);
   const { toast } = useToast();
 
-  // Load active timer on mount
+  // Sync with global active timer
   useEffect(() => {
-    loadActiveTimer();
-  }, []);
+    if (activeTimer && activeTimer._id) {
+      // Check if the timer is for the current issue
+      const timerIssueId = typeof activeTimer.workItemId === 'object' ? activeTimer.workItemId._id : activeTimer.workItemId;
+
+      if (timerIssueId === issueId) {
+        setIsActive(true);
+        const elapsed = activeTimer.startedAt
+          ? Math.round((Date.now() - new Date(activeTimer.startedAt).getTime()) / 1000)
+          : 0;
+        setElapsedSeconds(elapsed);
+        setActiveOtherTask(null);
+      } else {
+        // It's active elsewhere
+        const taskInfo = typeof activeTimer.workItemId === 'object'
+          ? { title: activeTimer.workItemId.title, key: activeTimer.workItemId.key }
+          : { title: 'Unknown Task', key: 'Unknown' };
+
+        setIsActive(false);
+        setActiveOtherTask(taskInfo);
+      }
+    } else {
+      setIsActive(false);
+      setActiveOtherTask(null);
+    }
+  }, [activeTimer, issueId]);
 
   // Live timer tick
   useEffect(() => {
@@ -48,34 +73,6 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
     return () => clearInterval(interval);
   }, [isActive]);
 
-  const loadActiveTimer = async () => {
-    try {
-      const timer = await issueApiService.getActiveTimer(userId);
-      if (timer && timer._id) {
-        // Check if the timer is for the current issue
-        const timerIssueId = typeof timer.workItemId === 'object' ? timer.workItemId._id : timer.workItemId;
-        
-        if (timerIssueId === issueId) {
-          setIsActive(true);
-          const elapsed = timer.startedAt
-            ? Math.round((Date.now() - new Date(timer.startedAt).getTime()) / 1000)
-            : 0;
-          setElapsedSeconds(elapsed);
-          setActiveOtherTask(null);
-        } else {
-          // It's active elsewhere
-          const taskInfo = typeof timer.workItemId === 'object' 
-            ? { title: timer.workItemId.title, key: timer.workItemId.key }
-            : { title: 'Unknown Task', key: 'Unknown' };
-            
-          setActiveOtherTask(taskInfo);
-        }
-      }
-    } catch (_e) {
-      // No active timer
-    }
-  };
-
   const handleStart = async () => {
     try {
       setIsLoading(true);
@@ -85,6 +82,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
       setShowCommentInput(false);
       toast({ description: 'Timer started' });
       onTimerStart?.();
+      refetchActiveTimer();
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -105,6 +103,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
       setShowCommentInput(false);
       toast({ description: `Timer logged: ${formatDuration(result.elapsedMinutes)}` });
       onTimerStop?.(result.elapsedMinutes);
+      refetchActiveTimer();
     } catch (error: any) {
       toast({
         variant: 'destructive',

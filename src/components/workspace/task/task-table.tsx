@@ -266,6 +266,7 @@ const DataTableFilterToolbar: FC<{
     { label: "Story", value: "story" },
     { label: "Task", value: "task" },
     { label: "Bug", value: "bug" },
+    { label: "Improvement", value: "improvement" },
     { label: "Subtask", value: "subtask" },
   ];
 

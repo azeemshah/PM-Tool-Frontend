@@ -1,4 +1,5 @@
 import { ChevronDown, Loader } from "lucide-react";
+import { useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -26,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
 
@@ -79,6 +81,7 @@ const AllMembers = () => {
         queryClient.invalidateQueries({
           queryKey: ["members", workspaceId],
         });
+        setOpenPopoverId(null);
         toast({
           title: "Success",
           description: "Member's role changed successfully",
@@ -142,7 +145,7 @@ const AllMembers = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Popover>
+              <Popover open={openPopoverId === member._id} onOpenChange={(open) => setOpenPopoverId(open ? member._id : null)}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"

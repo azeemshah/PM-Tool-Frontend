@@ -14,6 +14,7 @@ export function KanbanAppContextProvider({
   const [selectedCard, setSelectedCard] = useState<KanbanCard | Issue | null>(null);
   const [isCardDialogOpen, setIsCardDialogOpen] = useState(false);
   const [isIssueCreateDialogOpen, setIsIssueCreateDialogOpen] = useState(false);
+  const [selectedColumnName, setSelectedColumnName] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [viewMode, setViewMode] = useState<'board' | 'list' | 'calendar'>('board');
@@ -27,6 +28,8 @@ export function KanbanAppContextProvider({
     setIsCardDialogOpen,
     isIssueCreateDialogOpen,
     setIsIssueCreateDialogOpen,
+    selectedColumnName,
+    setSelectedColumnName,
     searchQuery,
     setSearchQuery,
     isSidebarOpen,
