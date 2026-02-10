@@ -232,6 +232,54 @@ export const WorkItemDetailsPage: React.FC = () => {
         return { id: i.reporter, name: n };
       }
     }
+    // Fallback to Assignee (Priority per user request)
+    if (i.assignee || i.assignedTo) {
+         // Re-implement or reuse getAssigneeInfo logic if not available in scope, 
+         // but getAssigneeInfo is defined below in this file, so we can't call it if it's defined after.
+         // Wait, getReporterInfo is defined BEFORE assigneeObj in this file, and getAssigneeInfo is NOT defined as a helper function in the same way in WorkItemDetailsPage.tsx
+         // In WorkItemDetailsPage.tsx, assigneeObj is a useMemo.
+         // So we need to duplicate the logic here or rely on the assigneeObj logic later.
+         
+         // Let's implement basic extraction here
+         const assigneeData = i.assignee || i.assignedTo;
+         if (assigneeData) {
+            let id = '';
+            let name = 'Unknown';
+            if (typeof assigneeData === 'object') {
+               id = assigneeData._id || assigneeData.id || '';
+               name = assigneeData.name || name;
+               if (id && name) return { id, name };
+            } else {
+               id = String(assigneeData);
+            }
+            if (id) {
+               const member = members.find((m: any) => {
+                  const u = m.user || m.userId;
+                  return (u?._id === id || u === id);
+               });
+               if (member) {
+                   const u = member.user || member.userId;
+                   const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+                   return { id, name: n };
+               }
+               return { id, name };
+            }
+         }
+    }
+
+    // Fallback to createdBy
+    if (i.createdBy) {
+      const id = typeof i.createdBy === 'object' ? (i.createdBy._id || i.createdBy.id) : i.createdBy;
+       if (id) {
+          const member = members.find((m: any) => {
+            const u = m.user || m.userId;
+            return (u?._id === id || u === id);
+          });
+          const u = member?.user || member?.userId;
+          const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+          return { id, name: n };
+       }
+    }
     return { id: '', name: '' };
   };
 
@@ -258,6 +306,34 @@ export const WorkItemDetailsPage: React.FC = () => {
         _id: info.id 
     };
   }, [detailedWorkItem, workItem, members]);
+
+  const parentObject = useMemo(() => {
+    const item = detailedWorkItem || workItem;
+    if (!item) return null;
+    
+    // Check for epic object
+    if ((item as any).epic && typeof (item as any).epic === 'object') {
+       const e = (item as any).epic;
+       if (e.title || e.name) return { ...e, type: 'epic' };
+    }
+    
+    // Check for parent object
+    if ((item as any).parent && typeof (item as any).parent === 'object') {
+       const p = (item as any).parent;
+       if (p.title || p.name) return { ...p, type: 'story' }; 
+    }
+    
+    // Fallback for epicTitle
+    if ((item as any).epicTitle) {
+        return {
+           _id: (item as any).epicId || (item as any).epic || '',
+           title: (item as any).epicTitle,
+           type: 'epic'
+        };
+    }
+    
+    return null;
+  }, [detailedWorkItem, workItem]);
 
   const assigneeObj = useMemo(() => {
     const currentItem = detailedWorkItem || workItem;
@@ -432,6 +508,21 @@ export const WorkItemDetailsPage: React.FC = () => {
 
           {/* Right: Details Sidebar */}
           <div className="space-y-6">
+            {/* Parent / Epic */}
+            {parentObject && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  {parentObject.type === 'epic' ? 'Epic' : 'Parent Issue'}
+                </label>
+                <div className="flex items-center gap-2 p-2 border rounded-md bg-gray-50 dark:bg-muted/50">
+                   <IssueTypeIcon type={parentObject.type || 'task'} />
+                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                     {parentObject.title || parentObject.name}
+                   </span>
+                </div>
+              </div>
+            )}
+
             {/* Status & Priority */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4">
               <div>

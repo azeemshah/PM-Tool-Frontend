@@ -260,6 +260,16 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     const targetColumnId = findColumnIdForStatus(issueStatus);
     const taskId = String(task._id);
 
+    const cleanCustomFields = (fields: any[]) => {
+      return fields.map(f => ({
+        name: f.name,
+        fieldType: f.fieldType,
+        value: f.value,
+        options: f.options,
+        userValue: (f.userValue && typeof f.userValue === 'object') ? f.userValue._id : f.userValue
+      }));
+    };
+
     const payload = {
       title: values.title,
       description: values.description,
@@ -270,7 +280,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       parent: values.parent || null,
       storyPoints: values.storyPoints,
       originalEstimate: values.originalEstimate ? Math.round(values.originalEstimate * 60) : undefined,
-      customFields: customFields.length > 0 ? customFields : undefined,
+      customFields: customFields.length > 0 ? cleanCustomFields(customFields) : undefined,
     };
 
     mutate({ issueId: taskId, data: payload }, {
