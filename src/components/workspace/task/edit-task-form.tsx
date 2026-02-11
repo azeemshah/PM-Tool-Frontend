@@ -756,7 +756,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
               {/* Time Tracking Summary */}
               <TimeTrackingSummary
-                issue={detailedIssue || task}
+                issue={detailedIssue || (task as any)}
                 originalEstimate={(detailedIssue as any)?.originalEstimate ?? (task as any)?.originalEstimate}
                 remainingEstimate={(detailedIssue as any)?.remainingEstimate ?? (task as any)?.remainingEstimate}
                 timeSpent={(detailedIssue as any)?.timeSpent ?? (task as any)?.timeSpent}

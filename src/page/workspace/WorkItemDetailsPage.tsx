@@ -102,8 +102,8 @@ export const WorkItemDetailsPage: React.FC = () => {
   const [status, setStatus] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [tags, setTags] = useState<Array<string | { _id?: string; name?: string }>>([]);
+  const [selectedLabels, setSelectedLabels] = useState<Array<string | { _id?: string; name?: string; color?: string } | null>>([]);
 
   // Fetch work item details
   const { data: workItem, isLoading: isLoadingWorkItem } = useQuery({
@@ -611,13 +611,14 @@ export const WorkItemDetailsPage: React.FC = () => {
               </label>
               {selectedLabels.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedLabels.map((label) => {
-                    const labelName = typeof label === 'string' ? label : label?.name;
-                    const labelColor = typeof label === 'object' ? label?.color : undefined;
-                    const labelId = typeof label === 'string' ? label : label?._id;
+                  {selectedLabels.filter(Boolean).map((label) => {
+                    if (!label) return null;
+                    const labelName = typeof label === 'string' ? label : (label.name ?? String((label as any)._id ?? ''));
+                    const labelColor = typeof label === 'object' ? label.color : undefined;
+                    const labelId = typeof label === 'string' ? label : (label._id ?? label.name ?? labelName);
                     return (
                       <Badge 
-                        key={labelId} 
+                        key={labelId}
                         variant="secondary"
                         style={{
                           backgroundColor: labelColor || '#e5e7eb',

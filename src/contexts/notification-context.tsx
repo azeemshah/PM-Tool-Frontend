@@ -108,7 +108,6 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
 
     newSocket.on('connect', () => {
       console.log('NotificationContext: Connected to notification socket', newSocket.id);
-      toast({ title: "Connected", description: "Real-time notifications active" });
     });
 
     newSocket.on('connect_error', (err) => {

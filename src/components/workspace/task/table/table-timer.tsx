@@ -16,96 +16,188 @@ export const TableTimer: React.FC<TableTimerProps> = ({
   issueId,
   defaultTimeSpent = 0,
 }) => {
-  const { activeTimer, refetchActiveTimer } = useContext(TimerContext);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const { activeTimer, refetchActiveTimer, setActiveTimer, isLoading: isGlobalLoading, lastAction, elapsedSeconds } = useContext(TimerContext);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+
+  // Combined loading state
+  const isAnyLoading = isLoading || isGlobalLoading;
 
   // Optimistic state to show active immediately after click
   const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null);
 
-  // Clear optimistic state when server state catches up
+  // Synchronize optimistic state with server state
   useEffect(() => {
-    if (optimisticActive !== null) {
-      const propActiveId = activeTimer?.workItemId?._id || activeTimer?.workItemId;
-      const propIsMatching = String(propActiveId) === String(issueId);
+    // 0. If lastAction was 'stop' and there is no activeTimer, clear optimisticActive immediately
+    // This handles the case where timer is stopped from GlobalTimer
+    if (lastAction === 'stop' && activeTimer === null) {
+      setOptimisticActive(null);
+      return;
+    }
 
-      if (optimisticActive === propIsMatching) {
+    // We only want to clear optimistic state when we have a definite answer from the server
+    if (optimisticActive !== null && !isGlobalLoading && !isLoading) {
+      const activeWorkItemId = getTimerWorkItemId(activeTimer);
+      const normalizedIssueId = String(issueId);
+      
+      const isActuallyMatching = (activeWorkItemId && normalizedIssueId) 
+        ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase() 
+        : false;
+
+      // 1. If we have a matching timer from server, we can eventually clear optimistic
+      if (isActuallyMatching) {
+        const timeout = setTimeout(() => {
+          if (isActuallyMatching && optimisticActive !== null) {
+            setOptimisticActive(null);
+          }
+        }, 15000); // Wait 15s to be absolutely sure server is stable
+        return () => clearTimeout(timeout);
+      } 
+      // 2. If server has a DIFFERENT timer, clear optimistic immediately to show reality
+      else if (activeTimer && !isActuallyMatching) {
         setOptimisticActive(null);
       }
+      // 3. If server says NULL, wait longer (15s) before giving up on optimistic start
+      else if (activeTimer === null && optimisticActive === true) {
+        // If lastAction is 'start', we definitely wait for the server to catch up
+        const timeout = setTimeout(() => {
+          if (optimisticActive === true && activeTimer === null && !isGlobalLoading && !isLoading) {
+            console.log('TableTimer: Grace period expired for start, clearing optimistic state');
+            setOptimisticActive(null);
+          }
+        }, 15000);
+        return () => clearTimeout(timeout);
+      }
+      // 4. If server says something but we wanted to STOP
+      else if (activeTimer !== null && optimisticActive === false) {
+        const timeout = setTimeout(() => {
+          if (optimisticActive === false && activeTimer !== null && !isGlobalLoading && !isLoading) {
+            console.log('TableTimer: Grace period expired for stop, clearing optimistic state');
+            setOptimisticActive(null);
+          }
+        }, 15000);
+        return () => clearTimeout(timeout);
+      }
     }
-  }, [activeTimer, issueId, optimisticActive]);
+  }, [activeTimer, issueId, optimisticActive, isGlobalLoading, isLoading, lastAction]);
+
+  // Helper to get workItem ID from a timer object
+  const getTimerWorkItemId = (timer: any) => {
+    if (!timer) return null;
+    
+    // Check various common fields where the ID might be stored
+    let id = null;
+    
+    if (timer.workItemId) {
+      if (typeof timer.workItemId === 'object') {
+        id = timer.workItemId._id || timer.workItemId.id || (timer.workItemId.toString !== Object.prototype.toString ? timer.workItemId.toString() : null);
+      } else {
+        id = timer.workItemId;
+      }
+    } 
+    
+    if (!id && timer.issueId) {
+      id = timer.issueId;
+    } 
+    
+    if (!id && timer.workItem) {
+      if (typeof timer.workItem === 'object') {
+        id = timer.workItem._id || timer.workItem.id || (timer.workItem.toString !== Object.prototype.toString ? timer.workItem.toString() : null);
+      } else {
+        id = timer.workItem;
+      }
+    }
+
+    if (!id && timer._id) {
+      // Last resort, but unlikely to be the workItemId
+      // Only use if we're sure it's not the timer's own ID
+    }
+               
+    return id ? String(id) : null;
+  };
 
   const isActive = React.useMemo(() => {
-    // If we have an optimistic state, use it (unless activeTimer prop has caught up)
+    const activeWorkItemId = getTimerWorkItemId(activeTimer);
+    const normalizedIssueId = String(issueId);
+    
+    const isActuallyMatching = (activeWorkItemId && normalizedIssueId) 
+      ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase() 
+      : false;
+
+    // If we have an optimistic state, it takes absolute precedence
     if (optimisticActive !== null) {
-        const propActiveId = activeTimer?.workItemId?._id || activeTimer?.workItemId;
-        const propIsMatching = String(propActiveId) === String(issueId);
-        
-        // If state hasn't caught up yet, return optimistic value
-        if (optimisticActive !== propIsMatching) {
-             return optimisticActive;
-        }
-        // If it has caught up, fall through to standard check (useEffect will clear optimisticActive)
+      return optimisticActive;
     }
 
-    if (!activeTimer || !activeTimer.workItemId) return false;
-    
-    const activeId = typeof activeTimer.workItemId === 'object' 
-      ? activeTimer.workItemId._id 
-      : activeTimer.workItemId;
-      
-    console.log('TableTimer: Checking match', { 
-      activeId, 
-      issueId, 
-      match: String(activeId) === String(issueId),
-      activeTimer 
-    });
-    return String(activeId) === String(issueId);
+    return isActuallyMatching;
   }, [activeTimer, issueId, optimisticActive]);
 
-  useEffect(() => {
-    // console.log('TableTimer effect', { issueId, isActive, activeTimer });
-    if (isActive) {
-      const startTime = activeTimer?.startedAt ? new Date(activeTimer.startedAt).getTime() : Date.now();
-      const updateTimer = () => {
-        const now = Date.now();
-        const seconds = Math.round((now - startTime) / 1000);
-        setElapsedSeconds(seconds);
-      };
-      
-      updateTimer(); // Initial update
-      const interval = setInterval(updateTimer, 1000);
-      return () => clearInterval(interval);
-    } else {
-      setElapsedSeconds(0);
-    }
-  }, [isActive, activeTimer]);
+  // Is ANY timer active? (to disable other play buttons)
+  const isAnyTimerActive = !!activeTimer || optimisticActive === true;
+
+  // We only show the "Another timer is running" state if we are NOT loading
+  // to prevent flickering with stale cached data
+  const showActiveConflict = isAnyTimerActive && !isActive && !isGlobalLoading;
+
+  if (isGlobalLoading && !isActive) {
+    return (
+      <div className="flex items-center gap-2">
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-gray-500" />
+      </div>
+    );
+  }
 
   const handleStart = async (e: React.MouseEvent) => {
     e.stopPropagation();
     e.preventDefault();
-    console.log("Starting timer for issue:", issueId);
+
+    const activeWorkItemId = getTimerWorkItemId(activeTimer);
+    if (activeWorkItemId) {
+      if (String(activeWorkItemId).toLowerCase() !== String(issueId).toLowerCase()) {
+        toast({
+          variant: 'destructive',
+          description: 'A timer is already running for another task. Please stop it first.',
+        });
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
-      setOptimisticActive(true); // Optimistically show stop button
-      await issueApiService.startTimer(issueId);
+      const now = Date.now();
+      setOptimisticActive(true); 
+
+      const result = await issueApiService.startTimer(issueId);
+      
+      const timerData = result.timer || result;
+      // Update global context immediately with our local start time to ensure 0-based start
+      setActiveTimer(timerData, now);
+      
       toast({ description: 'Timer started' });
-      refetchActiveTimer();
+      
+      // Delay refetch longer to allow DB to propagate
+      setTimeout(() => {
+        refetchActiveTimer();
+      }, 10000);
     } catch (error: any) {
-      setOptimisticActive(null); // Revert on error
       console.error("Error starting timer:", error);
       
       const errorMessage = error.response?.data?.message || '';
       
-      if (errorMessage.includes('already running')) {
+      // If it's already running for THIS issue, just sync
+      if (errorMessage.includes('already running for this issue') || 
+          (errorMessage.includes('already running') && !errorMessage.includes('"'))) {
          toast({ description: 'Timer synced' });
+         setOptimisticActive(true);
          refetchActiveTimer();
       } else {
+        // If it's running for ANOTHER issue, show the full error so the user knows which one
+        setOptimisticActive(null); 
         toast({
           variant: 'destructive',
           description: errorMessage || 'Failed to start timer',
         });
+        refetchActiveTimer(); // Sync to show which one is active
       }
     } finally {
       setIsLoading(false);
@@ -120,7 +212,10 @@ export const TableTimer: React.FC<TableTimerProps> = ({
       setIsLoading(true);
       // We stop the timer without a comment for the table view quick action
       const result = await issueApiService.stopTimer(issueId);
+      
       setOptimisticActive(false); // Optimistically show start button
+      setActiveTimer(null); // Clear global context immediately
+      
       toast({ description: `Timer logged: ${formatDuration(result.elapsedMinutes)}` });
       refetchActiveTimer();
     } catch (error: any) {
@@ -153,7 +248,7 @@ export const TableTimer: React.FC<TableTimerProps> = ({
           size="icon"
           className="h-6 w-6 rounded-full shadow-sm"
           onClick={handleStop}
-          disabled={isLoading}
+          disabled={isAnyLoading}
           title="Stop Timer"
         >
           <Square size={10} className="fill-current" />
@@ -173,8 +268,8 @@ export const TableTimer: React.FC<TableTimerProps> = ({
         size="icon"
         className="h-6 w-6 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
         onClick={handleStart}
-        disabled={isLoading}
-        title="Start Timer"
+        disabled={isAnyLoading || showActiveConflict}
+        title={showActiveConflict ? "Another timer is running" : "Start Timer"}
       >
         <Play size={14} className="ml-0.5" />
       </Button>

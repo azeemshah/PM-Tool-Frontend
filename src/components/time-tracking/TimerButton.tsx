@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Play, Square, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { issueApiService } from '@/api/issue/services/issueApiService';
-import { useToast } from '@/hooks/use-toast';
+import { toast, useToast } from '@/hooks/use-toast';
 import { formatDuration } from '@/lib/helper';
-import { TimerContext } from '../workspace/task/timer-context';
+import { useTimer } from '../workspace/task/timer-context';
 
 export interface TimerButtonProps {
   issueId: string;
@@ -25,85 +25,187 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   onTimerStart,
   onTimerStop,
 }) => {
-  const { activeTimer, refetchActiveTimer } = useContext(TimerContext);
-  const [isActive, setIsActive] = useState(false);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const { activeTimer, refetchActiveTimer, setActiveTimer, isLoading: isGlobalLoading, lastAction, elapsedSeconds } = useTimer();
   const [comment, setComment] = useState('');
   const [showCommentInput, setShowCommentInput] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [activeOtherTask, setActiveOtherTask] = useState<{ title: string; key: string } | null>(null);
-  const { toast } = useToast();
 
-  // Sync with global active timer
-  useEffect(() => {
-    if (activeTimer && activeTimer._id) {
-      // Check if the timer is for the current issue
-      const timerIssueId = typeof activeTimer.workItemId === 'object' ? activeTimer.workItemId._id : activeTimer.workItemId;
+  // Optimistic state
+  const [optimisticActive, setOptimisticActive] = useState<boolean | null>(null);
 
-      if (timerIssueId === issueId) {
-        setIsActive(true);
-        const elapsed = activeTimer.startedAt
-          ? Math.round((Date.now() - new Date(activeTimer.startedAt).getTime()) / 1000)
-          : 0;
-        setElapsedSeconds(elapsed);
-        setActiveOtherTask(null);
+  // Helper to get workItem ID from a timer object
+  const getTimerWorkItemId = (timer: any) => {
+    if (!timer) return null;
+    let id = null;
+    if (timer.workItemId) {
+      if (typeof timer.workItemId === 'object') {
+        id = timer.workItemId._id || timer.workItemId.id || (timer.workItemId.toString !== Object.prototype.toString ? timer.workItemId.toString() : null);
       } else {
-        // It's active elsewhere
-        const taskInfo = typeof activeTimer.workItemId === 'object'
-          ? { title: activeTimer.workItemId.title, key: activeTimer.workItemId.key }
-          : { title: 'Unknown Task', key: 'Unknown' };
-
-        setIsActive(false);
-        setActiveOtherTask(taskInfo);
+        id = timer.workItemId;
       }
-    } else {
-      setIsActive(false);
-      setActiveOtherTask(null);
+    } 
+    if (!id && timer.issueId) id = timer.issueId;
+    if (!id && timer.workItem) {
+      if (typeof timer.workItem === 'object') {
+        id = timer.workItem._id || timer.workItem.id || (timer.workItem.toString !== Object.prototype.toString ? timer.workItem.toString() : null);
+      } else {
+        id = timer.workItem;
+      }
     }
-  }, [activeTimer, issueId]);
+    return id ? String(id) : null;
+  };
 
-  // Live timer tick
+  const isActive = React.useMemo(() => {
+    const activeWorkItemId = getTimerWorkItemId(activeTimer);
+    const normalizedIssueId = String(issueId);
+    
+    const isActuallyMatching = (activeWorkItemId && normalizedIssueId) 
+      ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase() 
+      : false;
+
+    if (optimisticActive !== null) {
+      return optimisticActive;
+    }
+
+    return isActuallyMatching;
+  }, [activeTimer, issueId, optimisticActive]);
+
+  const activeOtherTask = React.useMemo(() => {
+    if (isActive) return null;
+    
+    const activeWorkItemId = getTimerWorkItemId(activeTimer);
+    if (!activeWorkItemId) return null;
+
+    // It's active elsewhere
+    if (activeTimer.workItemId && typeof activeTimer.workItemId === 'object') {
+      return { title: activeTimer.workItemId.title, key: activeTimer.workItemId.key };
+    }
+    return { title: 'Another Task', key: 'Active' };
+  }, [activeTimer, isActive]);
+
+  // Force refetch on mount to ensure fresh state
   useEffect(() => {
-    if (!isActive) return;
+    refetchActiveTimer();
+  }, []);
 
-    const interval = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
+  // Synchronize optimistic state
+  useEffect(() => {
+    if (optimisticActive !== null && !isGlobalLoading && !isLoading) {
+      const activeWorkItemId = getTimerWorkItemId(activeTimer);
+      const isActuallyMatching = activeWorkItemId && activeWorkItemId.toLowerCase() === String(issueId).toLowerCase();
 
-    return () => clearInterval(interval);
-  }, [isActive]);
+      // 0. If lastAction was 'stop' and there is no activeTimer, clear optimisticActive immediately
+      if (lastAction === 'stop' && activeTimer === null) {
+        setOptimisticActive(null);
+        return;
+      }
 
-  const handleStart = async () => {
+      // 1. If matching timer from server, wait a bit before clearing optimistic to ensure stability
+      if (isActuallyMatching) {
+        const timeout = setTimeout(() => {
+          if (isActuallyMatching && optimisticActive !== null) {
+            setOptimisticActive(null);
+          }
+        }, 15000);
+        return () => clearTimeout(timeout);
+      } 
+      // 2. If server has a DIFFERENT timer, clear optimistic immediately
+      else if (activeTimer && !isActuallyMatching) {
+        setOptimisticActive(null);
+      } 
+      // 3. If server says NULL but we wanted to START, wait 15s
+      else if (activeTimer === null && optimisticActive === true) {
+        const timeout = setTimeout(() => {
+          if (optimisticActive === true && activeTimer === null && !isGlobalLoading && !isLoading) {
+            console.log('TimerButton: Grace period expired for start, clearing optimistic state');
+            setOptimisticActive(null);
+          }
+        }, 15000);
+        return () => clearTimeout(timeout);
+      }
+      // 4. If server has a timer but we wanted to STOP, wait 15s
+      else if (activeTimer !== null && optimisticActive === false) {
+        const timeout = setTimeout(() => {
+          if (optimisticActive === false && activeTimer !== null && !isGlobalLoading && !isLoading) {
+            console.log('TimerButton: Grace period expired for stop, clearing optimistic state');
+            setOptimisticActive(null);
+          }
+        }, 15000);
+        return () => clearTimeout(timeout);
+      }
+    }
+  }, [activeTimer, issueId, optimisticActive, isGlobalLoading, isLoading, lastAction]);
+
+  const handleStart = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const currentActiveId = activeTimer ? (activeTimer.workItemId?._id || activeTimer.workItemId || activeTimer.issueId || activeTimer.workItem?._id || activeTimer.workItem) : null;
+    
+    if (currentActiveId) {
+      if (String(currentActiveId).toLowerCase() !== String(issueId).toLowerCase()) {
+        toast({
+          variant: 'destructive',
+          description: 'A timer is already running for another task. Please stop it first.',
+        });
+        return;
+      }
+    }
+
     try {
       setIsLoading(true);
-      await issueApiService.startTimer(issueId);
-      setIsActive(true);
-      setElapsedSeconds(0);
-      setShowCommentInput(false);
+      const now = Date.now();
+      setOptimisticActive(true);
+
+      const result = await issueApiService.startTimer(issueId);
+      
+      const timerData = result.timer || result;
+      // Update global context immediately with our local start time
+      setActiveTimer(timerData, now);
+      
       toast({ description: 'Timer started' });
       onTimerStart?.();
-      refetchActiveTimer();
+      
+      // Delay refetch slightly longer
+      setTimeout(() => {
+        refetchActiveTimer();
+      }, 10000);
     } catch (error: any) {
+      const errorMessage = error.response?.data?.message || '';
+      // If error is "Timer already running for this issue", we should just sync state
+      if (errorMessage.includes('already running for this issue') || 
+          (errorMessage.includes('already running') && !errorMessage.includes('"'))) {
+        await refetchActiveTimer();
+        return;
+      }
+      
       toast({
         variant: 'destructive',
-        description: error.response?.data?.message || 'Failed to start timer',
+        description: errorMessage || 'Failed to start timer',
       });
+      refetchActiveTimer();
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleStop = async () => {
+  const handleStop = async (e?: React.MouseEvent) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
       setIsLoading(true);
       const result = await issueApiService.stopTimer(issueId, comment);
-      setIsActive(false);
-      setElapsedSeconds(0);
+      
+      // Update global context immediately
+      setActiveTimer(null);
+      
       setComment('');
       setShowCommentInput(false);
       toast({ description: `Timer logged: ${formatDuration(result.elapsedMinutes)}` });
       onTimerStop?.(result.elapsedMinutes);
-      refetchActiveTimer();
+      refetchActiveTimer(); // Sync in background
     } catch (error: any) {
       toast({
         variant: 'destructive',
@@ -125,6 +227,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
           <Clock className="text-orange-600 dark:text-orange-400 flex-shrink-0" size={18} />
           <span className="text-sm font-semibold text-orange-700 dark:text-orange-300 flex-1">{formatTime(elapsedSeconds)}</span>
           <Button
+            type="button"
             variant="destructive"
             size="sm"
             onClick={handleStop}
@@ -146,6 +249,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
               className="h-8 text-xs dark:bg-slate-800 dark:border-slate-700 dark:text-white"
             />
             <Button
+              type="button"
               size="sm"
               variant="outline"
               onClick={() => setShowCommentInput(false)}
@@ -158,6 +262,7 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
 
         {!showCommentInput && (
           <Button
+            type="button"
             variant="ghost"
             size="sm"
             onClick={() => setShowCommentInput(true)}
@@ -170,22 +275,41 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
     );
   }
 
+  if (isGlobalLoading) {
+    return (
+      <Button variant="outline" className="w-full justify-start gap-2" disabled>
+        <div className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+        Loading Timer...
+      </Button>
+    );
+  }
+
+  if (activeOtherTask) {
+    return (
+      <div className="rounded-md border border-orange-200 bg-orange-50 p-3">
+        <div className="flex items-center gap-2 text-orange-800">
+          <Clock className="h-4 w-4" />
+          <span className="text-sm font-medium">Timer running on another task</span>
+        </div>
+        <div className="mt-1 text-xs text-orange-600 pl-6">
+          {activeOtherTask.key}: {activeOtherTask.title}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {activeOtherTask && (
-        <div className="p-3 bg-yellow-50 dark:bg-yellow-900/30 border border-yellow-200 dark:border-yellow-800/50 rounded-lg text-xs text-yellow-800 dark:text-yellow-200">
-          Timer active on <strong>{activeOtherTask.key}</strong>. Starting this will stop the other timer.
-        </div>
-      )}
       <Button
+        type="button"
         variant="outline"
         size="sm"
         onClick={handleStart}
-        disabled={isLoading}
+        disabled={isLoading || (!!activeTimer && !isActive)}
         className="gap-2 w-full"
       >
         <Play size={16} />
-        {activeOtherTask ? 'Switch Timer to This' : 'Start Timer'}
+        Start Timer
       </Button>
     </div>
   );

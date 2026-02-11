@@ -23,6 +23,7 @@ import {
 import { priorities, issueTypes, getStatusIcon } from "./data";
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { TaskType } from "@/api/issue/types";
+import { TableTimer } from "./table-timer";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   DropdownMenu,
@@ -257,15 +258,11 @@ export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[
       accessorKey: "timeSpent",
       header: ({ column }) => <DataTableColumnHeader column={column} title="Time Logged" />,
       cell: ({ row }) => {
-        const timeSpent = row.original.timeSpent;
-        if (!timeSpent || timeSpent <= 0) {
-          return <span className="text-sm text-muted-foreground">-</span>;
-        }
         return (
-          <Badge className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-            <Clock className="h-3 w-3" />
-            <span>{formatDuration(timeSpent)}</span>
-          </Badge>
+          <TableTimer
+            issueId={row.original._id}
+            defaultTimeSpent={row.original.timeSpent}
+          />
         );
       },
     },
