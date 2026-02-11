@@ -223,20 +223,22 @@ export const TimerButton: React.FC<TimerButtonProps> = ({
   if (isActive) {
     return (
       <div className="space-y-2">
-        <div className="flex items-center gap-3 p-3 bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800/50 rounded-lg">
-          <Clock className="text-orange-600 dark:text-orange-400 flex-shrink-0" size={18} />
-          <span className="text-sm font-semibold text-orange-700 dark:text-orange-300 flex-1">{formatTime(elapsedSeconds)}</span>
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="destructive"
-            size="sm"
+            size="icon"
             onClick={handleStop}
             disabled={isLoading}
-            className="h-8 gap-1"
+            className="h-6 w-6 rounded-full shadow-sm"
+            title="Stop Timer"
           >
-            <Square size={14} />
-            Stop
+            <Square size={10} className="fill-current" />
           </Button>
+          <div className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800">
+            <Clock className="h-3 w-3 animate-pulse" />
+            <span className="font-mono">{formatTime(elapsedSeconds)}</span>
+          </div>
         </div>
 
         {showCommentInput && (

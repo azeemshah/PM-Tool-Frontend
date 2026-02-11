@@ -91,19 +91,13 @@ export const mapColumnToStatus = (columnName: string): IssueStatus => {
  * @param minutesInput Duration in minutes (can be float)
  */
 export const formatDuration = (minutesInput: number): string => {
-  if (!minutesInput && minutesInput !== 0) return '0h 0m';
+  if (!minutesInput && minutesInput !== 0) return '0h 0m 0s';
   
   const totalSeconds = Math.round(minutesInput * 60);
-  if (totalSeconds === 0) return '0h 0m';
-
+  
   const hours = Math.floor(totalSeconds / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
-
-  if (seconds === 0) {
-    if (minutes === 0) return `${hours}h`;
-    return `${hours}h ${minutes}m`;
-  }
 
   return `${hours}h ${minutes}m ${seconds}s`;
 };

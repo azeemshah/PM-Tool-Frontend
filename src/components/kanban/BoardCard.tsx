@@ -11,7 +11,7 @@ import { priorities, issueTypes } from '@/components/workspace/task/table/data';
 import { formatStatusToEnum, formatDuration } from '@/lib/helper';
 import { TaskPriorityEnum } from '@/constant';
 import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
-import React, { useMemo } from 'react';
+import React, { useMemo, useContext } from 'react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ import { issueApiService } from '@/api/issue/services/issueApiService';
 import { toast } from '@/hooks/use-toast';
 import { getStatusIcon } from '@/components/workspace/task/table/data';
 import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
+import { TimerContext } from '../workspace/task/timer-context';
 
 interface BoardCardProps {
   card: KanbanCard | Issue;
@@ -33,6 +34,8 @@ interface BoardCardProps {
 
 export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps) {
   const workspaceId = useWorkspaceId();
+  const { activeTimer, elapsedSeconds } = useContext(TimerContext);
+
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const members = membersData?.members || [];
 
@@ -195,6 +198,24 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
               {formatDuration((card as any).timeSpent)}
             </Badge>
           )}
+
+          {(() => {
+            if (!activeTimer) return null;
+            
+            // Check if this card is the active one
+            const activeWorkItemId = activeTimer.workItemId?._id || activeTimer.workItemId || activeTimer.issueId || activeTimer.workItem?._id || activeTimer.workItem;
+            const currentCardId = (card as any)._id || (card as any).id;
+            
+            if (String(activeWorkItemId) === String(currentCardId)) {
+              return (
+                <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 shadow-sm">
+                  <Clock className="h-3 w-3 animate-pulse" />
+                  <span className="font-mono">{formatDuration(elapsedSeconds / 60)}</span>
+                </Badge>
+              );
+            }
+            return null;
+          })()}
         </div>
       </div>
 
