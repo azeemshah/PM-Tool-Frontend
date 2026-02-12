@@ -172,16 +172,6 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
               </Badge>
             );
           })()}
-
-          {isOverdue && (
-            <Badge
-              variant="outline"
-              className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
-            >
-              <Flag className="h-3 w-3 text-inherit" />
-              <span className="capitalize">Overdue</span>
-            </Badge>
-          )}
         </div>
 
         {/* Story points and time tracking badges */}
@@ -268,6 +258,18 @@ export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps)
           </span>
         )}
       </div>
+
+      {isOverdue && (
+        <div className="mb-2">
+          <Badge
+            variant="outline"
+            className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 w-fit"
+          >
+            <Flag className="h-3 w-3 text-inherit" />
+            <span className="capitalize">Overdue</span>
+          </Badge>
+        </div>
+      )}
 
       {
         hierarchyLabel && (
