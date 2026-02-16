@@ -23,10 +23,13 @@ import { Loader2 } from "lucide-react";
 
 export const BalanceStatistic = () => {
   const { workspace } = useAuthContext();
+  const [sprintsToShow, setSprintsToShow] = React.useState("10");
+
+  const limit = Number(sprintsToShow) || 10;
 
   const { data: velocityData, isLoading } = useQuery({
-    queryKey: ["workspace-velocity", workspace?._id],
-    queryFn: () => getWorkspaceVelocityQueryFn(workspace?._id || ""),
+    queryKey: ["workspace-velocity", workspace?._id, limit],
+    queryFn: () => getWorkspaceVelocityQueryFn(workspace?._id || "", limit),
     enabled: !!workspace?._id,
   });
 
@@ -61,6 +64,21 @@ export const BalanceStatistic = () => {
     <Card className="p-6 border-0">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h6 className="text-lg font-bold">Velocity Chart</h6>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Sprints</span>
+          <Select value={sprintsToShow} onValueChange={setSprintsToShow}>
+            <SelectTrigger className="h-8 w-[70px] bg-background border-border/60 shadow-sm">
+              <SelectValue placeholder={sprintsToShow} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="flex items-center justify-center gap-6 mt-4 flex-wrap">

@@ -168,10 +168,13 @@ export const getWorkspaceAnalyticsQueryFn = async (
 };
 
 export const getWorkspaceVelocityQueryFn = async (
-  workspaceId: string
+  workspaceId: string,
+  limit?: number
 ): Promise<any[]> => {
   try {
-    const response = await API.get(`/workspace/velocity/${workspaceId}`);
+    const response = await API.get(`/workspace/velocity/${workspaceId}`, {
+      params: { limit },
+    });
     console.log('Workspace velocity response:', response.data);
     return response.data;
   } catch (err: any) {
