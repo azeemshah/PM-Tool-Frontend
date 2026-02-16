@@ -124,14 +124,12 @@ export const getColumns = (onBulkDeleteClick?: () => void): ColumnDef<TaskType>[
               );
             })()}
 
-            {/* Overdue Badge */}
             {isOverdue && (
               <Badge
                 variant="outline"
-                className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
+                className="flex items-center px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400"
               >
                 <Flag className="h-4 w-4 text-inherit" />
-                <span className="capitalize">Overdue</span>
               </Badge>
             )}
           </div>

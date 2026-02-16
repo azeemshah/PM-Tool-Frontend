@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { Play, Square, Clock } from 'lucide-react';
+import { Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import { formatDuration } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from '@/hooks/use-toast';
@@ -39,9 +38,9 @@ export const TableTimer: React.FC<TableTimerProps> = ({
     if (optimisticActive !== null && !isGlobalLoading && !isLoading) {
       const activeWorkItemId = getTimerWorkItemId(activeTimer);
       const normalizedIssueId = String(issueId);
-      
-      const isActuallyMatching = (activeWorkItemId && normalizedIssueId) 
-        ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase() 
+
+      const isActuallyMatching = (activeWorkItemId && normalizedIssueId)
+        ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase()
         : false;
 
       // 1. If we have a matching timer from server, we can eventually clear optimistic
@@ -52,7 +51,7 @@ export const TableTimer: React.FC<TableTimerProps> = ({
           }
         }, 15000); // Wait 15s to be absolutely sure server is stable
         return () => clearTimeout(timeout);
-      } 
+      }
       // 2. If server has a DIFFERENT timer, clear optimistic immediately to show reality
       else if (activeTimer && !isActuallyMatching) {
         setOptimisticActive(null);
@@ -84,22 +83,22 @@ export const TableTimer: React.FC<TableTimerProps> = ({
   // Helper to get workItem ID from a timer object
   const getTimerWorkItemId = (timer: any) => {
     if (!timer) return null;
-    
+
     // Check various common fields where the ID might be stored
     let id = null;
-    
+
     if (timer.workItemId) {
       if (typeof timer.workItemId === 'object') {
         id = timer.workItemId._id || timer.workItemId.id || (timer.workItemId.toString !== Object.prototype.toString ? timer.workItemId.toString() : null);
       } else {
         id = timer.workItemId;
       }
-    } 
-    
+    }
+
     if (!id && timer.issueId) {
       id = timer.issueId;
-    } 
-    
+    }
+
     if (!id && timer.workItem) {
       if (typeof timer.workItem === 'object') {
         id = timer.workItem._id || timer.workItem.id || (timer.workItem.toString !== Object.prototype.toString ? timer.workItem.toString() : null);
@@ -112,16 +111,16 @@ export const TableTimer: React.FC<TableTimerProps> = ({
       // Last resort, but unlikely to be the workItemId
       // Only use if we're sure it's not the timer's own ID
     }
-               
+
     return id ? String(id) : null;
   };
 
   const isActive = React.useMemo(() => {
     const activeWorkItemId = getTimerWorkItemId(activeTimer);
     const normalizedIssueId = String(issueId);
-    
-    const isActuallyMatching = (activeWorkItemId && normalizedIssueId) 
-      ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase() 
+
+    const isActuallyMatching = (activeWorkItemId && normalizedIssueId)
+      ? activeWorkItemId.toLowerCase() === normalizedIssueId.toLowerCase()
       : false;
 
     // If we have an optimistic state, it takes absolute precedence
@@ -165,34 +164,34 @@ export const TableTimer: React.FC<TableTimerProps> = ({
     try {
       setIsLoading(true);
       const now = Date.now();
-      setOptimisticActive(true); 
+      setOptimisticActive(true);
 
       const result = await issueApiService.startTimer(issueId);
-      
+
       const timerData = result.timer || result;
       // Update global context immediately with our local start time to ensure 0-based start
       setActiveTimer(timerData, now);
-      
+
       toast({ description: 'Timer started' });
-      
+
       // Delay refetch longer to allow DB to propagate
       setTimeout(() => {
         refetchActiveTimer();
       }, 10000);
     } catch (error: any) {
       console.error("Error starting timer:", error);
-      
+
       const errorMessage = error.response?.data?.message || '';
-      
+
       // If it's already running for THIS issue, just sync
-      if (errorMessage.includes('already running for this issue') || 
-          (errorMessage.includes('already running') && !errorMessage.includes('"'))) {
-         toast({ description: 'Timer synced' });
-         setOptimisticActive(true);
-         refetchActiveTimer();
+      if (errorMessage.includes('already running for this issue') ||
+        (errorMessage.includes('already running') && !errorMessage.includes('"'))) {
+        toast({ description: 'Timer synced' });
+        setOptimisticActive(true);
+        refetchActiveTimer();
       } else {
         // If it's running for ANOTHER issue, show the full error so the user knows which one
-        setOptimisticActive(null); 
+        setOptimisticActive(null);
         toast({
           variant: 'destructive',
           description: errorMessage || 'Failed to start timer',
@@ -212,10 +211,10 @@ export const TableTimer: React.FC<TableTimerProps> = ({
       setIsLoading(true);
       // We stop the timer without a comment for the table view quick action
       const result = await issueApiService.stopTimer(issueId);
-      
+
       setOptimisticActive(false); // Optimistically show start button
       setActiveTimer(null); // Clear global context immediately
-      
+
       toast({ description: `Timer logged: ${formatDuration(result.elapsedMinutes)}` });
       refetchActiveTimer();
     } catch (error: any) {
@@ -226,7 +225,7 @@ export const TableTimer: React.FC<TableTimerProps> = ({
       if (errorMessage === "No active timer found for this issue" || errorMessage.includes("No active timer")) {
         setOptimisticActive(false); // Ensure UI reflects stopped state
         refetchActiveTimer(); // Sync with server
-        return; 
+        return;
       }
 
       setOptimisticActive(null); // Revert on error - force re-evaluation
@@ -242,47 +241,36 @@ export const TableTimer: React.FC<TableTimerProps> = ({
 
   if (isActive) {
     return (
-      <div className="flex items-center gap-2">
-        <Button
-          variant="destructive"
-          size="icon"
-          className="h-6 w-6 rounded-full shadow-sm"
-          onClick={handleStop}
-          disabled={isAnyLoading}
-          title="Stop Timer"
-        >
-          <Square size={10} className="fill-current" />
-        </Button>
-        <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-orange-200 bg-orange-50 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 dark:border-orange-800">
-          <Clock className="h-3 w-3 animate-pulse" />
-          <span className="font-mono">{formatDuration(elapsedSeconds / 60)}</span>
-        </Badge>
-      </div>
+      <Button
+        variant="outline"
+        size="sm"
+        className="flex items-center gap-1 px-3 py-1 h-7 rounded-md text-xs font-medium shadow-sm border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700"
+        onClick={handleStop}
+        disabled={isAnyLoading}
+        title="Stop Timer"
+      >
+        <Clock className="h-3 w-3 animate-pulse" />
+        <span className="font-mono">{formatDuration(elapsedSeconds / 60)}</span>
+      </Button>
     );
   }
 
+  const displayDuration = defaultTimeSpent > 0 ? defaultTimeSpent : 0;
+
   return (
-    <div className="flex items-center gap-2 group/timer">
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 rounded-full text-gray-500 hover:text-green-600 hover:bg-green-50 transition-colors"
-        onClick={handleStart}
-        disabled={isAnyLoading || showActiveConflict}
-        title={showActiveConflict ? "Another timer is running" : "Start Timer"}
-      >
-        <Play size={14} className="ml-0.5" />
-      </Button>
-      
-      {defaultTimeSpent > 0 ? (
-        <Badge variant="outline" className="flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-md shadow-sm border-0 bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400">
-          <Clock className="h-3 w-3" />
-          <span>{formatDuration(defaultTimeSpent)}</span>
-        </Badge>
-      ) : (
-        <span className="text-sm text-muted-foreground ml-1">-</span>
-      )}
-    </div>
+    <Button
+      variant="outline"
+      size="sm"
+      className="flex items-center gap-1 px-3 py-1 h-7 rounded-md text-xs font-medium shadow-sm border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 disabled:opacity-60 disabled:cursor-not-allowed dark:bg-blue-900/30 dark:text-blue-400 dark:border-blue-700"
+      onClick={handleStart}
+      disabled={isAnyLoading || showActiveConflict}
+      title={showActiveConflict ? "Another timer is running" : "Start Timer"}
+    >
+      <Clock className="h-3 w-3" />
+      <span className="font-mono">
+        {formatDuration(displayDuration)}
+      </span>
+    </Button>
   );
 };
 
