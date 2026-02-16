@@ -6,6 +6,7 @@
 import React, { useEffect } from 'react';
 import { useMember } from '@/hooks/useMember';
 import type { Member } from '@/api/member/types';
+import { getProfileImageUrl } from '@/lib/helper';
 
 interface MemberListProps {
   workspaceId: string;
@@ -60,7 +61,7 @@ export const MemberList: React.FC<MemberListProps> = ({
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">
               {userObj?.profilePicture ? (
-                <img src={userObj.profilePicture} alt={userObj.name || ''} className="w-10 h-10 rounded-full" />
+                <img src={getProfileImageUrl(userObj.profilePicture)} alt={userObj.name || ''} className="w-10 h-10 rounded-full" />
               ) : (
                 <span>{initials(userObj?.name)}</span>
               )}

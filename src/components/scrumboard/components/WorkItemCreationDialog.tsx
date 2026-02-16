@@ -47,7 +47,7 @@ import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { Download, Trash2 } from 'lucide-react';
 import { uploadWorkItemAttachment } from '@/lib/api';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
 
@@ -152,7 +152,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
         label: (
           <div className="flex items-center space-x-2">
             <Avatar className="h-6 w-6">
-              <AvatarImage src={profilePicture || ''} alt={name} />
+              <AvatarImage src={getProfileImageUrl(profilePicture)} alt={name} />
               <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
             </Avatar>
             <span>{name}</span>

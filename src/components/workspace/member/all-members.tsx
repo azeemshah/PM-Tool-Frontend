@@ -1,4 +1,5 @@
 import { ChevronDown, Loader } from "lucide-react";
+import { useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from "@/lib/helper";
 import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
@@ -26,6 +27,7 @@ import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
 
@@ -79,6 +81,7 @@ const AllMembers = () => {
         queryClient.invalidateQueries({
           queryKey: ["members", workspaceId],
         });
+        setOpenPopoverId(null);
         toast({
           title: "Success",
           description: "Member's role changed successfully",
@@ -127,7 +130,7 @@ const AllMembers = () => {
             <div className="flex items-center space-x-4">
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={userObj?.profilePicture || ""}
+                  src={getProfileImageUrl(userObj?.profilePicture) || ""}
                   alt="Image"
                 />
                 <AvatarFallback className={avatarColor}>
@@ -142,7 +145,7 @@ const AllMembers = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Popover>
+              <Popover open={openPopoverId === member._id} onOpenChange={(open) => setOpenPopoverId(open ? member._id : null)}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"

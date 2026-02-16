@@ -40,7 +40,8 @@ import { TaskType } from "@/api/issue/types";
 import FileUpload from "@/components/ui/file-upload";
 import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards";
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
-import { mapColumnToStatus } from "@/lib/helper";
+import { mapColumnToStatus, getProfileImageUrl, getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import type { IssueStatus } from "@/api/issue/types";
 import { ParentSelector } from "@/components/issue/ParentSelector";
 import { IssueTypeIcon } from "@/components/issue/IssueTypeIcon";
@@ -141,6 +142,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     return {
       label: name,
       value: userObj?._id || (typeof userObj === 'string' ? userObj : ""),
+      profilePicture: userObj?.profilePicture,
     };
   });
 
@@ -258,6 +260,16 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     const targetColumnId = findColumnIdForStatus(issueStatus);
     const taskId = String(task._id);
 
+    const cleanCustomFields = (fields: any[]) => {
+      return fields.map(f => ({
+        name: f.name,
+        fieldType: f.fieldType,
+        value: f.value,
+        options: f.options,
+        userValue: (f.userValue && typeof f.userValue === 'object') ? f.userValue._id : f.userValue
+      }));
+    };
+
     const payload = {
       title: values.title,
       description: values.description,
@@ -268,7 +280,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
       parent: values.parent || null,
       storyPoints: values.storyPoints,
       originalEstimate: values.originalEstimate ? Math.round(values.originalEstimate * 60) : undefined,
-      customFields: customFields.length > 0 ? customFields : undefined,
+      customFields: customFields.length > 0 ? cleanCustomFields(customFields) : undefined,
     };
 
     mutate({ issueId: taskId, data: payload }, {
@@ -573,7 +585,15 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
                   <SelectContent>
                     <div className="w-full max-h-[200px] overflow-y-auto scrollbar">
                       {membersOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                        <SelectItem key={option.value} value={option.value}>
+                          <div className="flex items-center gap-2">
+                            <Avatar className="h-6 w-6">
+                              <AvatarImage src={getProfileImageUrl(option.profilePicture)} />
+                              <AvatarFallback className={getAvatarColor(option.label)}>{getAvatarFallbackText(option.label)}</AvatarFallback>
+                            </Avatar>
+                            <span>{option.label}</span>
+                          </div>
+                        </SelectItem>
                       ))}
                     </div>
                   </SelectContent>
@@ -736,7 +756,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
               {/* Time Tracking Summary */}
               <TimeTrackingSummary
-                issue={detailedIssue || task}
+                issue={detailedIssue || (task as any)}
                 originalEstimate={(detailedIssue as any)?.originalEstimate ?? (task as any)?.originalEstimate}
                 remainingEstimate={(detailedIssue as any)?.remainingEstimate ?? (task as any)?.remainingEstimate}
                 timeSpent={(detailedIssue as any)?.timeSpent ?? (task as any)?.timeSpent}

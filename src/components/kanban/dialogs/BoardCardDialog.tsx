@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, mapColumnToStatus, getProfileImageUrl } from '@/lib/helper';
 
 import { ParentSelector } from '@/components/issue/ParentSelector';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
@@ -184,6 +184,24 @@ export function BoardCardDialog() {
         return { id: i.reporter, name: n };
       }
     }
+    // Fallback to Assignee (Priority per user request)
+    if (i.assignee || i.assignedTo) {
+        const info = getAssigneeInfo(i);
+        if (info && info.id) return info;
+    }
+    // Fallback to createdBy
+    if (i.createdBy) {
+      const id = typeof i.createdBy === 'object' ? (i.createdBy._id || i.createdBy.id) : i.createdBy;
+       if (id) {
+          const member = members.find((m: any) => {
+            const u = m.user || m.userId;
+            return (u?._id === id || u === id);
+          });
+          const u = member?.user || member?.userId;
+          const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+          return { id, name: n };
+       }
+    }
     return { id: '', name: '' };
   };
 
@@ -204,11 +222,28 @@ export function BoardCardDialog() {
   const getParentId = (item: any) => {
     if (!item) return '';
     if (item.parentIssueId) return item.parentIssueId;
-    if (item.epicId) return item.epicId;
+    
+    // Check for parent/parentId first (Task/Subtask parent)
+    if (item.parentId) return item.parentId;
     if (item.parent) {
       if (typeof item.parent === 'string') return item.parent;
       if (typeof item.parent === 'object') return item.parent._id || item.parent.id || '';
     }
+
+    // Check for task (Subtask parent specific)
+    if (item.task) {
+      if (typeof item.task === 'string') return item.task;
+      if (typeof item.task === 'object') return item.task._id || item.task.id || '';
+    }
+    if (item.taskId) return item.taskId;
+
+    // Then check for Epic (Story/Task epic)
+    if (item.epicId) return item.epicId;
+    if (item.epic) {
+      if (typeof item.epic === 'string') return item.epic;
+      if (typeof item.epic === 'object') return item.epic._id || item.epic.id || '';
+    }
+    
     return '';
   };
 
@@ -425,7 +460,15 @@ export function BoardCardDialog() {
 
     // call existing mutation
     try {
-      updateIssue({ issueId: String(issue._id), data: { customFields: updated } } as any, {
+      const cleaned = updated.map(f => ({
+        name: f.name,
+        fieldType: f.fieldType,
+        value: f.value,
+        options: f.options,
+        userValue: (f.userValue && typeof f.userValue === 'object') ? f.userValue._id : f.userValue
+      }));
+
+      updateIssue({ issueId: String(issue._id), data: { customFields: cleaned } } as any, {
         onSuccess: () => {
           setEditingFieldName(null);
           setEditingFieldValue(null);
@@ -544,13 +587,48 @@ export function BoardCardDialog() {
 
   // Determine the parent object to display (prefer populated data from detailedIssue)
   const parentObject = (() => {
+    if (!issue) return null;
+
     if (detailedIssue) {
-      const p = (detailedIssue as any).parent || (detailedIssue as any).epic;
-      // Check if it's a populated object (has title or name)
+      // Check for parent first (populated object)
+      const p = (detailedIssue as any).parent;
       if (p && typeof p === 'object' && (p.title || p.name)) {
         return p;
       }
+
+      // Check for task (populated object for subtask)
+      const t = (detailedIssue as any).task;
+      if (t && typeof t === 'object' && (t.title || t.name)) {
+        return t;
+      }
+
+      // If not subtask, check for epic
+      if (issue.type !== 'subtask') {
+        const e = (detailedIssue as any).epic;
+        if (e && typeof e === 'object' && (e.title || e.name)) {
+          return e;
+        }
+
+        // Fallback: If epic is just an ID but we have epicTitle, construct a fake object
+        if ((detailedIssue as any).epicTitle) {
+          return {
+            _id: (detailedIssue as any).epicId || (detailedIssue as any).epic || '',
+            title: (detailedIssue as any).epicTitle,
+            type: 'epic'
+          };
+        }
+      }
     }
+    
+    // Also check initial issue object (only if not subtask)
+    if (issue.type !== 'subtask' && issue && (issue as any).epicTitle) {
+      return {
+        _id: (issue as any).epicId || (issue as any).epic || '',
+        title: (issue as any).epicTitle,
+        type: 'epic'
+      };
+    }
+
     return fetchedParent;
   })();
 
@@ -731,6 +809,14 @@ export function BoardCardDialog() {
     const targetColumnId = findColumnIdForStatus(normalizedStatus);
     const issueIdStr = String(issue._id);
 
+    const cleanedCustomFields = customFields.map(f => ({
+      name: f.name,
+      fieldType: f.fieldType,
+      value: f.value,
+      options: f.options,
+      userValue: (f.userValue && typeof f.userValue === 'object') ? f.userValue._id : f.userValue
+    }));
+
     console.log('Update Issue Payload:', {
       issueId: issueIdStr,
       data: {
@@ -743,7 +829,7 @@ export function BoardCardDialog() {
         parent: parentId || null,
         labels,
         tags,
-        customFields,
+        customFields: cleanedCustomFields,
       }
     });
 
@@ -760,7 +846,7 @@ export function BoardCardDialog() {
           parent: parentId || null,
           labels,
           tags,
-          customFields,
+          customFields: cleanedCustomFields,
         },
       },
       {
@@ -1075,15 +1161,13 @@ export function BoardCardDialog() {
                 )
               ) : (
                 <div className="flex items-center gap-2">
-                  {parentId ? (
-                    parentObject ? (
-                      <div className="flex items-center gap-2 p-1 px-2 border rounded-md bg-gray-50 dark:bg-muted/50">
-                        <IssueTypeIcon type={parentObject.type || 'task'} />
-                        <span className="text-sm">{parentObject.title || parentObject.name || 'Unknown Parent'}</span>
-                      </div>
-                    ) : (
-                      <span className="text-gray-500 text-sm">{isParentLoading ? 'Loading...' : 'Parent not found'}</span>
-                    )
+                  {parentObject ? (
+                    <div className="flex items-center gap-2 p-1 px-2 border rounded-md bg-gray-50 dark:bg-muted/50">
+                      <IssueTypeIcon type={parentObject.type || 'task'} />
+                      <span className="text-sm">{parentObject.title || parentObject.name || 'Unknown Parent'}</span>
+                    </div>
+                  ) : parentId ? (
+                    <span className="text-gray-500 text-sm">{isParentLoading ? 'Loading...' : 'Parent not found'}</span>
                   ) : (
                     <span className="text-gray-500 text-sm italic">None</span>
                   )}
@@ -1429,7 +1513,7 @@ export function BoardCardDialog() {
                           <SelectItem key={id} value={id}>
                             <div className="flex items-center gap-2">
                               <Avatar className="h-6 w-6">
-                                <AvatarImage src={userObj.profilePicture || ''} />
+                                <AvatarImage src={getProfileImageUrl(userObj.profilePicture)} />
                                 <AvatarFallback className={getAvatarColor(name)}>
                                   {getAvatarFallbackText(name)}
                                 </AvatarFallback>
@@ -1447,20 +1531,68 @@ export function BoardCardDialog() {
               </Select>
             ) : (
               <div className="flex items-center gap-2">
-                {reporterId ? (() => {
-                  const reporterName = getReporterInfo(issue).name;
+                {(() => {
+                  // Robust logic to find the user to display
+                  // Priority: Reporter State -> Assignee State -> Issue Reporter -> Issue Assignee -> Issue CreatedBy
+                  let effectiveId = reporterId;
+                  let isAssigneeFallback = false;
+                  
+                  if (!effectiveId) {
+                      if (assigneeId) {
+                          effectiveId = assigneeId;
+                          isAssigneeFallback = true;
+                      } else {
+                          // Try to get from issue object directly
+                          const reporterInfo = getReporterInfo(issue);
+                          if (reporterInfo && reporterInfo.id) {
+                              effectiveId = reporterInfo.id;
+                          } else {
+                              const assigneeInfo = getAssigneeInfo(issue);
+                              if (assigneeInfo && assigneeInfo.id) {
+                                  effectiveId = assigneeInfo.id;
+                                  isAssigneeFallback = true;
+                              } else if (issue.createdBy) {
+                                  effectiveId = typeof issue.createdBy === 'object' ? (issue.createdBy._id || issue.createdBy.id) : issue.createdBy;
+                              }
+                          }
+                      }
+                  }
+
+                  if (!effectiveId) {
+                      return <span className="text-gray-500 dark:text-muted-foreground">No reporter</span>;
+                  }
+                  
                   const member = members.find((m: any) => {
                     const u = m.user || m.userId;
-                    return (u?._id === reporterId || u === reporterId);
+                    return (u?._id === effectiveId || u === effectiveId);
                   });
-                  const userObj = member?.user || member?.userId;
-                  const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : (reporterName || 'Unknown'));
-                  const profilePicture = userObj?.profilePicture;
+                  
+                  let name = 'Unknown';
+                  let profilePicture = null;
+
+                  if (member) {
+                    const userObj = member.user || member.userId;
+                    name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : 'Unknown');
+                    profilePicture = userObj?.profilePicture;
+                  } else {
+                     if (isAssigneeFallback) {
+                        name = getAssigneeInfo(issue).name || 'Unknown';
+                     } else {
+                        // Try reporter info, then createdBy info
+                        const rInfo = getReporterInfo(issue);
+                        if (rInfo.id === effectiveId) {
+                            name = rInfo.name || 'Unknown';
+                        } else {
+                             // Must be createdBy or manually set ID
+                             name = 'Unknown'; 
+                        }
+                     }
+                  }
 
                   return (
                     <>
                       <Avatar className="h-6 w-6">
-                        <AvatarImage src={profilePicture || ''} />
+                        <AvatarImage src={getProfileImageUrl(profilePicture)} />
                         <AvatarFallback className={getAvatarColor(name)}>
                           {getAvatarFallbackText(name)}
                         </AvatarFallback>
@@ -1468,9 +1600,7 @@ export function BoardCardDialog() {
                       <span className="text-gray-900 dark:text-foreground">{name}</span>
                     </>
                   );
-                })() : (
-                  <span className="text-gray-500 dark:text-muted-foreground">No reporter</span>
-                )}
+                })()}
               </div>
             )}
           </div>

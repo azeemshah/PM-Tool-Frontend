@@ -79,6 +79,8 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
     let socketUrl = import.meta.env.VITE_SOCKET_URL;
     
     if (socketUrl) {
+        // Remove trailing slash if present
+        socketUrl = socketUrl.replace(/\/$/, '');
         socketUrl = `${socketUrl}/notifications`;
     } else {
         try {
@@ -94,12 +96,14 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
     console.log('NotificationContext: Connecting to socket', socketUrl, 'with userId:', user._id);
 
     const newSocket = io(socketUrl, {
-      query: { userId: user._id },
-      transports: ['websocket', 'polling'], // Allow polling as fallback
+      query: { userId: String(user._id) }, // Ensure string
+      transports: ['websocket', 'polling'], // Allow polling fallback
       reconnection: true,
-      reconnectionAttempts: 5,
-      reconnectionDelay: 1000,
-      forceNew: true,
+      reconnectionAttempts: 20,
+      reconnectionDelay: 2000,
+      forceNew: false, // Don't force new connection unnecessarily
+      withCredentials: true,
+      autoConnect: true,
     });
 
     newSocket.on('connect', () => {
@@ -108,23 +112,29 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
 
     newSocket.on('connect_error', (err) => {
       console.error('NotificationContext: Connection error', err);
+      // Only show error toast if it persists (optional)
+      // toast({ variant: "destructive", title: "Connection Error", description: err.message });
+    });
+
+    newSocket.on('welcome', (data) => {
+      console.log('NotificationContext: Received welcome message', data);
+    });
+
+    newSocket.on('connect_error', (err) => {
+      console.error('NotificationContext: Connection error', err.message, err);
     });
 
     newSocket.on('notification', (notification: Notification) => {
       console.log('NotificationContext: New notification received', notification);
       
-      // Filter by workspace if workspaceId is provided
-      const currentWorkspaceId = workspaceIdRef.current;
-      const notifWsId = typeof notification.workspace === 'object' ? notification.workspace._id : notification.workspace;
-      
-      if (currentWorkspaceId && notifWsId && notifWsId !== currentWorkspaceId) {
-        console.log('NotificationContext: Ignoring notification from different workspace', notifWsId);
-        return;
-      }
+      // Show toast immediately for feedback
+      toast({
+          title: "New Notification",
+          description: notification.message,
+      });
 
       setNotifications((prev) => {
-        // Avoid duplicates if necessary, though simple prepend is usually fine
-        // Check if notification already exists (optional but good for safety)
+        // Check if notification already exists to prevent duplicates
         if (prev.some(n => n._id === notification._id)) {
             return prev;
         }

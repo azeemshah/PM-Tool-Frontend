@@ -18,6 +18,7 @@ import { Bell } from "lucide-react";
 import { useNotifications } from "@/contexts/notification-context";
 import { NotificationList } from "./notification/notification-list";
 import { GlobalSearchBar } from "./search/GlobalSearchBar";
+import { GlobalTimer } from "./time-tracking/GlobalTimer";
 
 const Header = () => {
   const location = useLocation();
@@ -77,6 +78,7 @@ const Header = () => {
         <GlobalSearchBar />
       </div>
       <div className="flex items-center gap-2 absolute right-3">
+        <GlobalTimer />
         <Popover>
           <PopoverTrigger asChild>
             <Button variant="ghost" size="icon" className="relative">

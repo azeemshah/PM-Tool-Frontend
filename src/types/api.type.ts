@@ -145,6 +145,9 @@ export type AnalyticsResponseType = {
   totalTasks: number;
   overdueTasks: number;
   completedTasks: number;
+  remainingTasks: number;
+  remainingPoints: number;
+  remainingHours: number;
 };
 
 export type PaginationType = {

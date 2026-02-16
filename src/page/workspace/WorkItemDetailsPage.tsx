@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import { CommentSection } from '@/components/kanban/dialogs/CommentSection';
 import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
@@ -102,8 +102,8 @@ export const WorkItemDetailsPage: React.FC = () => {
   const [status, setStatus] = useState('');
   const [assigneeId, setAssigneeId] = useState('');
   const [dueDate, setDueDate] = useState<Date | null>(null);
-  const [tags, setTags] = useState<string[]>([]);
-  const [selectedLabels, setSelectedLabels] = useState<string[]>([]);
+  const [tags, setTags] = useState<Array<string | { _id?: string; name?: string }>>([]);
+  const [selectedLabels, setSelectedLabels] = useState<Array<string | { _id?: string; name?: string; color?: string } | null>>([]);
 
   // Fetch work item details
   const { data: workItem, isLoading: isLoadingWorkItem } = useQuery({
@@ -232,30 +232,151 @@ export const WorkItemDetailsPage: React.FC = () => {
         return { id: i.reporter, name: n };
       }
     }
+    // Fallback to Assignee (Priority per user request)
+    if (i.assignee || i.assignedTo) {
+         // Re-implement or reuse getAssigneeInfo logic if not available in scope, 
+         // but getAssigneeInfo is defined below in this file, so we can't call it if it's defined after.
+         // Wait, getReporterInfo is defined BEFORE assigneeObj in this file, and getAssigneeInfo is NOT defined as a helper function in the same way in WorkItemDetailsPage.tsx
+         // In WorkItemDetailsPage.tsx, assigneeObj is a useMemo.
+         // So we need to duplicate the logic here or rely on the assigneeObj logic later.
+         
+         // Let's implement basic extraction here
+         const assigneeData = i.assignee || i.assignedTo;
+         if (assigneeData) {
+            let id = '';
+            let name = 'Unknown';
+            if (typeof assigneeData === 'object') {
+               id = assigneeData._id || assigneeData.id || '';
+               name = assigneeData.name || name;
+               if (id && name) return { id, name };
+            } else {
+               id = String(assigneeData);
+            }
+            if (id) {
+               const member = members.find((m: any) => {
+                  const u = m.user || m.userId;
+                  return (u?._id === id || u === id);
+               });
+               if (member) {
+                   const u = member.user || member.userId;
+                   const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+                   return { id, name: n };
+               }
+               return { id, name };
+            }
+         }
+    }
+
+    // Fallback to createdBy
+    if (i.createdBy) {
+      const id = typeof i.createdBy === 'object' ? (i.createdBy._id || i.createdBy.id) : i.createdBy;
+       if (id) {
+          const member = members.find((m: any) => {
+            const u = m.user || m.userId;
+            return (u?._id === id || u === id);
+          });
+          const u = member?.user || member?.userId;
+          const n = u?.name || (u?.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : 'Unknown');
+          return { id, name: n };
+       }
+    }
     return { id: '', name: '' };
   };
 
-  // Build reporter object from detailedWorkItem or workItem
-  const reporterObj = (() => {
-    const r = (detailedWorkItem as any)?.reporter ?? (workItem as any)?.reporter;
-    if (!r) return null;
-    if (typeof r === 'object') {
-      return {
-        _id: String(r._id || r.id || ''),
-        name: r.name || 'Unknown',
-        profilePicture: r.profilePicture ?? null,
-      };
+  const reporterObj = useMemo(() => {
+    const currentItem = detailedWorkItem || workItem;
+    const info = getReporterInfo(currentItem);
+    
+    const member = members.find((m: any) => {
+      const u = m.user || m.userId;
+      return (u?._id === info.id || u === info.id);
+    });
+
+    const u = member?.user || member?.userId;
+    // Prioritize member profile picture, fallback to item's reporter object if available and is object
+    let profilePicture = u?.profilePicture;
+    
+    if (!profilePicture && currentItem?.reporter && typeof currentItem.reporter === 'object') {
+        profilePicture = (currentItem.reporter as any).profilePicture;
     }
-    if (typeof r === 'string') {
-      const member = members.find((m: any) => (m.userId?._id === r || m.userId === r));
-      return {
-        _id: r,
-        name: member?.userId?.name || member?.name || 'Unknown',
-        profilePicture: member?.userId?.profilePicture ?? null,
-      };
+
+    return { 
+        name: info.name, 
+        profilePicture,
+        _id: info.id 
+    };
+  }, [detailedWorkItem, workItem, members]);
+
+  const parentObject = useMemo(() => {
+    const item = detailedWorkItem || workItem;
+    if (!item) return null;
+    
+    // Check for epic object
+    if ((item as any).epic && typeof (item as any).epic === 'object') {
+       const e = (item as any).epic;
+       if (e.title || e.name) return { ...e, type: 'epic' };
     }
+    
+    // Check for parent object
+    if ((item as any).parent && typeof (item as any).parent === 'object') {
+       const p = (item as any).parent;
+       if (p.title || p.name) return { ...p, type: 'story' }; 
+    }
+    
+    // Fallback for epicTitle
+    if ((item as any).epicTitle) {
+        return {
+           _id: (item as any).epicId || (item as any).epic || '',
+           title: (item as any).epicTitle,
+           type: 'epic'
+        };
+    }
+    
     return null;
-  })();
+  }, [detailedWorkItem, workItem]);
+
+  const assigneeObj = useMemo(() => {
+    const currentItem = detailedWorkItem || workItem;
+    const assigneeData = (currentItem as any)?.assignee ?? (currentItem as any)?.assignedTo;
+    
+    if (!assigneeData) return null;
+
+    let id = '';
+    let name = 'Unknown';
+    let initialProfilePicture = null;
+
+    if (typeof assigneeData === 'object') {
+      id = assigneeData._id || assigneeData.id || '';
+      name = assigneeData.name || name;
+      initialProfilePicture = assigneeData.profilePicture;
+    } else {
+      id = String(assigneeData);
+    }
+
+    if (!id) return null;
+
+    const member = members.find((m: any) => {
+      const u = m.user || m.userId;
+      return (u?._id === id || u === id);
+    });
+
+    const u = member?.user || member?.userId;
+    
+    let profilePicture = u?.profilePicture;
+    if (!profilePicture && initialProfilePicture) {
+        profilePicture = initialProfilePicture;
+    }
+
+    if (u) {
+        name = u.name || (u.firstName ? `${u.firstName} ${u.lastName || ''}`.trim() : name);
+    }
+
+    return { 
+        _id: id,
+        name, 
+        profilePicture 
+    };
+  }, [detailedWorkItem, workItem, members]);
 
   const getStatusOptions = () => {
     return [
@@ -387,6 +508,21 @@ export const WorkItemDetailsPage: React.FC = () => {
 
           {/* Right: Details Sidebar */}
           <div className="space-y-6">
+            {/* Parent / Epic */}
+            {parentObject && (
+              <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
+                <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                  {parentObject.type === 'epic' ? 'Epic' : 'Parent Issue'}
+                </label>
+                <div className="flex items-center gap-2 p-2 border rounded-md bg-gray-50 dark:bg-muted/50">
+                   <IssueTypeIcon type={parentObject.type || 'task'} />
+                   <span className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                     {parentObject.title || parentObject.name}
+                   </span>
+                </div>
+              </div>
+            )}
+
             {/* Status & Priority */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6 space-y-4">
               <div>
@@ -404,20 +540,40 @@ export const WorkItemDetailsPage: React.FC = () => {
               </div>
             </div>
 
-            {/* Assignee (Reporter) */}
+            {/* Assignee */}
             <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
               <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
                 Assignee
               </label>
+              {assigneeObj ? (
+                <div className="flex items-center gap-2">
+                  <Avatar className="h-8 w-8">
+                    <AvatarImage src={getProfileImageUrl(assigneeObj.profilePicture)} />
+                    <AvatarFallback className={getAvatarColor(assigneeObj.name)}>
+                      {getAvatarFallbackText(assigneeObj.name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">
+                    {assigneeObj.name}
+                  </span>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-gray-400">
+                  Unassigned
+                </p>
+              )}
+            </div>
+
+            {/* Reporter */}
+            <div className="bg-white dark:bg-gray-800 rounded-lg p-6">
+              <label className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-2 block">
+                Reporter
+              </label>
               {reporterObj ? (
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={reporterObj.profilePicture || ''} />
-                    <AvatarFallback
-                      style={{
-                        backgroundColor: getAvatarColor(reporterObj.name),
-                      }}
-                    >
+                    <AvatarImage src={getProfileImageUrl(reporterObj.profilePicture)} />
+                    <AvatarFallback className={getAvatarColor(reporterObj.name)}>
                       {getAvatarFallbackText(reporterObj.name)}
                     </AvatarFallback>
                   </Avatar>
@@ -427,7 +583,7 @@ export const WorkItemDetailsPage: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-sm text-gray-500 dark:text-gray-400">
-                  Unassigned
+                  No reporter
                 </p>
               )}
             </div>
@@ -455,13 +611,14 @@ export const WorkItemDetailsPage: React.FC = () => {
               </label>
               {selectedLabels.length > 0 ? (
                 <div className="flex flex-wrap gap-2">
-                  {selectedLabels.map((label) => {
-                    const labelName = typeof label === 'string' ? label : label?.name;
-                    const labelColor = typeof label === 'object' ? label?.color : undefined;
-                    const labelId = typeof label === 'string' ? label : label?._id;
+                  {selectedLabels.filter(Boolean).map((label) => {
+                    if (!label) return null;
+                    const labelName = typeof label === 'string' ? label : (label.name ?? String((label as any)._id ?? ''));
+                    const labelColor = typeof label === 'object' ? label.color : undefined;
+                    const labelId = typeof label === 'string' ? label : (label._id ?? label.name ?? labelName);
                     return (
                       <Badge 
-                        key={labelId} 
+                        key={labelId}
                         variant="secondary"
                         style={{
                           backgroundColor: labelColor || '#e5e7eb',

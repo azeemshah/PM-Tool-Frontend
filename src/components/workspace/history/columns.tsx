@@ -4,7 +4,7 @@ import { Activity } from "@/hooks/api/use-history";
 import { DataTableColumnHeader } from "../task/table/table-column-header";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { getAvatarColor, getAvatarFallbackText, formatDuration, transformStatusEnum } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, formatDuration, transformStatusEnum, getProfileImageUrl } from "@/lib/helper";
 import { ArrowRight, Clock, CheckCircle2, Circle, AlertCircle, Move, Activity as ActivityIcon, Edit, Trash2, MessageSquare } from "lucide-react";
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { getStatusIcon } from "../task/table/data";
@@ -195,7 +195,7 @@ export const columns: ColumnDef<Activity>[] = [
       return (
         <div className="flex items-center gap-2">
           <Avatar className="h-6 w-6">
-            <AvatarImage src={user.avatar} alt={name} />
+            <AvatarImage src={getProfileImageUrl(user.avatar)} alt={name} />
             <AvatarFallback className={`${color} text-[10px]`}>
               {initials}
             </AvatarFallback>

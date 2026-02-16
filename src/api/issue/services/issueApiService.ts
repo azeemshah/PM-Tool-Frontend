@@ -20,7 +20,8 @@ import type {
 	GetIssuesResponse,
 	CreateItemDto,
 	ItemType,
-	TaskType
+	TaskType,
+	Improvement
 } from '../types';
 
 const ISSUES_ENDPOINT = '/issues';

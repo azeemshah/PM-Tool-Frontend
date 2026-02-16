@@ -7,6 +7,7 @@ import {
   getAvatarFallbackText,
   transformStatusEnum,
   formatStatusToEnum,
+  getProfileImageUrl,
 } from "@/lib/helper";
 import { getStatusIcon } from "@/components/workspace/task/table/data";
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
@@ -159,7 +160,7 @@ const RecentTasks = () => {
                 <div className="flex items-center space-x-2 ml-2">
                   <Avatar className="h-8 w-8">
                     <AvatarImage
-                      src={assignee?.profilePicture || ""}
+                      src={getProfileImageUrl(assignee?.profilePicture)}
                       alt={assignee?.name}
                     />
                     <AvatarFallback className={avatarColor}>

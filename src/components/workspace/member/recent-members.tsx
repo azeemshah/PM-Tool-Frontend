@@ -1,7 +1,7 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from "@/lib/helper";
 import { format } from "date-fns";
 import { Loader } from "lucide-react";
 
@@ -37,7 +37,7 @@ const RecentMembers = () => {
               <div className="flex-shrink-0">
                 <Avatar className="h-9 w-9 sm:flex">
                   <AvatarImage
-                    src={userObj?.profilePicture || ""}
+                    src={getProfileImageUrl(userObj?.profilePicture)}
                     alt={name}
                   />
                   <AvatarFallback className={avatarColor}>

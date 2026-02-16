@@ -249,7 +249,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
                       <div className="flex-shrink-0">
                         <Avatar className="h-8 w-8">
                           <AvatarImage
-                            src={result.assignedTo?.profilePicture as string}
+                            src={getProfileImageUrl(result.assignedTo?.profilePicture)}
                           />
                           <AvatarFallback
                             style={{

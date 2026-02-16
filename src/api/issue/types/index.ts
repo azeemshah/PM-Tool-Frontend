@@ -101,6 +101,11 @@ export interface CreateItemDto {
 }
 // ==================== BASE ISSUE INTERFACE ====================
 export interface Issue {
+//   createdBy: any;
+//   createdBy: any;
+//   createdBy: any;
+//   createdBy: any;
+  createdBy: any;
   originalEstimate: number;
   remainingEstimate: number;
   customFields: any[];
@@ -279,6 +284,7 @@ export interface UpdateIssueDTO {
 	title?: string;
 	description?: string;
 	status?: string;
+	column?: string | null;
 	priority?: string;
 	assignee?: string;
 	assignedTo?: string | null;

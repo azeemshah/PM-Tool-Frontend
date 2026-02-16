@@ -5,7 +5,7 @@ import { GanttBar } from './GanttBar';
 import { formatTime } from './utils/ganttCalculations';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { ISSUE_TYPES_CONFIG } from '@/components/issue/constants';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { statusIcons, getStatusIcon } from '@/components/workspace/task/table/data';
 import { statusColorMap, normalizeGanttStatus, getGanttStatusColor } from './utils/colorMaps';
 import { TaskStatusEnum } from '@/constant';
@@ -116,7 +116,7 @@ export const GanttRow: React.FC<GanttRowProps> = ({
 
           return (
             <Avatar className="w-6 h-6 flex-shrink-0 border border-border">
-              <AvatarImage src={assignee.profilePicture || assignee.avatar} alt={assignee.name} />
+              <AvatarImage src={getProfileImageUrl(assignee.profilePicture || assignee.avatar)} alt={assignee.name} />
               <AvatarFallback className={`text-xs ${getAvatarColor(assignee.name || '')}`}>
                 {getAvatarFallbackText(assignee.name)}
               </AvatarFallback>

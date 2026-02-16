@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { MessageSquare, Edit2, Trash2, Reply, AtSign, Paperclip, X } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
-import { getAvatarColor, getAvatarFallbackText } from '@/lib/helper';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import {
   Command,
@@ -123,18 +123,25 @@ const CommentItem = ({
     setReplyAttachments([]);
   };
 
+  const resolvedUser = useMemo(() => {
+    const userId = comment.userId?._id || (typeof comment.userId === 'string' ? comment.userId : '');
+    if (!userId) return comment.userId;
+    const found = members.find((u: any) => (u._id === userId || u === userId));
+    return found || comment.userId;
+  }, [comment.userId, members]);
+
   return (
     <div className="flex gap-4 group">
       <Avatar className="w-8 h-8 mt-1">
-        <AvatarImage src={comment.userId?.profilePicture} />
-        <AvatarFallback className={getAvatarColor(getUserName(comment.userId))}>{getAvatarFallbackText(getUserName(comment.userId))}</AvatarFallback>
+        <AvatarImage src={getProfileImageUrl(resolvedUser?.profilePicture)} />
+        <AvatarFallback className={getAvatarColor(getUserName(resolvedUser))}>{getAvatarFallbackText(getUserName(resolvedUser))}</AvatarFallback>
       </Avatar>
 
       <div className="flex-1 space-y-1">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="font-semibold text-sm text-gray-900 dark:text-foreground">
-              {getUserName(comment.userId)}
+              {getUserName(resolvedUser)}
             </span>
             <span className="text-xs text-gray-500 dark:text-muted-foreground">
               {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
@@ -525,7 +532,7 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
       {/* Add Comment Input */}
       <div className="flex gap-4">
         <Avatar className="w-8 h-8 mt-1">
-          <AvatarImage src={user?.profilePicture || undefined} />
+          <AvatarImage src={getProfileImageUrl(user?.profilePicture)} />
           <AvatarFallback className={getAvatarColor(getUserName(user))}>{getAvatarFallbackText(getUserName(user))}</AvatarFallback>
         </Avatar>
         <div className="flex-1 space-y-2">
@@ -585,7 +592,7 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
                             onSelect={() => insertMention(getUserName(member))}
                           >
                             <Avatar className="w-6 h-6 mr-2">
-                                <AvatarImage src={member.profilePicture} />
+                                <AvatarImage src={getProfileImageUrl(member.profilePicture)} />
                                 <AvatarFallback className="text-[10px]">{getAvatarFallbackText(getUserName(member))}</AvatarFallback>
                             </Avatar>
                             <span>{getUserName(member)}</span>

@@ -132,7 +132,11 @@ export function KanbanBoardView() {
           : undefined,
       };
 
-      const parentId = item.parent || null;
+      let parentId = item.parent;
+      if (!parentId && item.epic) {
+        parentId = typeof item.epic === 'object' ? (item.epic._id || item.epic.id) : item.epic;
+      }
+      
       const parentItem = parentId ? byId.get(String(parentId)) : null;
       const parentType = parentItem ? String(parentItem.type || '').toLowerCase() : null;
       const parentTitle = parentItem ? parentItem.title : null;
@@ -141,7 +145,7 @@ export function KanbanBoardView() {
         base.parentIssueId = parentId || undefined;
         base.parentTitle = parentTitle || undefined;
         base.parentType = parentType || undefined;
-      } else if (['story', 'task', 'bug'].includes(String(item.type).toLowerCase())) {
+      } else if (['story', 'task', 'bug', 'improvement'].includes(String(item.type).toLowerCase())) {
         base.epicId = parentId || undefined;
         base.epicTitle = parentTitle || undefined;
       }
