@@ -5,6 +5,7 @@ import { getNotifications, markAsRead, markAllAsRead, deleteNotification, delete
 import { Notification } from "@/api/notification/types";
 import { baseURL } from "@/lib/base-url";
 import { useToast } from "@/hooks/use-toast";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface NotificationContextType {
   notifications: Notification[];
@@ -27,6 +28,7 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
   const [socket, setSocket] = useState<Socket | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   
   // Use a ref to keep track of the current workspaceId without triggering socket reconnection
   const workspaceIdRef = React.useRef(workspaceId);
@@ -138,6 +140,12 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
         if (wsId && wsId !== currentWorkspaceId) {
           return;
         }
+      }
+
+      if (notification.type === 'COMMENT_ADDED' && notification.workItem) {
+        const workItemId = notification.workItem.toString();
+        console.log('NotificationContext: invalidating comments for workItem', workItemId);
+        queryClient.invalidateQueries({ queryKey: ['comments', workItemId] });
       }
 
       toast({

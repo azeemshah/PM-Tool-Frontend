@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/popover"
 import { commentApiService } from '@/api/comment/services/commentApiService';
 import API from '@/lib/axios-client';
+import { useCommentsSubscription } from '@/hooks/useCommentsSubscription';
 
 interface CommentSectionProps {
   workItemId: string;
@@ -347,6 +348,8 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
   const { mutate: updateComment, isPending: isUpdating } = useUpdateComment();
   const { data: membersData } = useGetWorkspaceMembers(workspaceId);
   const queryClient = useQueryClient();
+
+  useCommentsSubscription({ workspaceId, workItemId, enabled: true });
 
   // Normalize members list
   const members = useMemo(() => {
