@@ -43,9 +43,11 @@ const WorkspaceDashboard = () => {
       <div className="mt-6">
         <TimeSpentEstimate />
       </div>
-      <div className="mt-6">
-        <BalanceStatistic />
-      </div>
+      {workspace?.boardType === "scrumboard" && (
+        <div className="mt-6">
+          <BalanceStatistic />
+        </div>
+      )}
       <div className="mt-6">
         <TimeTrackingDashboard workspaceId={workspace?._id || ''} />
       </div>

@@ -44,13 +44,15 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
     setIsLoading(true);
     try {
       const data = await getNotifications(user._id);
-      // Sort by newest first
-      let sorted = Array.isArray(data) ? data.sort((a: Notification, b: Notification) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      ) : [];
+      let sorted = Array.isArray(data)
+        ? data.sort(
+            (a: Notification, b: Notification) =>
+              new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+          )
+        : [];
 
       if (workspaceId) {
-        sorted = sorted.filter(n => {
+        sorted = sorted.filter((n) => {
           const wsId = typeof n.workspace === 'object' ? n.workspace._id : n.workspace;
           return !wsId || wsId === workspaceId;
         });
@@ -126,17 +128,26 @@ export const NotificationProvider = ({ children, workspaceId }: { children: Reac
 
     newSocket.on('notification', (notification: Notification) => {
       console.log('NotificationContext: New notification received', notification);
-      
-      // Show toast immediately for feedback
+
+      const currentWorkspaceId = workspaceIdRef.current;
+      if (currentWorkspaceId) {
+        const wsId =
+          typeof notification.workspace === 'object'
+            ? notification.workspace?._id
+            : notification.workspace;
+        if (wsId && wsId !== currentWorkspaceId) {
+          return;
+        }
+      }
+
       toast({
-          title: "New Notification",
-          description: notification.message,
+        title: 'New Notification',
+        description: notification.message,
       });
 
       setNotifications((prev) => {
-        // Check if notification already exists to prevent duplicates
-        if (prev.some(n => n._id === notification._id)) {
-            return prev;
+        if (prev.some((n) => n._id === notification._id)) {
+          return prev;
         }
         return [notification, ...prev];
       });
