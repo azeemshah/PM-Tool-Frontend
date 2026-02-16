@@ -16,12 +16,8 @@ interface TimerContextType {
 
 export const TimerContext = createContext<TimerContextType>({
   activeTimer: null,
-<<<<<<< HEAD
-  refetchActiveTimer: () => { },
-=======
-  refetchActiveTimer: async () => {},
-  setActiveTimer: () => {},
->>>>>>> 2575bba0195a00bf1391e459d3e11e27cbd8c696
+  refetchActiveTimer: async () => { },
+  setActiveTimer: () => { },
   isLoading: false,
   effectiveStartTime: null,
   elapsedSeconds: 0,
@@ -77,19 +73,19 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const getTimerWorkItemId = (timer: any) => {
     if (!timer) return null;
     let id = null;
-    
+
     if (timer.workItemId) {
       if (typeof timer.workItemId === 'object') {
         id = timer.workItemId._id || timer.workItemId.id || (timer.workItemId.toString !== Object.prototype.toString ? timer.workItemId.toString() : null);
       } else {
         id = timer.workItemId;
       }
-    } 
-    
+    }
+
     if (!id && timer.issueId) {
       id = timer.issueId;
-    } 
-    
+    }
+
     if (!id && timer.workItem) {
       if (typeof timer.workItem === 'object') {
         id = timer.workItem._id || timer.workItem.id || (timer.workItem.toString !== Object.prototype.toString ? timer.workItem.toString() : null);
@@ -97,7 +93,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         id = timer.workItem;
       }
     }
-    
+
     return id ? String(id) : null;
   };
 
@@ -133,7 +129,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (serverTimer) {
       console.log('TimerContext: Server timer received:', serverTimer);
       const serverTimerId = getTimerWorkItemId(serverTimer);
-      
+
       // If we recently stopped THIS timer, and server still returns it, ignore it
       if (isStopGracePeriod && serverTimerId === recentlyStoppedId) {
         console.log('TimerContext: Ignoring stale server timer during grace period:', serverTimerId);
@@ -144,7 +140,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       setLocalActiveTimer(serverTimer);
       stopRequestedRef.current = false;
       if (!isStopGracePeriod) setRecentlyStoppedId(null);
-      
+
       // Update effectiveStartTime if it's not set or if it's significantly different (drift)
       const serverStartTimeStr = serverTimer.startedAt || serverTimer.logDate || serverTimer.createdAt;
       if (serverStartTimeStr) {
@@ -194,12 +190,12 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const activeTimer = useMemo(() => {
     const now = Date.now();
     const isStopGracePeriod = now - stopTimestampRef.current < 15000;
-    
+
     // If we just stopped something, don't show it even if server/local state still has it
     if (isStopGracePeriod && recentlyStoppedId) {
       const currentServerId = getTimerWorkItemId(serverTimer);
       const currentLocalId = getTimerWorkItemId(localActiveTimer);
-      
+
       if (currentServerId === recentlyStoppedId || currentLocalId === recentlyStoppedId) {
         console.log('TimerContext: Hiding active timer during stop grace period');
         return null;
@@ -210,7 +206,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       console.log('TimerContext: Hiding active timer because stop was requested');
       return null;
     }
-    
+
     const effectiveTimer = serverTimer || localActiveTimer;
     if (effectiveTimer) {
       console.log('TimerContext: Active timer determined:', effectiveTimer);
@@ -287,7 +283,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           setRecentlyStoppedId(idToStop);
           stopTimestampRef.current = Date.now();
         }
-        
+
         stopRequestedRef.current = true;
         setLocalActiveTimer(null);
         setEffectiveStartTime(null);
@@ -309,7 +305,7 @@ export const TimerProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         }
       }
       queryClient.setQueryData(['active-timer', userId], timer);
-      
+
       if (timer) {
         localStorage.setItem('active_timer_last', JSON.stringify(timer));
         if (userId) {
