@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import WorkspaceAnalytics from "@/components/workspace/workspace-analytics";
 import { TimeTrackingDashboard } from "@/components/time-tracking";
@@ -11,12 +12,54 @@ import WorkloadDistribution from "@/components/workspace/workload-distribution";
 import TimeSpentEstimate from "@/components/workspace/time-spent-estimate";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { AreaChart, BarChart3, BarChartHorizontal, Gauge, LineChart, RefreshCw } from "lucide-react";
 
 const WorkspaceDashboard = () => {
   const { workspace, workspaceLoading } = useAuthContext();
   const queryClient = useQueryClient();
   console.log('Dashboard render - workspace:', workspace?._id, 'loading:', workspaceLoading);
+
+  const [activeChart, setActiveChart] = useState<
+    "workloadOverview" | "cumulativeFlow" | "workloadDistribution" | "timeSpentEstimate" | "velocity"
+  >("workloadOverview");
+
+  const isScrumboard = workspace?.boardType === "scrumboard";
+
+  const charts = [
+    {
+      id: "workloadOverview" as const,
+      label: "Workload Overview",
+      icon: LineChart,
+    },
+    {
+      id: "cumulativeFlow" as const,
+      label: "Cumulative Flow Diagram",
+      icon: AreaChart,
+    },
+    {
+      id: "workloadDistribution" as const,
+      label: "Workload Distribution",
+      icon: BarChart3,
+    },
+    {
+      id: "timeSpentEstimate" as const,
+      label: "Time Spent vs Estimate",
+      icon: BarChartHorizontal,
+    },
+    ...(isScrumboard
+      ? [
+        {
+          id: "velocity" as const,
+          label: "Velocity",
+          icon: Gauge,
+        },
+      ]
+      : []),
+  ];
+
+  const availableIds = charts.map((chart) => chart.id);
+  const currentChartId = availableIds.includes(activeChart as any) ? activeChart : charts[0]?.id;
+  const currentChart = charts.find((chart) => chart.id === currentChartId) ?? charts[0];
 
   return (
     <main className="flex flex-1 flex-col py-4 md:pt-3">
@@ -32,22 +75,46 @@ const WorkspaceDashboard = () => {
       </div>
       <WorkspaceAnalytics />
       <div className="mt-6">
-        <EnrollmentRateChart />
-      </div>
-      <div className="mt-6">
-        <RevenueStatistic />
-      </div>
-      <div className="mt-6">
-        <WorkloadDistribution />
-      </div>
-      <div className="mt-6">
-        <TimeSpentEstimate />
-      </div>
-      {workspace?.boardType === "scrumboard" && (
-        <div className="mt-6">
-          <BalanceStatistic />
+        <div className="flex items-center justify-between rounded-lg border bg-card px-3 py-2">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Chart type
+            </span>
+            <span className="text-sm font-medium text-foreground">
+              {currentChart?.label}
+            </span>
+          </div>
+          <div className="flex items-center gap-1 rounded-full bg-muted px-1 py-1">
+            {charts.map((chart) => {
+              const Icon = chart.icon;
+              const isActive = chart.id === currentChartId;
+              return (
+                <button
+                  key={chart.id}
+                  type="button"
+                  onClick={() => setActiveChart(chart.id)}
+                  className={
+                    "inline-flex h-9 w-9 items-center justify-center rounded-full border text-muted-foreground transition " +
+                    (isActive
+                      ? "bg-background text-primary border-primary shadow-sm"
+                      : "bg-muted hover:bg-background")
+                  }
+                  aria-label={chart.label}
+                >
+                  <Icon className="h-4 w-4" />
+                </button>
+              );
+            })}
+          </div>
         </div>
-      )}
+        <div className="mt-4">
+          {currentChartId === "workloadOverview" && <EnrollmentRateChart />}
+          {currentChartId === "cumulativeFlow" && <RevenueStatistic />}
+          {currentChartId === "workloadDistribution" && <WorkloadDistribution />}
+          {currentChartId === "timeSpentEstimate" && <TimeSpentEstimate />}
+          {currentChartId === "velocity" && isScrumboard && <BalanceStatistic />}
+        </div>
+      </div>
       <div className="mt-6">
         <TimeTrackingDashboard workspaceId={workspace?._id || ''} />
       </div>
