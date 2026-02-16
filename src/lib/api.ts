@@ -147,10 +147,13 @@ export const getMembersInWorkspaceQueryFn = async (
 };
 
 export const getWorkspaceAnalyticsQueryFn = async (
-  workspaceId: string
+  workspaceId: string,
+  timeframe?: string
 ): Promise<AnalyticsResponseType> => {
   try {
-    const response = await API.get(`/workspace/analytics/${workspaceId}`);
+    const response = await API.get(`/workspace/analytics/${workspaceId}`, {
+      params: { timeframe }
+    });
     console.log('Workspace analytics response:', response.data);
     return response.data;
   } catch (err: any) {
@@ -160,6 +163,34 @@ export const getWorkspaceAnalyticsQueryFn = async (
       return ({ analytics: { totalTasks: 0, overdueTasks: 0, completedTasks: 0 } } as any);
     }
     // rethrow other errors so auth/permission problems surface where appropriate
+    throw err;
+  }
+};
+
+export const getWorkspaceVelocityQueryFn = async (
+  workspaceId: string
+): Promise<any[]> => {
+  try {
+    const response = await API.get(`/workspace/velocity/${workspaceId}`);
+    console.log('Workspace velocity response:', response.data);
+    return response.data;
+  } catch (err: any) {
+    console.error('Error fetching workspace velocity:', err);
+    throw err;
+  }
+};
+
+export const getWorkspaceCFDQueryFn = async (
+  workspaceId: string,
+  timeframe: string
+): Promise<any[]> => {
+  try {
+    const response = await API.get(
+      `/workspace/cfd/${workspaceId}?timeframe=${timeframe}`
+    );
+    return response.data;
+  } catch (err: any) {
+    console.error("Error fetching workspace CFD:", err);
     throw err;
   }
 };

@@ -4,6 +4,11 @@ import { TimeTrackingDashboard } from "@/components/time-tracking";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import RecentTasks from "@/components/workspace/task/recent-tasks";
 import RecentMembers from "@/components/workspace/member/recent-members";
+import { EnrollmentRateChart } from "@/components/workspace/enrollment-rate-chart";
+import { BalanceStatistic } from "@/components/workspace/balance-statistic";
+import RevenueStatistic from "@/components/workspace/revenue-statistic";
+import WorkloadDistribution from "@/components/workspace/workload-distribution";
+import TimeSpentEstimate from "@/components/workspace/time-spent-estimate";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQueryClient } from "@tanstack/react-query";
 import { RefreshCw } from "lucide-react";
@@ -26,6 +31,21 @@ const WorkspaceDashboard = () => {
         </div>
       </div>
       <WorkspaceAnalytics />
+      <div className="mt-6">
+        <EnrollmentRateChart />
+      </div>
+      <div className="mt-6">
+        <RevenueStatistic />
+      </div>
+      <div className="mt-6">
+        <WorkloadDistribution />
+      </div>
+      <div className="mt-6">
+        <TimeSpentEstimate />
+      </div>
+      <div className="mt-6">
+        <BalanceStatistic />
+      </div>
       <div className="mt-6">
         <TimeTrackingDashboard workspaceId={workspace?._id || ''} />
       </div>
