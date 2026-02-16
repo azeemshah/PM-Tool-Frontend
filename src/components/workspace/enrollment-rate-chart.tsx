@@ -22,7 +22,7 @@ import { useAuthContext } from "@/context/auth-provider";
 import { Loader2 } from "lucide-react";
 
 export const EnrollmentRateChart = () => {
-  const [timeframe, setTimeframe] = React.useState("yearly");
+  const [timeframe, setTimeframe] = React.useState("monthly");
   const { workspace } = useAuthContext();
 
   const { data: analyticsData, isLoading } = useQuery({
@@ -100,8 +100,8 @@ export const EnrollmentRateChart = () => {
               <SelectValue placeholder="Select timeframe" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="yearly">Yearly</SelectItem>
               <SelectItem value="monthly">Monthly</SelectItem>
+              <SelectItem value="yearly">Yearly</SelectItem>
               <SelectItem value="weekly">Weekly</SelectItem>
               <SelectItem value="today">Today</SelectItem>
             </SelectContent>

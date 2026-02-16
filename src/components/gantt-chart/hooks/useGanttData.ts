@@ -1,19 +1,36 @@
 import { useQuery } from '@tanstack/react-query';
-import type { GanttItem } from '../types/gantt';
+import type { GanttItem, TimelineRange, ViewType } from '../types/gantt';
 import { buildHierarchyTree } from '../utils/hierarchyBuilder';
 import API from '@/lib/axios-client';
 
 /**
- * Hook to fetch and transform workspace items into Gantt data
+ * Hook to fetch and transform workspace items into Gantt data.
+ * Accepts viewType and visible range so the server can filter items
+ * to the current window (week or month).
  */
-export function useGanttData(workspaceId: string) {
+export function useGanttData(
+  workspaceId: string,
+  viewType: ViewType,
+  range: TimelineRange
+) {
+  const startDate = range.start.toISOString();
+  const endDate = range.end.toISOString();
+
   const { data, isLoading, error, refetch } = useQuery({
-    queryKey: ['gantt-data', workspaceId],
+    queryKey: ['gantt-data', workspaceId, viewType, startDate, endDate],
     queryFn: async () => {
-      // Fetch all workspace items and specifically subtasks to ensure coverage
+      const baseParams = {
+        view: viewType,
+        startDate,
+        endDate,
+      };
+
+      // Fetch workspace items within the current visible window
       const [response, subtasksResponse] = await Promise.all([
-        API.get(`/items/workspace/${workspaceId}`),
-        API.get(`/items/workspace/${workspaceId}`, { params: { type: 'subtask' } })
+        API.get(`/items/workspace/${workspaceId}`, { params: baseParams }),
+        API.get(`/items/workspace/${workspaceId}`, {
+          params: { ...baseParams, type: 'subtask' },
+        }),
       ]);
 
       const mainItems = (response.data?.data || response.data) as GanttItem[];

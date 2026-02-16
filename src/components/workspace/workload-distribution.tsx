@@ -2,6 +2,13 @@ import React from "react";
 import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQuery } from "@tanstack/react-query";
 import { getMembersInWorkspaceQueryFn } from "@/lib/api";
@@ -12,6 +19,7 @@ import { useTheme } from "@/components/theme-provider";
 const WorkloadDistribution = () => {
   const { workspace } = useAuthContext();
   const { theme } = useTheme();
+  const [membersToShow, setMembersToShow] = React.useState("10");
 
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
@@ -101,15 +109,18 @@ const WorkloadDistribution = () => {
     });
   }
 
-  const categories = workloadData.map((d) => d.name);
+  const limit = Number(membersToShow) || 10;
+  const visibleWorkloadData = workloadData.slice(0, limit);
+
+  const categories = visibleWorkloadData.map((d) => d.name);
   const series = [
     {
       name: "Tasks Count",
-      data: workloadData.map((d) => d.tasksCount),
+      data: visibleWorkloadData.map((d) => d.tasksCount),
     },
     {
       name: "Story Points / Hours",
-      data: workloadData.map((d) => -d.storyPoints), // Negative to show below axis like Expenses
+      data: visibleWorkloadData.map((d) => -d.storyPoints), // Negative to show below axis like Expenses
     },
   ];
 
@@ -200,6 +211,21 @@ const WorkloadDistribution = () => {
             Team workload overview by tasks and story points
           </span>
         </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Members</span>
+          <Select value={membersToShow} onValueChange={setMembersToShow}>
+            <SelectTrigger className="h-8 w-[70px] bg-background border-border/60 shadow-sm">
+              <SelectValue placeholder={membersToShow} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="mt-6 mb-6 flex flex-wrap gap-10">
@@ -218,7 +244,7 @@ const WorkloadDistribution = () => {
       </div>
 
       <div className="h-[300px]">
-        {workloadData.length > 0 ? (
+        {visibleWorkloadData.length > 0 ? (
           <ReactApexChart
             options={options}
             series={series}

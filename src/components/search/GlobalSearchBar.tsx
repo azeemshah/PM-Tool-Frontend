@@ -183,7 +183,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       {isOpen && (debouncedSearchTerm.length >= 2 || searchResults.length > 0) && (
         <div
           ref={dropdownRef}
-          className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto"
+          className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto scrollbar"
         >
           {isLoading && debouncedSearchTerm.length >= 2 ? (
             <div className="flex items-center justify-center py-8">

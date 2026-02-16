@@ -16,14 +16,12 @@ export const GanttChart: React.FC<GanttChartProps> = ({
   workspaceId,
   onTaskClick,
 }) => {
-  const { tree, isLoading, error } = useGanttData(workspaceId);
-  const { filters, updateFilter } = useGanttFilters(tree);
-  const [viewType, setViewType] = useState<'week' | 'month'>('week');
+  const [viewType, setViewType] = useState<'week' | 'month'>('month');
   const [currentDate, setCurrentDate] = useState(new Date());
-  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
-
   const { range, dateLabels } = useTimelineCalculations(viewType, currentDate);
+  const { tree, isLoading, error } = useGanttData(workspaceId, viewType, range);
   const { filteredNodes } = useGanttFilters(tree);
+  const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
 
   // Enrich tree with positions
   const enrichedNodes = useMemo(() => {
@@ -141,15 +139,6 @@ export const GanttChart: React.FC<GanttChartProps> = ({
                 </button>
               </div>
             </div>
-
-            {/* Right side - Search */}
-            <input
-              type="text"
-              placeholder="Search tasks..."
-              className="px-3 py-1.5 text-sm border border-input rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent bg-background text-foreground placeholder:text-muted-foreground"
-              value={filters.searchText || ''}
-              onChange={(e) => updateFilter('searchText', e.target.value)}
-            />
           </div>
         </div>
       </div>

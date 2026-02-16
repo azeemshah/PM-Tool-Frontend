@@ -2,6 +2,13 @@ import React from "react";
 import ReactApexChart from "react-apexcharts";
 import type { ApexOptions } from "apexcharts";
 import { Card } from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQuery } from "@tanstack/react-query";
 import { issueApiService } from "@/api/issue/services/issueApiService";
@@ -11,12 +18,18 @@ import { useTheme } from "@/components/theme-provider";
 const TimeSpentEstimate = () => {
   const { workspace } = useAuthContext();
   const { theme } = useTheme();
+  const [itemsToShow, setItemsToShow] = React.useState("10");
 
   const isDarkMode = theme === "dark" || (theme === "system" && window.matchMedia("(prefers-color-scheme: dark)").matches);
 
+  const limit = Number(itemsToShow) || 10;
+
   const { data: tasksData, isLoading } = useQuery({
-    queryKey: ["workspace-tasks-time-tracking", workspace?._id],
-    queryFn: () => issueApiService.getTasksByWorkspace(workspace?._id || "", { limit: 5000 }),
+    queryKey: ["workspace-tasks-time-tracking", workspace?._id, limit],
+    queryFn: () =>
+      issueApiService.getTasksByWorkspace(workspace?._id || "", {
+        limit,
+      }),
     enabled: !!workspace?._id,
   });
 
@@ -29,12 +42,10 @@ const TimeSpentEstimate = () => {
   }
 
   const tasks = tasksData?.data || [];
-  
-  // Show all tasks from the workspace (unfiltered)
   const tasksWithTime = tasks;
 
   const categories = tasksWithTime.map((task: any) => task.title);
-  
+
   const series = [
     {
       name: "Estimated Hours",
@@ -53,7 +64,7 @@ const TimeSpentEstimate = () => {
   const options: ApexOptions = {
     chart: {
       type: "bar",
-      toolbar: { show: true },
+      toolbar: { show: false },
       fontFamily: "DM Sans, sans-serif",
       foreColor: "hsl(var(--muted-foreground))",
       background: 'transparent',
@@ -145,6 +156,21 @@ const TimeSpentEstimate = () => {
           <p className="text-sm text-muted-foreground">
             Comparison of estimated hours vs actual logged time per work item
           </p>
+        </div>
+        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+          <span>Tasks</span>
+          <Select value={itemsToShow} onValueChange={setItemsToShow}>
+            <SelectTrigger className="h-8 w-[70px] bg-background border-border/60 shadow-sm">
+              <SelectValue placeholder={itemsToShow} />
+            </SelectTrigger>
+            <SelectContent side="top">
+              {[10, 20, 30, 40, 50].map((size) => (
+                <SelectItem key={size} value={`${size}`}>
+                  {size}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
       </div>
 

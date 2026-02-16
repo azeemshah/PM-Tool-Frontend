@@ -23,7 +23,7 @@ import { getWorkspaceCFDQueryFn } from "@/lib/api";
 
 const RevenueStatistic = () => {
   const { workspace } = useAuthContext();
-  const [timeframe, setTimeframe] = React.useState("yearly");
+  const [timeframe, setTimeframe] = React.useState("monthly");
 
   const { data: cfdData, isLoading } = useQuery({
     queryKey: ["workspace-cfd", workspace?._id, timeframe],
@@ -62,8 +62,8 @@ const RevenueStatistic = () => {
             <SelectValue placeholder="Select" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="yearly">Yearly</SelectItem>
             <SelectItem value="monthly">Monthly</SelectItem>
+            <SelectItem value="yearly">Yearly</SelectItem>
             <SelectItem value="weekly">Weekly</SelectItem>
             <SelectItem value="today">Today</SelectItem>
           </SelectContent>
