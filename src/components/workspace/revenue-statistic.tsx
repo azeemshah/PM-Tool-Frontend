@@ -33,14 +33,45 @@ const RevenueStatistic = () => {
 
   console.log("CFD Data from API:", cfdData);
 
-  // Get current totals from the last data point
-  const currentStats = cfdData && cfdData.length > 0 
-    ? cfdData[cfdData.length - 1] 
-    : { "Backlog": 0, "To Do": 0, "In Progress": 0, "In Review": 0, "Done": 0 };
+  const statusKeys = React.useMemo(() => {
+    const keys = new Set<string>();
+    (cfdData || []).forEach((point: any) => {
+      Object.keys(point || {}).forEach((key) => {
+        if (key !== "name" && key !== "timestamp") {
+          keys.add(key);
+        }
+      });
+    });
 
-  const totalTasks = Object.values(currentStats).reduce((acc: number, val: any) => 
-    typeof val === 'number' ? acc + val : acc, 0
-  ) as number;
+    const preferredOrder = [
+      "Backlog",
+      "To Do",
+      "In Progress",
+      "In Review",
+      "Blocked",
+      "Done",
+      "Closed",
+    ];
+
+    return Array.from(keys).sort((a, b) => {
+      const ai = preferredOrder.indexOf(a);
+      const bi = preferredOrder.indexOf(b);
+      if (ai === -1 && bi === -1) return a.localeCompare(b);
+      if (ai === -1) return 1;
+      if (bi === -1) return -1;
+      return ai - bi;
+    });
+  }, [cfdData]);
+
+  const currentStats = cfdData && cfdData.length > 0 ? cfdData[cfdData.length - 1] || {} : {};
+
+  const totalTasks = statusKeys.reduce((acc, key) => {
+    const val = (currentStats as any)[key];
+    if (typeof val === "number") {
+      return acc + val;
+    }
+    return acc;
+  }, 0);
 
   if (isLoading) {
     return (
@@ -50,8 +81,32 @@ const RevenueStatistic = () => {
     );
   }
 
-  // Ensure data exists and has points to show
   const hasData = cfdData && cfdData.length > 0 && totalTasks > 0;
+
+  const getStatusColor = (status: string, index: number) => {
+    const map: Record<string, string> = {
+      Backlog: "#94a3b8",
+      "To Do": "#487fff",
+      "In Progress": "#ff9f43",
+      "In Review": "#8e44ad",
+      Blocked: "#f97316",
+      Done: "#10b981",
+      Closed: "#64748b",
+    };
+
+    if (map[status]) return map[status];
+
+    const palette = [
+      "#0ea5e9",
+      "#22c55e",
+      "#a855f7",
+      "#ec4899",
+      "#facc15",
+      "#4b5563",
+    ];
+
+    return palette[index % palette.length];
+  };
 
   return (
     <Card className="p-6 md:p-7 rounded-2xl border border-border/60 bg-card shadow-sm">
@@ -71,36 +126,20 @@ const RevenueStatistic = () => {
       </div>
 
       <div className="flex items-center justify-center gap-6 mt-4 mb-1 flex-wrap">
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#94a3b8]" />
-          <span className="text-sm text-muted-foreground">
-            Backlog: <span className="font-bold text-foreground">{currentStats["Backlog"] || 0}</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#487fff]" />
-          <span className="text-sm text-muted-foreground">
-            To Do: <span className="font-bold text-foreground">{currentStats["To Do"] || 0}</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#ff9f43]" />
-          <span className="text-sm text-muted-foreground">
-            In Progress: <span className="font-bold text-foreground">{currentStats["In Progress"]}</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#8e44ad]" />
-          <span className="text-sm text-muted-foreground">
-            In Review: <span className="font-bold text-foreground">{currentStats["In Review"]}</span>
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <span className="w-3 h-3 rounded-full bg-[#10b981]" />
-          <span className="text-sm text-muted-foreground">
-            Done: <span className="font-bold text-foreground">{currentStats["Done"]}</span>
-          </span>
-        </div>
+        {statusKeys.map((status, index) => (
+          <div key={status} className="flex items-center gap-2">
+            <span
+              className="w-3 h-3 rounded-full"
+              style={{ backgroundColor: getStatusColor(status, index) }}
+            />
+            <span className="text-sm text-muted-foreground">
+              {status}:{" "}
+              <span className="font-bold text-foreground">
+                {(currentStats as any)[status] || 0}
+              </span>
+            </span>
+          </div>
+        ))}
       </div>
 
       <div className="mt-5 h-[200px] md:h-[220px] flex items-center justify-center">
@@ -108,26 +147,16 @@ const RevenueStatistic = () => {
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={cfdData} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
               <defs>
-                <linearGradient id="backlogGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#94a3b8" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#94a3b8" stopOpacity={0.02} />
-                </linearGradient>
-                <linearGradient id="todoGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#487fff" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#487fff" stopOpacity={0.02} />
-                </linearGradient>
-                <linearGradient id="progressGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#ff9f43" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#ff9f43" stopOpacity={0.02} />
-                </linearGradient>
-                <linearGradient id="reviewGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#8e44ad" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#8e44ad" stopOpacity={0.02} />
-                </linearGradient>
-                <linearGradient id="doneGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#10b981" stopOpacity={0.4} />
-                  <stop offset="100%" stopColor="#10b981" stopOpacity={0.02} />
-                </linearGradient>
+                {statusKeys.map((status, index) => {
+                  const color = getStatusColor(status, index);
+                  const gradientId = `cfdGradient-${index}`;
+                  return (
+                    <linearGradient key={gradientId} id={gradientId} x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor={color} stopOpacity={0.4} />
+                      <stop offset="100%" stopColor={color} stopOpacity={0.02} />
+                    </linearGradient>
+                  );
+                })}
               </defs>
               <CartesianGrid strokeDasharray="3 8" className="stroke-muted/60" />
               <XAxis
@@ -147,51 +176,22 @@ const RevenueStatistic = () => {
                 }}
                 labelStyle={{ color: "hsl(var(--foreground))" }}
               />
-              <Area
-                type="monotone"
-                dataKey="Backlog"
-                stackId="1"
-                stroke="#94a3b8"
-                fill="url(#backlogGradient)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="To Do"
-                stackId="1"
-                stroke="#487fff"
-                fill="url(#todoGradient)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="In Progress"
-                stackId="1"
-                stroke="#ff9f43"
-                fill="url(#progressGradient)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="In Review"
-                stackId="1"
-                stroke="#8e44ad"
-                fill="url(#reviewGradient)"
-                strokeWidth={2}
-                dot={false}
-              />
-              <Area
-                type="monotone"
-                dataKey="Done"
-                stackId="1"
-                stroke="#10b981"
-                fill="url(#doneGradient)"
-                strokeWidth={2}
-                dot={false}
-              />
+              {statusKeys.map((status, index) => {
+                const color = getStatusColor(status, index);
+                const gradientId = `cfdGradient-${index}`;
+                return (
+                  <Area
+                    key={status}
+                    type="monotone"
+                    dataKey={status}
+                    stackId="1"
+                    stroke={color}
+                    fill={`url(#${gradientId})`}
+                    strokeWidth={2}
+                    dot={false}
+                  />
+                );
+              })}
             </AreaChart>
           </ResponsiveContainer>
         ) : (
