@@ -251,18 +251,6 @@ export function KanbanBoardView() {
     return '';
   }, []);
 
-  const scrollLeft = () => {
-    if (scrollableRef.current) {
-      scrollableRef.current.scrollBy({ left: -500, behavior: 'smooth' });
-    }
-  };
-
-  const scrollRight = () => {
-    if (scrollableRef.current) {
-      scrollableRef.current.scrollBy({ left: 500, behavior: 'smooth' });
-    }
-  };
-
   const handleDragEnd = useCallback(
     async (result: DropResult) => {
       setDragging(false);
@@ -519,25 +507,7 @@ export function KanbanBoardView() {
         onDragEnd={handleDragEnd}
         onBeforeDragStart={() => setDragging(true)}
       >
-        <div className="flex-1 overflow-hidden relative group">
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute left-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm dark:bg-slate-950/80 border-slate-200 dark:border-slate-800"
-            onClick={scrollLeft}
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </Button>
-
-          <Button
-            variant="outline"
-            size="icon"
-            className="absolute right-2 top-1/2 -translate-y-1/2 z-10 h-10 w-10 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity bg-white/80 backdrop-blur-sm dark:bg-slate-950/80 border-slate-200 dark:border-slate-800"
-            onClick={scrollRight}
-          >
-            <ChevronRight className="h-6 w-6" />
-          </Button>
-
+        <div className="flex-1 overflow-hidden">
           <div
             ref={scrollableRef}
             className="h-full overflow-x-auto scrollbar"
