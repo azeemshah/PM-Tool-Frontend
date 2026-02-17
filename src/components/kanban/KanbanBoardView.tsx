@@ -46,6 +46,24 @@ export function KanbanBoardView() {
     scrollSpeed: 8,
   });
 
+  useEffect(() => {
+    const el = scrollableRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      event.preventDefault();
+      el.scrollLeft += event.deltaY;
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
+
   const { getAllTagsByWorkspace } = useTags();
   const { data: allTags = [] } = getAllTagsByWorkspace(workspaceId);
 
@@ -375,7 +393,6 @@ export function KanbanBoardView() {
 
               const queryKey = ['all-tasks', 'kanban', workspaceId];
               const previousData = queryClient.getQueryData(queryKey);
-
               // Optimistically update cache
               queryClient.setQueryData(queryKey, (old: any[]) => {
                 if (!old) return [];

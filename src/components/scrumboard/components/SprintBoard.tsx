@@ -34,6 +34,24 @@ const SprintBoard: React.FC<SprintBoardProps> = ({ sprint }) => {
     scrollThreshold: 50,
     scrollSpeed: 8,
   });
+
+  useEffect(() => {
+    const el = scrollableRef.current;
+    if (!el) return;
+
+    const handleWheel = (event: WheelEvent) => {
+      if (event.deltaY === 0) return;
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      event.preventDefault();
+      el.scrollLeft += event.deltaY;
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => {
+      el.removeEventListener('wheel', handleWheel);
+    };
+  }, []);
   const { setSelectedCard, setIsCardDialogOpen } = useKanbanAppContext();
 
   // Get boards for this workspace to find default board ID for labels
