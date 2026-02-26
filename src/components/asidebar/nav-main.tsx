@@ -19,7 +19,7 @@ import {
 import { Link, useLocation } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceByIdQueryFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 
 type ItemType = {
   title: string;
@@ -35,7 +35,7 @@ export function NavMain() {
 
   const { data: workspaceData } = useQuery({
     queryKey: ["workspace", workspaceId],
-    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
     enabled: !!workspaceId,
   });
 

@@ -35,7 +35,6 @@ import { TaskType } from "@/api/issue/types";
 import { useGetKanbanBoards } from "@/api/kanban/hooks/boards/useGetKanbanBoards";
 import { useGetKanbanBoardLists } from "@/api/kanban/hooks/lists/useGetKanbanBoardLists";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
-import { bulkDeleteTasksMutationFn } from "@/lib/api";
 import EditTaskDialog from "./edit-task-dialog";
 
 // ---- Define TaskType ----
@@ -118,7 +117,10 @@ const TaskTable: FC = () => {
 
   // Bulk delete
   const bulkDeleteMutation = useMutation({
-    mutationFn: bulkDeleteTasksMutationFn,
+    mutationFn: async ({ ids }: { ids: string[] }) => {
+      // Bulk delete by calling deleteTask for each id
+      await Promise.all(ids.map(id => issueApiService.deleteTask(id)));
+    },
     onSuccess: () => {
       setIsDeleteAlertOpen(false);
       setSelectedTaskIds([]);

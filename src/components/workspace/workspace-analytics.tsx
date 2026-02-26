@@ -1,14 +1,14 @@
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import AnalyticsCard from "./common/analytics-card";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceAnalyticsQueryFn } from "@/lib/api";
+import { analyticsApiService } from "@/api/analytics/services";
 
 const WorkspaceAnalytics = () => {
   const workspaceId = useWorkspaceId();
 
   const { data, isPending } = useQuery({
     queryKey: ["workspace-analytics", workspaceId],
-    queryFn: () => getWorkspaceAnalyticsQueryFn(workspaceId),
+    queryFn: () => analyticsApiService.getAnalytics(workspaceId),
     staleTime: 0,
     enabled: !!workspaceId,
   });

@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
 import { EllipsisIcon, Loader, LogOut, Camera } from "lucide-react";
-import { uploadProfilePictureMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import { useToast } from "@/hooks/use-toast";
 import { baseURL } from "@/lib/base-url";
 import {
@@ -44,7 +44,7 @@ const Asidebar = () => {
     if (!file) return;
 
     try {
-      await uploadProfilePictureMutationFn(file);
+      await authApiService.uploadProfilePicture(file);
       refetchAuth();
       toast({ title: "Success", description: "Profile picture updated successfully" });
     } catch (error: any) {

@@ -45,7 +45,7 @@ import { IssueTypeIcon } from '@/components/issue/IssueTypeIcon';
 import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { Download, Trash2 } from 'lucide-react';
-import { uploadWorkItemAttachment } from '@/lib/api';
+import { attachmentApiService } from '@/api/attachment/services';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
@@ -196,7 +196,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       if (attachments.length > 0 && created?._id) {
         for (const att of attachments) {
           try {
-            await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+            await attachmentApiService.uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
           } catch (e: any) {
             toast({
               title: 'Error',

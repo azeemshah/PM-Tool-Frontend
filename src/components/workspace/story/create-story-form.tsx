@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { createStoryMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -25,7 +25,8 @@ export default function CreateStoryForm(props: {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: createStoryMutationFn,
+    mutationFn: ({ epicId, data }: { epicId: string; data: any }) =>
+      issueApiService.createStory(epicId, data),
   });
 
   const formSchema = z.object({

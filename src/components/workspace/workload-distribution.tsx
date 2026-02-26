@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/select";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQuery } from "@tanstack/react-query";
-import { getMembersInWorkspaceQueryFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Loader2 } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
@@ -25,7 +25,7 @@ const WorkloadDistribution = () => {
 
   const { data: membersData, isLoading: membersLoading } = useQuery({
     queryKey: ["members", workspace?._id],
-    queryFn: () => getMembersInWorkspaceQueryFn(workspace?._id || ""),
+    queryFn: () => workspaceApiService.getMembers(workspace?._id || ""),
     enabled: !!workspace?._id,
   });
 

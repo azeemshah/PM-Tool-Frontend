@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { resetPasswordMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
@@ -30,7 +30,7 @@ const ResetPassword = () => {
   const [searchParams] = useSearchParams();
   const tokenFromQuery = searchParams.get("token") || "";
 
-  const { mutate, isPending } = useMutation({ mutationFn: resetPasswordMutationFn });
+  const { mutate, isPending } = useMutation({ mutationFn: authApiService.resetPassword });
 
   const formSchema = z.object({
     token: z.string().min(1, { message: "Token is required" }).optional(),

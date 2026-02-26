@@ -1,10 +1,6 @@
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  getTasksQueryFn,
-  deleteTaskMutationFn,
-  updateTaskMutationFn,
-} from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -57,11 +53,11 @@ export default function TasksList({ workspaceId }: { workspaceId: string }) {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["tasks", workspaceId],
-    queryFn: () => getTasksQueryFn(workspaceId),
+    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId, { limit: 100 }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteTaskMutationFn,
+    mutationFn: issueApiService.deleteTask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
       toast({
@@ -81,7 +77,7 @@ export default function TasksList({ workspaceId }: { workspaceId: string }) {
     },
   });
 
-  const tasks = data?.data || data || [];
+  const tasks = data?.data || [];
 
   const handleEdit = (task: Task) => {
     setSelectedTask(task);

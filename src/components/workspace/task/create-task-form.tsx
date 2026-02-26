@@ -40,7 +40,7 @@ import {
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { createTaskMutationFn, createTaskWithoutEpicMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { TagInput } from '@/components/tag/TagInput';
@@ -65,7 +65,7 @@ export default function CreateTaskForm(props: {
 
   // Mutation for creating task in workspace
   const { mutate: mutateIndependentTask, isPending: isIndependentTaskPending } = useMutation({
-    mutationFn: createTaskWithoutEpicMutationFn,
+    mutationFn: issueApiService.createTaskWithoutEpic,
   });
 
   const isPending = isIndependentTaskPending;
@@ -157,8 +157,12 @@ export default function CreateTaskForm(props: {
     // Create task in workspace
     {
       const payload = {
-        workspaceId,
-        data: taskData,
+        projectId: workspaceId,
+        title: taskData.title,
+        description: taskData.description,
+        assignedTo: taskData.assignedTo,
+        priority: taskData.priority as any,
+        tags: taskData.tags,
       };
 
       mutateIndependentTask(payload, {

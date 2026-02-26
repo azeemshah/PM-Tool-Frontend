@@ -14,7 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -30,7 +30,7 @@ export default function CreateWorkspaceForm({
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: createWorkspaceMutationFn,
+    mutationFn: workspaceApiService.createWorkspace,
   });
 
   const formSchema = z.object({

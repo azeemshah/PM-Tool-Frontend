@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { BASE_ROUTE } from "@/routes/common/routePaths";
 import useAuth from "@/hooks/api/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { invitedUserJoinWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { toast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -27,7 +27,7 @@ const InviteUser = () => {
   const user = authData?.user;
 
   const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: invitedUserJoinWorkspaceMutationFn,
+    mutationFn: workspaceApiService.inviteUserJoinWorkspace,
   });
 
   // Auto-join when user is logged in

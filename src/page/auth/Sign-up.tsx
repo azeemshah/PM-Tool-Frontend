@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { registerMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -32,7 +32,7 @@ const SignUp = () => {
   const returnUrl = searchParams.get("returnUrl");
 
   const { mutate, isPending } = useMutation({
-    mutationFn: registerMutationFn,
+    mutationFn: authApiService.register,
   });
 
   const formSchema = z.object({

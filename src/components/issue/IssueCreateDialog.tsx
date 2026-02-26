@@ -41,7 +41,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
-import { getAllAttachments, uploadWorkItemAttachment } from '@/lib/api';
+import { attachmentApiService } from '@/api/attachment/services';
 
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
@@ -426,7 +426,7 @@ export function IssueCreateDialog({
                         if (attachments.length > 0 && created?._id) {
                             for (const att of attachments) {
                                 try {
-                                    await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                    await attachmentApiService.uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
                                 } catch (e: any) {
                                     toast({
                                         title: 'Error',
@@ -494,7 +494,7 @@ export function IssueCreateDialog({
                         if (attachments.length > 0 && created?._id) {
                             for (const att of attachments) {
                                 try {
-                                    await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                    await attachmentApiService.uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
                                 } catch (e: any) {
                                     toast({
                                         title: 'Error',
@@ -570,7 +570,7 @@ export function IssueCreateDialog({
                             if (attachments.length > 0 && created?._id) {
                                 for (const att of attachments) {
                                     try {
-                                        await uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
+                                        await attachmentApiService.uploadWorkItemAttachment({ workItemId: created._id, file: att.file });
                                     } catch (e: any) {
                                         toast({
                                             title: 'Error',
@@ -1126,5 +1126,6 @@ export function IssueCreateDialog({
         </Dialog>
     );
 }
+
 
 

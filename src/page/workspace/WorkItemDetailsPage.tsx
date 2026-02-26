@@ -9,7 +9,7 @@ import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanB
 import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
-import { getCurrentUserQueryFn } from '@/lib/api';
+import { authApiService } from '@/api/auth/services';
 import { useToast } from '@/hooks/use-toast';
 import {
   Select,
@@ -145,7 +145,7 @@ export const WorkItemDetailsPage: React.FC = () => {
 
   const { data: currentUserData } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: getCurrentUserQueryFn,
+    queryFn: authApiService.getCurrentUser,
   });
 
   const currentUserId = currentUserData?.user?._id || '';

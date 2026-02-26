@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { updateEpicMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -33,7 +33,8 @@ export default function EditEpicForm(props: {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: updateEpicMutationFn,
+    mutationFn: ({ epicId, data }: { epicId: string; data: any }) =>
+      issueApiService.updateEpic(epicId, data),
   });
 
   const formSchema = z.object({

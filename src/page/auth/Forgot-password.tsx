@@ -21,14 +21,14 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { forgotPasswordMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
 
-  const { mutate, isPending } = useMutation({ mutationFn: forgotPasswordMutationFn });
+  const { mutate, isPending } = useMutation({ mutationFn: authApiService.forgotPassword });
 
   const formSchema = z.object({
     email: z.string().trim().email("Invalid email address").min(1, {

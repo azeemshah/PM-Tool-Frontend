@@ -13,7 +13,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { createEpicMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -25,7 +25,7 @@ export default function CreateEpicForm(props: {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: createEpicMutationFn,
+    mutationFn: (data: any) => issueApiService.createEpic(data),
   });
 
   const formSchema = z.object({
@@ -48,8 +48,10 @@ export default function CreateEpicForm(props: {
 
     mutate(
       {
-        projectId,
-        data: { title: values.title || '', description: values.description || '' },
+        title: values.title || '',
+        description: values.description || '',
+        type: 'epic' as const,
+        workspace: projectId,
       },
       {
         onSuccess: () => {

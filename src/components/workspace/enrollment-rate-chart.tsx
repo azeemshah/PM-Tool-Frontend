@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceAnalyticsQueryFn } from "@/lib/api";
+import { analyticsApiService } from "@/api/analytics/services";
 import { useAuthContext } from "@/context/auth-provider";
 import { Loader2 } from "lucide-react";
 
@@ -27,7 +27,7 @@ export const EnrollmentRateChart = () => {
 
   const { data: analyticsData, isLoading } = useQuery({
     queryKey: ["workspace-analytics", workspace?._id, timeframe],
-    queryFn: () => getWorkspaceAnalyticsQueryFn(workspace?._id || "", timeframe),
+    queryFn: () => analyticsApiService.getAnalytics(workspace?._id || "", timeframe),
     enabled: !!workspace?._id,
   });
 

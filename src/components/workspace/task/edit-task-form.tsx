@@ -33,7 +33,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { issueApiService } from "@/api/issue/services/issueApiService";
-import { deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from "@/lib/api";
+import { attachmentApiService } from "@/api/attachment/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { TaskType } from "@/api/issue/types";
@@ -242,10 +242,14 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
   });
 
   useEffect(() => {
-    const loadAttachments = async () => {
+     const loadAttachments = async () => {
       try {
-        const items = await getWorkItemAttachments(String(task._id));
-        setAttachments(items);
+        const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
+        setAttachments((items as any[]).map((item: any) => ({
+          _id: String(item._id || ''),
+          url: String(item.url || ''),
+          name: String(item.name || ''),
+        })));
       } catch (e) {
         // ignore
       }
@@ -348,9 +352,13 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
         const name = url.split('/').pop() || 'attachment';
         setAttachments((prev) => [...prev, { _id: `temp-${Date.now()}`, url, name }]);
       }
-      const items = await getWorkItemAttachments(String(task._id));
+      const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
       if (Array.isArray(items) && items.length > 0) {
-        setAttachments(items);
+        setAttachments((items as any[]).map((item: any) => ({
+          _id: String(item._id || ''),
+          url: String(item.url || ''),
+          name: String(item.name || ''),
+        })));
       }
       toast({
         title: "Success",
@@ -375,15 +383,15 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     try {
       let targetId = att._id;
       if (!targetId || targetId.startsWith('temp-')) {
-        const items = await getWorkItemAttachments(String(task._id));
+        const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
         const match = items.find((x) => x.url === att.url || x.name === att.name);
-        targetId = match?._id;
+        targetId = match?._id ? String(match._id) : undefined;
       }
       if (!targetId) {
-        await deleteAttachmentByUrl(att.url);
+        await attachmentApiService.deleteAttachmentByUrl(att.url);
         setAttachments((prev) => prev.filter((a) => a.url !== att.url));
       } else {
-        await deleteAttachmentById(targetId);
+        await attachmentApiService.deleteAttachmentById(targetId);
         setAttachments((prev) => prev.filter((a) => a._id !== att._id && a.url !== att.url));
       }
       toast({
@@ -929,6 +937,7 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
     </div>
   );
 }
+
 
 
 

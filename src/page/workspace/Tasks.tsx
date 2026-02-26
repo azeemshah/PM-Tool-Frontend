@@ -7,7 +7,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import type { IssueType } from "@/api/issue/types";
-import { getWorkspaceByIdQueryFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 
 export default function Tasks() {
   const workspaceId = useWorkspaceId();
@@ -17,7 +17,7 @@ export default function Tasks() {
   // Fetch workspace to get board type
   const { data: workspaceResponse } = useQuery({
     queryKey: ['workspace', workspaceId],
-    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
   });
 
   const workspace = workspaceResponse?.workspace;

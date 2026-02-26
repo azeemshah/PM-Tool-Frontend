@@ -11,8 +11,8 @@ import { useGetKanbanBoardLabels } from '@/api/kanban/hooks/labels/useGetKanbanB
 import { useGetKanbanBoards } from '@/api/kanban/hooks/boards/useGetKanbanBoards';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import API from '@/lib/axios-client';
-import { uploadWorkItemAttachment, deleteAttachmentById, deleteAttachmentByUrl, getWorkItemAttachments } from '@/lib/api';
-import { getCurrentUserQueryFn } from '@/lib/api';
+import { attachmentApiService } from '@/api/attachment/services';
+import { authApiService } from '@/api/auth/services';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -70,7 +70,7 @@ export function BoardCardDialog() {
   const { toast } = useToast();
   const { data: currentUserData } = useQuery({
     queryKey: ['currentUser'],
-    queryFn: getCurrentUserQueryFn,
+    queryFn: authApiService.getCurrentUser,
   });
 
   const currentUserId = currentUserData?.user?._id || '';
@@ -552,7 +552,7 @@ export function BoardCardDialog() {
     queryFn: async () => {
       if (!issueIdStr) return [];
       try {
-        const data = await getWorkItemAttachments(issueIdStr);
+        const data = await attachmentApiService.getWorkItemAttachments(issueIdStr);
         return Array.isArray(data) ? data : [];
       } catch {
         return [];
@@ -1627,7 +1627,7 @@ export function BoardCardDialog() {
 
                     setIsUploadingAttachment(true);
                     try {
-                      const resp = await uploadWorkItemAttachment({ workItemId: issueIdStr, file });
+                      const resp = await attachmentApiService.uploadWorkItemAttachment({ workItemId: issueIdStr, file });
                       const ok = resp?.success || resp?.url;
                       if (ok) {
                         queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
@@ -1713,9 +1713,9 @@ export function BoardCardDialog() {
                               setDeletingAttachmentId(delKey);
                               try {
                                 if (id) {
-                                  await deleteAttachmentById(String(id));
+                                  await attachmentApiService.deleteAttachmentById(String(id));
                                 } else if (att.url || att.fileUrl) {
-                                  await deleteAttachmentByUrl(String(att.url || att.fileUrl));
+                                  await attachmentApiService.deleteAttachmentByUrl(String(att.url || att.fileUrl));
                                 }
                                 queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item', issueIdStr || 'unknown'] });
                                 queryClient.invalidateQueries({ queryKey: ['attachments', 'work-item-fallback', issueIdStr || 'unknown'] });

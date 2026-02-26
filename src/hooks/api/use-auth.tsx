@@ -1,4 +1,4 @@
-import { getCurrentUserQueryFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import { useQuery } from "@tanstack/react-query";
 
 const useAuth = () => {
@@ -7,7 +7,7 @@ const useAuth = () => {
   
   const query = useQuery({
     queryKey: ["authUser"],
-    queryFn: getCurrentUserQueryFn,
+    queryFn: authApiService.getCurrentUser,
     staleTime: 0,
     retry: 2,
     enabled: hasToken, // Only run query if token exists

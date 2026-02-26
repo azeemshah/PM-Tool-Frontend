@@ -19,7 +19,7 @@ import {
 import { Loader2 } from "lucide-react";
 import { useAuthContext } from "@/context/auth-provider";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceCFDQueryFn } from "@/lib/api";
+import { analyticsApiService } from "@/api/analytics/services";
 
 const RevenueStatistic = () => {
   const { workspace } = useAuthContext();
@@ -27,7 +27,7 @@ const RevenueStatistic = () => {
 
   const { data: cfdData, isLoading } = useQuery({
     queryKey: ["workspace-cfd", workspace?._id, timeframe],
-    queryFn: () => getWorkspaceCFDQueryFn(workspace?._id || "", timeframe),
+    queryFn: () => analyticsApiService.getCFD(workspace?._id || "", timeframe),
     enabled: !!workspace?._id,
   });
 

@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
-import { getWorkspaceVelocityQueryFn } from "@/lib/api";
+import { analyticsApiService } from "@/api/analytics/services";
 import { useAuthContext } from "@/context/auth-provider";
 import { Loader2 } from "lucide-react";
 
@@ -29,7 +29,7 @@ export const BalanceStatistic = () => {
 
   const { data: velocityData, isLoading } = useQuery({
     queryKey: ["workspace-velocity", workspace?._id, limit],
-    queryFn: () => getWorkspaceVelocityQueryFn(workspace?._id || "", limit),
+    queryFn: () => analyticsApiService.getVelocity(workspace?._id || "", limit),
     enabled: !!workspace?._id,
   });
 

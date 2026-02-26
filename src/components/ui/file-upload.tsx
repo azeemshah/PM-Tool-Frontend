@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Loader } from 'lucide-react';
-import { uploadWorkItemAttachment } from '@/lib/api';
+import { attachmentApiService } from '@/api/attachment/services';
 import { useToast } from '@/hooks/use-toast';
 
 type Props = {
@@ -37,7 +37,7 @@ export default function FileUpload({ type, id, onUploaded }: Props) {
     setUploading(true);
     try {
       let res: any;
-      res = await uploadWorkItemAttachment({ workItemId: id, file });
+      res = await attachmentApiService.uploadWorkItemAttachment({ workItemId: id, file });
       const url = res?.url || res?.data?.url || '';
       if (!url) {
         toast({

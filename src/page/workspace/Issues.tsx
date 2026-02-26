@@ -7,7 +7,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { IssueCreateDialog } from "@/components/issue";
 import { useIssueCreateDialog } from "@/hooks/useIssueCreateDialog";
 import API from "@/lib/axios-client";
-import { getWorkspaceByIdQueryFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import {
   Table,
   TableBody,
@@ -119,7 +119,7 @@ export default function Issues() {
   // Fetch workspace to get board type
   const { data: workspaceResponse } = useQuery({
     queryKey: ['workspace', workspaceId],
-    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
   });
 
   const workspace = workspaceResponse?.workspace;

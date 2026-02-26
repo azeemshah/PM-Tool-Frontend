@@ -22,7 +22,7 @@ import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { changeWorkspaceMemberRoleMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
@@ -64,7 +64,7 @@ const AllMembers = () => {
   const canChange = isWorkspaceOwner || canChangeMemberRole;
 
   const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: changeWorkspaceMemberRoleMutationFn,
+    mutationFn: workspaceApiService.changeMemberRole,
   });
 
   const handleSelect = (roleId: string, memberId: string) => {

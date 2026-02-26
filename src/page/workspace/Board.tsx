@@ -7,7 +7,7 @@ import { KanbanBoardView } from '@/components/kanban/KanbanBoardView';
 import { KanbanAppContextProvider } from '@/contexts/KanbanAppContext';
 import ScrumBoardView from '@/components/scrumboard/ScrumBoardView';
 import useWorkspaceId from '@/hooks/use-workspace-id';
-import { getWorkspaceByIdQueryFn } from '@/lib/api';
+import { workspaceApiService } from '@/api/workspace/services';
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center h-full">
@@ -27,7 +27,7 @@ const BoardPage = () => {
   // Fetch workspace to get board type
   const { data: workspaceResponse, isLoading: isWorkspaceLoading } = useQuery({
     queryKey: ['workspace', workspaceId],
-    queryFn: () => getWorkspaceByIdQueryFn(workspaceId),
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
   });
 
   const workspace = workspaceResponse?.workspace;

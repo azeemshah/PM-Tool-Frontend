@@ -15,7 +15,7 @@ import { Textarea } from "../ui/textarea";
 import { useAuthContext } from "@/context/auth-provider";
 import { useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { editWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -38,7 +38,7 @@ export default function EditWorkspaceForm() {
   const workspaceId = useWorkspaceId();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: editWorkspaceMutationFn,
+    mutationFn: workspaceApiService.editWorkspace,
   });
 
   const formSchema = z.object({

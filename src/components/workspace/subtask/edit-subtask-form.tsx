@@ -30,7 +30,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import { SubtaskPriorityEnum, SubtaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateSubtaskMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 
@@ -58,7 +58,8 @@ export default function EditSubtaskForm(props: {
   const workspaceId = useWorkspaceId();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: updateSubtaskMutationFn,
+    mutationFn: ({ subtaskId, data }: { subtaskId: string; data: any }) =>
+      issueApiService.updateSubtask(subtaskId, data),
   });
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);

@@ -1,10 +1,6 @@
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  getSubtasksQueryFn,
-  deleteSubtaskMutationFn,
-  updateSubtaskMutationFn,
-} from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -56,11 +52,11 @@ export default function SubtasksList({ taskId }: { taskId: string }) {
 
   const { data, isLoading, isError } = useQuery({
     queryKey: ["subtasks", taskId],
-    queryFn: () => getSubtasksQueryFn(taskId),
+    queryFn: () => issueApiService.getSubtasks(taskId),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteSubtaskMutationFn,
+    mutationFn: issueApiService.deleteSubtask,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["subtasks", taskId] });
       queryClient.invalidateQueries({ queryKey: ["gantt-data"] });
@@ -81,7 +77,7 @@ export default function SubtasksList({ taskId }: { taskId: string }) {
     },
   });
 
-  const subtasks = data?.data || data || [];
+  const subtasks = Array.isArray(data) ? data : [];
 
   const handleEdit = (subtask: Subtask) => {
     setSelectedSubtask(subtask);
