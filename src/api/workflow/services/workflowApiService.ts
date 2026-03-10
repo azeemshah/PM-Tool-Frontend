@@ -2,17 +2,17 @@ import API from "@/lib/axios-client";
 
 export const workflowApiService = {
   getWorkflows: async () => {
-    const response = await API.get("/workflows");
+    const response = await API.get("/pm-workflows");
     return response.data;
   },
 
   getWorkflowById: async (workflowId: string) => {
-    const response = await API.get(`/workflows/${workflowId}`);
+    const response = await API.get(`/pm-workflows/${workflowId}`);
     return response.data;
   },
 
   createWorkflow: async (data: Record<string, unknown>) => {
-    const response = await API.post("/workflows", data);
+    const response = await API.post("/pm-workflows", data);
     return response.data;
   },
 
@@ -23,17 +23,17 @@ export const workflowApiService = {
     workflowId: string;
     data: Record<string, unknown>;
   }) => {
-    const response = await API.put(`/workflows/${workflowId}`, data);
+    const response = await API.put(`/pm-workflows/${workflowId}`, data);
     return response.data;
   },
 
   deleteWorkflow: async (workflowId: string) => {
-    const response = await API.delete(`/workflows/${workflowId}`);
+    const response = await API.delete(`/pm-workflows/${workflowId}`);
     return response.data;
   },
 
   getStates: async (workflowId: string) => {
-    const response = await API.get(`/workflows/${workflowId}/states`);
+    const response = await API.get(`/pm-workflows/${workflowId}/states`);
     return response.data;
   },
 
@@ -44,7 +44,7 @@ export const workflowApiService = {
     workflowId: string;
     data: Record<string, unknown>;
   }) => {
-    const response = await API.post(`/workflows/${workflowId}/states`, data);
+    const response = await API.post(`/pm-workflows/${workflowId}/states`, data);
     return response.data;
   },
 
@@ -55,12 +55,12 @@ export const workflowApiService = {
     workflowId: string;
     stateId: string;
   }) => {
-    const response = await API.delete(`/workflows/${workflowId}/states/${stateId}`);
+    const response = await API.delete(`/pm-workflows/${workflowId}/states/${stateId}`);
     return response.data;
   },
 
   getTransitions: async (workflowId: string) => {
-    const response = await API.get(`/workflows/${workflowId}/transitions`);
+    const response = await API.get(`/pm-workflows/${workflowId}/transitions`);
     return response.data;
   },
 
@@ -71,7 +71,7 @@ export const workflowApiService = {
     workflowId: string;
     data: Record<string, unknown>;
   }) => {
-    const response = await API.post(`/workflows/${workflowId}/transitions`, data);
+    const response = await API.post(`/pm-workflows/${workflowId}/transitions`, data);
     return response.data;
   },
 
@@ -83,7 +83,7 @@ export const workflowApiService = {
     transitionId: string;
   }) => {
     const response = await API.delete(
-      `/workflows/${workflowId}/transitions/${transitionId}`
+      `/pm-workflows/${workflowId}/transitions/${transitionId}`
     );
     return response.data;
   },

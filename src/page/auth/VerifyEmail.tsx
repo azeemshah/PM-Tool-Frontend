@@ -24,7 +24,7 @@ const VerifyEmail = () => {
 
     const verifyEmail = async () => {
       try {
-        await API.get(`/auth/verify-email?token=${token}`);
+        await API.get(`/pm-auth/verify-email?token=${token}`);
         setStatus("success");
         setMessage("Email verified successfully! You can now log in.");
       } catch (error: any) {

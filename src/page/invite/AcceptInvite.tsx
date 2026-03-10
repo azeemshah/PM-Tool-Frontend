@@ -22,7 +22,7 @@ const AcceptInvite = () => {
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: async (inviteToken: string) => {
-      const response = await API.post(`/members/invite/accept`, {
+      const response = await API.post(`/pm-members/invite/accept`, {
         token: inviteToken,
       });
       return response.data;

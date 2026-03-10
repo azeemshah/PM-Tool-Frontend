@@ -18,7 +18,7 @@ export function TagInputIntegrationExample1() {
   const handleCreateWorkItem = async (formData: any) => {
     try {
       // Your API call with tags included
-      const response = await fetch('/kanban/items', {
+      const response = await fetch('/pm-kanban/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -86,7 +86,7 @@ export function CreateWorkItemFormWithTags({
     e.preventDefault();
 
     try {
-      const response = await fetch('/kanban/items', {
+      const response = await fetch('/pm-kanban/items', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -279,7 +279,7 @@ export function AdvancedCreateWorkItemWithTags({
       // Log tag data for debugging
       console.log('Creating work item with tags:', formData.tags);
 
-      const response = await fetch('/kanban/items', {
+      const response = await fetch('/pm-kanban/items', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

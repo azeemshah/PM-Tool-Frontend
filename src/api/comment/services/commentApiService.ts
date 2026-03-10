@@ -1,7 +1,7 @@
 import API from '@/lib/axios-client';
 import { Comment, CreateCommentDto, UpdateCommentDto } from '../types';
 
-const COMMENTS_ENDPOINT = '/kanban/comments';
+const COMMENTS_ENDPOINT = '/pm-kanban/comments';
 
 export const commentApiService = {
   // Create a new comment
@@ -31,7 +31,7 @@ export const commentApiService = {
   uploadAttachment: async (workItemId: string, file: File): Promise<{ success: boolean; url: string; fileName: string }> => {
     const formData = new FormData();
     formData.append('file', file);
-    const response = await API.post(`/kanban/files/upload/${workItemId}`, formData, {
+    const response = await API.post(`/pm-kanban/files/upload/${workItemId}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },

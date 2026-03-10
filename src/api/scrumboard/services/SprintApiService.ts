@@ -1,7 +1,7 @@
 import API from '@/lib/axios-client';
 import { Sprint, CreateSprintDto } from '../types';
 
-const SPRINT_ENDPOINT = '/sprints';
+const SPRINT_ENDPOINT = '/pm-sprints';
 
 export const SprintApiService = {
   // Get all sprints for workspace

@@ -23,7 +23,7 @@ const OtpVerification = () => {
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: { email: string; otp: string }) => {
-      const response = await API.post("/auth/verify-otp", data);
+      const response = await API.post("/pm-auth/verify-otp", data);
       return response.data;
     },
     onSuccess: (data) => {

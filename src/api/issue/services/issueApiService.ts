@@ -24,7 +24,7 @@ import type {
 	Improvement
 } from '../types';
 
-const ISSUES_ENDPOINT = '/issues';
+const ISSUES_ENDPOINT = '/pm-issues';
 
 export type GetTasksByWorkspaceParams = {
 	page?: number;
@@ -55,17 +55,17 @@ export const issueApiService = {
 	 * POST /issues/epic
 	 */
 	async createEpic(data: CreateItemDto): Promise<Epic> {
-		const response = await API.post(`/items/create`, data);
+		const response = await API.post(`/pm-items/create`, data);
 		return response.data.data || response.data;
 	},
 
 	async createItem(data: CreateItemDto): Promise<TaskType> {
-		const response = await API.post(`/items/create`, data);
+		const response = await API.post(`/pm-items/create`, data);
 		return response.data.data || response.data;
 	},
 
 	async updateItem(itemId: string, data: UpdateIssueDTO): Promise<any> {
-		const response = await API.patch(`/items/${itemId}`, data);
+		const response = await API.patch(`/pm-items/${itemId}`, data);
 		return response.data.data || response.data;
 	},
 
@@ -86,7 +86,7 @@ export const issueApiService = {
 	},
 
 	async getEpicsByWorkspace(workspaceId: string): Promise<Epic[]> {
-		const resp = await API.get(`items/workspace/${workspaceId}`);
+		const resp = await API.get(`pm-items/workspace/${workspaceId}`);
 		const items = resp.data?.data || resp.data || [];
 
 		return (items as any[])
@@ -235,7 +235,7 @@ export const issueApiService = {
 			totalPages: number;
 		};
 	}> {
-		const resp = await API.get(`items/workspace/${workspaceId}`, {
+		const resp = await API.get(`pm-items/workspace/${workspaceId}`, {
 			params,
 		});
 
@@ -244,7 +244,7 @@ export const issueApiService = {
 
 
 	async moveItemToColumn(itemId: string, columnId: string): Promise<any> {
-		const response = await API.patch(`/items/${itemId}/move/column/${columnId}`);
+		const response = await API.patch(`/pm-items/${itemId}/move/column/${columnId}`);
 		return response.data.data || response.data;
 	},
 
@@ -343,7 +343,7 @@ export const issueApiService = {
 	 */
 	async getIssue(issueId: string): Promise<Issue> {
 		// Use /items endpoint which matches WorkItemController
-		const response = await API.get(`/items/${issueId}`);
+		const response = await API.get(`/pm-items/${issueId}`);
 		return response.data.data || response.data;
 	},
 
@@ -368,7 +368,7 @@ export const issueApiService = {
 		// Backend expects 'assignedTo' and 'parent' directly, no mapping needed.
 		// And use /items endpoint which matches ItemController
 
-		const response = await API.patch(`/items/${issueId}`, payload);
+		const response = await API.patch(`/pm-items/${issueId}`, payload);
 		return response.data.data || response.data;
 	},
 
@@ -377,7 +377,7 @@ export const issueApiService = {
 	 * POST /items/:id/log-work
 	 */
 	async logWork(itemId: string, data: { timeSpent: number; comment?: string; adjustRemaining?: boolean }) {
-		const response = await API.post(`/items/${itemId}/log-work`, data);
+		const response = await API.post(`/pm-items/${itemId}/log-work`, data);
 		return response.data.data || response.data;
 	},
 
@@ -386,7 +386,7 @@ export const issueApiService = {
 	 * POST /items/:id/estimate
 	 */
 	async setEstimate(itemId: string, data: { originalEstimate: number }) {
-		const response = await API.post(`/items/${itemId}/estimate`, data);
+		const response = await API.post(`/pm-items/${itemId}/estimate`, data);
 		return response.data.data || response.data;
 	},
 
@@ -395,7 +395,7 @@ export const issueApiService = {
 	 * GET /items/:id/time-tracking
 	 */
 	async getTimeTracking(itemId: string) {
-		const response = await API.get(`/items/${itemId}/time-tracking`);
+		const response = await API.get(`/pm-items/${itemId}/time-tracking`);
 		return response.data.data || response.data;
 	},
 
@@ -404,7 +404,7 @@ export const issueApiService = {
 	 * DELETE /items/delete/:id
 	 */
 	async deleteIssue(issueId: string): Promise<void> {
-		await API.delete(`/items/delete/${issueId}`);
+		await API.delete(`/pm-items/delete/${issueId}`);
 	},
 
 	/**
@@ -438,7 +438,7 @@ export const issueApiService = {
 	 * POST /time-logs/start
 	 */
 	async startTimer(issueId: string) {
-		const response = await API.post('/time-logs/start', { issueId });
+		const response = await API.post('/pm-time-logs/start', { issueId });
 		return response.data.data || response.data;
 	},
 
@@ -447,7 +447,7 @@ export const issueApiService = {
 	 * POST /time-logs/stop
 	 */
 	async stopTimer(issueId: string, comment?: string) {
-		const response = await API.post('/time-logs/stop', { issueId, comment });
+		const response = await API.post('/pm-time-logs/stop', { issueId, comment });
 		return response.data.data || response.data;
 	},
 
@@ -456,7 +456,7 @@ export const issueApiService = {
 	 * GET /time-logs/active/:userId
 	 */
 	async getActiveTimer(userId: string) {
-		const response = await API.get(`/time-logs/active/${userId}`);
+		const response = await API.get(`/pm-time-logs/active/${userId}`);
 		return response.data.data || response.data;
 	},
 
@@ -465,7 +465,7 @@ export const issueApiService = {
 	 * GET /time-logs/issue/:issueId
 	 */
 	async getIssueLogs(issueId: string) {
-		const response = await API.get(`/time-logs/issue/${issueId}`);
+		const response = await API.get(`/pm-time-logs/issue/${issueId}`);
 		return response.data.data || response.data;
 	},
 
@@ -474,7 +474,7 @@ export const issueApiService = {
 	 * GET /time-logs/user/:userId
 	 */
 	async getUserLogs(userId: string) {
-		const response = await API.get(`/time-logs/user/${userId}`);
+		const response = await API.get(`/pm-time-logs/user/${userId}`);
 		return response.data.data || response.data;
 	},
 
@@ -483,7 +483,7 @@ export const issueApiService = {
 	 * GET /time-logs/timesheet?userId=&from=&to=
 	 */
 	async getTimesheet(userId: string, fromDate: string, toDate: string) {
-		const response = await API.get('/time-logs/timesheet', {
+		const response = await API.get('/pm-time-logs/timesheet', {
 			params: { userId, from: fromDate, to: toDate },
 		});
 		return response.data.data || response.data;
@@ -494,7 +494,7 @@ export const issueApiService = {
 	 * PUT /time-logs/:id
 	 */
 	async updateTimeLog(logId: string, data: { timeSpent?: number; comment?: string; logDate?: string }) {
-		const response = await API.put(`/time-logs/${logId}`, data);
+		const response = await API.put(`/pm-time-logs/${logId}`, data);
 		return response.data.data || response.data;
 	},
 
@@ -503,7 +503,7 @@ export const issueApiService = {
 	 * DELETE /time-logs/:id
 	 */
 	async deleteTimeLog(logId: string) {
-		const response = await API.delete(`/time-logs/${logId}`);
+		const response = await API.delete(`/pm-time-logs/${logId}`);
 		return response.data.data || response.data;
 	},
 };

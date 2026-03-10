@@ -16,7 +16,7 @@ import type {
 
 } from '../types';
 
-const MEMBER_ENDPOINT = '/members';
+const MEMBER_ENDPOINT = '/pm-members';
 
 export const memberApiService = {
   /**

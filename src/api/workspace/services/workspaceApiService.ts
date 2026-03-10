@@ -13,7 +13,7 @@ export const workspaceApiService = {
   createWorkspace: async (
     data: CreateWorkspaceType
   ): Promise<CreateWorkspaceResponseType> => {
-    const response = await API.post("/workspace/create/new", data);
+    const response = await API.post("/pm-workspace/create/new", data);
     return response.data;
   },
 
@@ -21,19 +21,19 @@ export const workspaceApiService = {
     workspaceId,
     data,
   }: EditWorkspaceType) => {
-    const response = await API.patch(`/workspace/${workspaceId}`, data);
+    const response = await API.patch(`/pm-workspace/${workspaceId}`, data);
     return response.data;
   },
 
   getAllWorkspacesUserIsMember: async (): Promise<AllWorkspaceResponseType> => {
-    const response = await API.get("/workspace/all");
+    const response = await API.get("/pm-workspace/all");
     return response.data;
   },
 
   getWorkspaceById: async (
     workspaceId: string
   ): Promise<WorkspaceByIdResponseType> => {
-    const response = await API.get(`/workspace/${workspaceId}`);
+    const response = await API.get(`/pm-workspace/${workspaceId}`);
     return response.data;
   },
 
@@ -42,7 +42,7 @@ export const workspaceApiService = {
   ): Promise<AllMembersInWorkspaceResponseType> => {
     try {
       // Try new NestJS endpoint first
-      const response = await API.get(`/members/workspace/${workspaceId}`);
+      const response = await API.get(`/pm-members/workspace/${workspaceId}`);
       const data = response.data.data;
 
       const members = Array.isArray(data) ? data : (data?.members || []);
@@ -60,7 +60,7 @@ export const workspaceApiService = {
       // Fallback to old endpoint
       if ((err as any)?.response?.status === 404) {
         try {
-          const response = await API.get(`/workspace/members/${workspaceId}`);
+          const response = await API.get(`/pm-workspace/members/${workspaceId}`);
           const members = response.data.members || response.data.data || [];
           return {
             message: response.data.message || "Members retrieved",
@@ -79,7 +79,7 @@ export const workspaceApiService = {
   changeMemberRole: async ({
     data,
   }: ChangeWorkspaceMemberRoleType) => {
-    const response = await API.put(`/members/${data.memberId}`, {
+    const response = await API.put(`/pm-members/${data.memberId}`, {
       roleId: data.roleId,
     });
     return response.data;
@@ -91,7 +91,7 @@ export const workspaceApiService = {
     message: string;
     currentWorkspace: string;
   }> => {
-    const response = await API.delete(`/workspace/${workspaceId}`);
+    const response = await API.delete(`/pm-workspace/${workspaceId}`);
     return response.data;
   },
 
@@ -101,7 +101,7 @@ export const workspaceApiService = {
     message: string;
     workspaceId: string;
   }> => {
-    const response = await API.post(`/members/join/${inviteCode}`);
+    const response = await API.post(`/pm-members/join/${inviteCode}`);
     const responseData = response.data;
 
     if (responseData.data?.workspaceId) {

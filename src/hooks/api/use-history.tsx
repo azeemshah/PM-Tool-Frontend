@@ -52,7 +52,7 @@ export function useGetHistory(params: HistoryParams) {
   return useQuery({
     queryKey: ['history', params],
     queryFn: async () => {
-      const { data } = await API.get<HistoryResponse>('/api/history', { params });
+      const { data } = await API.get<HistoryResponse>('/pm-history', { params });
       return data;
     },
     keepPreviousData: true,

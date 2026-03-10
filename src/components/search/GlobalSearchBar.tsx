@@ -70,7 +70,7 @@ export const GlobalSearchBar: React.FC<GlobalSearchBarProps> = ({
       try {
         console.log('Fetching global search for:', debouncedSearchTerm);
         const response = await API.get(
-          `/items/search/global/${encodeURIComponent(debouncedSearchTerm)}`
+          `/pm-items/search/global/${encodeURIComponent(debouncedSearchTerm)}`
         );
         console.log('Search response:', response.data);
         const results = response.data?.data || [];

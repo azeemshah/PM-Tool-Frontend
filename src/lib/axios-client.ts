@@ -77,15 +77,15 @@ if (!baseURL) {
 
   API = {
     get: async (url: string) => {
-      if (url.includes("/workspace/all")) {
+      if (url.includes("/pm-workspace/all")) {
         return { data: { message: "local", workspaces: [sampleWorkspace] } };
       }
 
-      if (url.includes("/workspace/members")) {
+      if (url.includes("/pm-workspace/members")) {
         return { data: { message: "local", members: sampleMembers, roles: sampleRoles } };
       }
 
-      if (url.includes("/workspace/analytics")) {
+      if (url.includes("/pm-workspace/analytics")) {
         return {
           data: {
             message: "local",
@@ -98,7 +98,7 @@ if (!baseURL) {
         return { data: { message: "local", tasks: sampleTasks, pagination: emptyPagination } };
       }
 
-      if (url.includes("/user/current")) {
+      if (url.includes("/pm-user/current")) {
         // Check if user is authenticated by looking at localStorage
         const isAuthenticated = localStorage.getItem("mockAuthToken") === "true";
         if (!isAuthenticated) {
@@ -107,17 +107,17 @@ if (!baseURL) {
         return { data: { message: "local", user: sampleUser } };
       }
 
-      if (url.match(/\/workspace\/[a-zA-Z0-9\-]+$/)) {
+      if (url.match(/\/pm-workspace\/[a-zA-Z0-9\-]+$/)) {
         return { data: { message: "local", workspace: { ...sampleWorkspace, members: sampleMembers } } };
       }
 
       // Kanban boards endpoints (GET)
-      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+      if (url.includes("/pm-kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
         return { data: sampleBoards };
       }
 
-      if (url.match(/\/kanban\/boards\/[a-zA-Z0-9]+$/)) {
-        const match = url.match(/\/kanban\/boards\/([a-zA-Z0-9]+)$/);
+      if (url.match(/\/pm-kanban\/boards\/[a-zA-Z0-9]+$/)) {
+        const match = url.match(/\/pm-kanban\/boards\/([a-zA-Z0-9]+)$/);
         const boardId = match ? match[1] : null;
         const board = sampleBoards.find((b) => b._id === boardId);
         if (board) {
@@ -130,34 +130,34 @@ if (!baseURL) {
       return { data: {} };
     },
     post: async (url: string, _data?: any) => {
-      if (url.includes("/auth/login")) {
+      if (url.includes("/pm-auth/login")) {
         // Store auth state when user logs in
         localStorage.setItem("mockAuthToken", "true");
         return { data: { message: "logged in (local)", user: sampleUser } };
       }
-      if (url.includes("/auth/register")) {
+      if (url.includes("/pm-auth/register")) {
         // Store auth state when user registers
         localStorage.setItem("mockAuthToken", "true");
         return { data: { message: "registered (local)", user: sampleUser } };
       }
-      if (url.includes("/auth/logout")) {
+      if (url.includes("/pm-auth/logout")) {
         // Clear auth state when user logs out
         localStorage.removeItem("mockAuthToken");
         return { data: { message: "logged out (local)" } };
       }
-      if (url.includes("/workspace/create/new")) {
+      if (url.includes("/pm-workspace/create/new")) {
         return { data: { message: "created (local)", workspace: sampleWorkspace } };
       }
-      if (url.includes("/member/workspace") && url.includes("/join")) {
+      if (url.includes("/pm-member/workspace") && url.includes("/join")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
       // also support new endpoint path used by backend
-      if (url.includes("/members/join/")) {
+      if (url.includes("/pm-members/join/")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
 
       // Email invite acceptance
-      if (url.includes("/members/invite/accept")) {
+      if (url.includes("/pm-members/invite/accept")) {
         console.log("[Mock] Accept invitation called");
         localStorage.setItem("mockAuthToken", "true");
         return { 
@@ -174,7 +174,7 @@ if (!baseURL) {
       }
 
       // Kanban: Create board (POST)
-      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+      if (url.includes("/pm-kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
         const newBoard = {
           _id: `board-${boardIdCounter++}`,
           name: _data?.name || "New Board",
@@ -249,7 +249,7 @@ if (!baseURL) {
       if (status === 401 && !originalRequest?._retry) {
         originalRequest._retry = true;
         try {
-          const refreshResp = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+          const refreshResp = await axios.post(`${baseURL}/pm-auth/refresh`, {}, { withCredentials: true });
           const accessToken = refreshResp?.data?.accessToken;
           if (accessToken) {
             localStorage.setItem('accessToken', accessToken);

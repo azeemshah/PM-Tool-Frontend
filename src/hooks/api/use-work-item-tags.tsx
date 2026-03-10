@@ -22,7 +22,7 @@ export const useWorkItemTags = ({
   const assignTagsMutation = useMutation({
     mutationFn: async (tagIds: string[]) => {
       const response = await axios.put(
-        `${API_BASE_URL}/kanban/work-items/${workItemId}`,
+        `${API_BASE_URL}/pm-kanban/work-items/${workItemId}`,
         { tags: tagIds },
       );
       return response.data;

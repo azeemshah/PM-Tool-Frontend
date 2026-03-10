@@ -27,8 +27,8 @@ export function useGanttData(
 
       // Fetch workspace items within the current visible window
       const [response, subtasksResponse] = await Promise.all([
-        API.get(`/items/workspace/${workspaceId}`, { params: baseParams }),
-        API.get(`/items/workspace/${workspaceId}`, {
+        API.get(`/pm-items/workspace/${workspaceId}`, { params: baseParams }),
+        API.get(`/pm-items/workspace/${workspaceId}`, {
           params: { ...baseParams, type: 'subtask' },
         }),
       ]);

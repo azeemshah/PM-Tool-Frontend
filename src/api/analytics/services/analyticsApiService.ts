@@ -7,7 +7,7 @@ export const analyticsApiService = {
     timeframe?: string
   ): Promise<AnalyticsResponseType> => {
     try {
-      const response = await API.get(`/workspace/analytics/${workspaceId}`, {
+      const response = await API.get(`/pm-workspace/analytics/${workspaceId}`, {
         params: { timeframe },
       });
       console.log("Workspace analytics response:", response.data);
@@ -37,7 +37,7 @@ export const analyticsApiService = {
     limit?: number
   ): Promise<{ name: string; committed: number; completed: number }[]> => {
     try {
-      const response = await API.get(`/workspace/velocity/${workspaceId}`, {
+      const response = await API.get(`/pm-workspace/velocity/${workspaceId}`, {
         params: { limit },
       });
       console.log("Workspace velocity response:", response.data);
@@ -54,7 +54,7 @@ export const analyticsApiService = {
   ): Promise<{ date: string; [status: string]: string | number }[]> => {
     try {
       const response = await API.get(
-        `/workspace/cfd/${workspaceId}?timeframe=${timeframe}`
+        `/pm-workspace/cfd/${workspaceId}?timeframe=${timeframe}`
       );
       return response.data;
     } catch (err: unknown) {

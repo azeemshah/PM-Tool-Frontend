@@ -112,7 +112,7 @@ export const WorkItemDetailsPage: React.FC = () => {
       if (initialWorkItem) {
         return initialWorkItem;
       }
-      const response = await API.get(`/kanban/items/${workItemId}`);
+      const response = await API.get(`/pm-kanban/items/${workItemId}`);
       return response.data?.data || response.data;
     },
     enabled: !!workItemId,

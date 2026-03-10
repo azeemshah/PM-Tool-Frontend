@@ -20,7 +20,7 @@ import type {
 } from '../types';
 import API from '@/lib/axios-client';
 
-const KANBAN_ENDPOINT = '/kanban';
+const KANBAN_ENDPOINT = '/pm-kanban';
 
 export const KanbanApiService = {
 	// ==================== BOARDS ====================
@@ -103,7 +103,7 @@ export const KanbanApiService = {
 	// ==================== LISTS ====================
 
 	async getKanbanBoardLists(boardId: string): Promise<KanbanList[]> {
-		const response = await API.get(`/column/${boardId}/columns`);
+		const response = await API.get(`/pm-column/${boardId}/columns`);
 		return response.data.data || response.data;
 	},
 
@@ -111,7 +111,7 @@ export const KanbanApiService = {
 		boardId: string,
 		data: CreateListDTO
 	): Promise<KanbanList> {
-		const response = await API.post(`column/create`, data);
+		const response = await API.post(`pm-column/create`, data);
 		return response.data.data || response.data;
 	},
 
@@ -128,7 +128,7 @@ export const KanbanApiService = {
 		boardId: string,
 		listId: string
 	): Promise<void> {
-		await API.delete(`column/columns/${listId}`);
+		await API.delete(`pm-column/columns/${listId}`);
 	},
 
 	// ==================== CARDS ====================
@@ -245,14 +245,14 @@ export const KanbanApiService = {
 		columnId: string,
 		position: number
 	): Promise<void> {
-		await API.patch(`/column/move/${columnId}`, { position });
+		await API.patch(`/pm-column/move/${columnId}`, { position });
 	},
 
 	async reorderColumnsInBoard(
 		boardId: string,
 		columnIds: string[]
 	): Promise<void> {
-		await API.put(`/column/columns/reorder/${boardId}`, { columnIds });
+		await API.put(`/pm-column/columns/reorder/${boardId}`, { columnIds });
 	},
 
 	async reorderCardsInList(

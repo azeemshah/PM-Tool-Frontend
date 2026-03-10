@@ -27,7 +27,7 @@ export const useTags = () => {
     return useQuery({
       queryKey: ["tags", workspaceId],
       queryFn: async () => {
-          const response = await API.get(`/kanban/tags/workspace/${workspaceId}`);
+          const response = await API.get(`/pm-kanban/tags/workspace/${workspaceId}`);
         return response.data;
       },
       enabled: !!workspaceId,
@@ -40,7 +40,7 @@ export const useTags = () => {
     return useQuery({
       queryKey: ["tags-search", workspaceId, searchTerm],
       queryFn: async () => {
-        const response = await API.get(`/kanban/tags/search/${workspaceId}`, {
+        const response = await API.get(`/pm-kanban/tags/search/${workspaceId}`, {
           params: { q: searchTerm, limit },
         });
         return response.data;
@@ -54,7 +54,7 @@ export const useTags = () => {
     return useQuery({
       queryKey: ["tag", tagId],
       queryFn: async () => {
-        const response = await API.get(`/kanban/tags/${tagId}`);
+        const response = await API.get(`/pm-kanban/tags/${tagId}`);
         return response.data;
       },
       enabled: !!tagId,
@@ -66,7 +66,7 @@ export const useTags = () => {
     return useQuery({
       queryKey: ["tags-batch", tagIds],
       queryFn: async () => {
-        const response = await API.post(`/kanban/tags/batch/find`, {
+        const response = await API.post(`/pm-kanban/tags/batch/find`, {
           tagIds,
         });
         return response.data;
@@ -78,7 +78,7 @@ export const useTags = () => {
   // Create tag mutation
   const createTagMutation = useMutation({
     mutationFn: async (payload: CreateTagPayload) => {
-      const response = await API.post(`/kanban/tags`, payload);
+      const response = await API.post(`/pm-kanban/tags`, payload);
       return response.data;
     },
     onSuccess: (data) => {
@@ -94,7 +94,7 @@ export const useTags = () => {
   // Update tag mutation
   const updateTagMutation = useMutation({
     mutationFn: async ({ tagId, payload }: { tagId: string; payload: UpdateTagPayload }) => {
-      const response = await API.put(`/kanban/tags/${tagId}`, payload);
+      const response = await API.put(`/pm-kanban/tags/${tagId}`, payload);
       return response.data;
     },
     onSuccess: (data) => {
@@ -110,7 +110,7 @@ export const useTags = () => {
   // Delete tag mutation
   const deleteTagMutation = useMutation({
     mutationFn: async (tagId: string) => {
-      const response = await API.delete(`/kanban/tags/${tagId}`);
+      const response = await API.delete(`/pm-kanban/tags/${tagId}`);
       return response.data;
     },
     onSuccess: () => {
@@ -128,7 +128,7 @@ export const useTags = () => {
     return useQuery({
       queryKey: ["tag-exists", workspaceId, tagName],
       queryFn: async () => {
-          const response = await API.get(`/kanban/tags/check/${workspaceId}/${tagName}`);
+          const response = await API.get(`/pm-kanban/tags/check/${workspaceId}/${tagName}`);
         return response.data;
       },
       enabled: !!workspaceId && !!tagName,

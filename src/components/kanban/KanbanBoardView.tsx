@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, useMemo } from 'react';
+import { useCallback, useEffect, useRef, useState, useMemo, type WheelEvent as ReactWheelEvent } from 'react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -46,22 +46,16 @@ export function KanbanBoardView() {
     scrollSpeed: 8,
   });
 
-  useEffect(() => {
-    const el = scrollableRef.current;
-    if (!el) return;
+  const handleHorizontalWheel = useCallback((event: ReactWheelEvent<HTMLDivElement>) => {
+    const el = event.currentTarget;
+    if (el.scrollWidth <= el.clientWidth) return;
 
-    const handleWheel = (event: WheelEvent) => {
-      if (event.deltaY === 0) return;
-      if (el.scrollWidth <= el.clientWidth) return;
+    // Convert vertical wheel into horizontal movement for Kanban columns
+    const delta = event.deltaY !== 0 ? event.deltaY : event.deltaX;
+    if (delta === 0) return;
 
-      event.preventDefault();
-      el.scrollLeft += event.deltaY;
-    };
-
-    el.addEventListener('wheel', handleWheel, { passive: false });
-    return () => {
-      el.removeEventListener('wheel', handleWheel);
-    };
+    event.preventDefault();
+    el.scrollLeft += delta;
   }, []);
 
   const { getAllTagsByWorkspace } = useTags();
@@ -510,7 +504,8 @@ export function KanbanBoardView() {
         <div className="flex-1 overflow-hidden">
           <div
             ref={scrollableRef}
-            className="h-full overflow-x-auto scrollbar"
+            className="h-full overflow-x-auto overflow-y-hidden scrollbar"
+            onWheel={handleHorizontalWheel}
           >
             <Droppable
               droppableId="board"

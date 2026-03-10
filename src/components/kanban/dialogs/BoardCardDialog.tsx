@@ -537,7 +537,7 @@ export function BoardCardDialog() {
     queryFn: async () => {
       if (!issueIdStr) return [];
       try {
-        const resp = await API.get(`/kanban/files/work-item/${issueIdStr}`);
+        const resp = await API.get(`/pm-kanban/files/work-item/${issueIdStr}`);
         const data = resp.data?.data || resp.data || [];
         return Array.isArray(data) ? data : [];
       } catch (e) {
@@ -574,7 +574,7 @@ export function BoardCardDialog() {
     queryFn: async () => {
       if (!parentIssueIdStr) return [];
       try {
-        const resp = await API.get(`/kanban/files/work-item/${parentIssueIdStr}`);
+        const resp = await API.get(`/pm-kanban/files/work-item/${parentIssueIdStr}`);
         const data = resp.data?.data || resp.data || [];
         return Array.isArray(data) ? data : [];
       } catch (e) {
