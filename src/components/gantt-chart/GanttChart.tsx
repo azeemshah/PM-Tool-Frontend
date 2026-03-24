@@ -149,7 +149,7 @@ export const GanttChart: React.FC<GanttChartProps> = ({
         <TimelineHeader range={range} viewType={viewType} dateLabels={dateLabels} />
 
         {/* Content Area */}
-        <div className="flex-1 overflow-auto">
+        <div className="flex-1 overflow-auto scrollbar">
           {enrichedNodes.length === 0 ? (
             <div className="flex items-center justify-center h-full">
               <div className="text-center">
