@@ -11,6 +11,7 @@ export interface Member {
     profilePicture?: string | null;
   };
   workspaceId: string;
+  invitedBy?: string | null;
   roleId: {
     _id: string;
     name: string;

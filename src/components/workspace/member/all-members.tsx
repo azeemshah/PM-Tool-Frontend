@@ -23,6 +23,7 @@ import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { workspaceApiService } from "@/api/workspace/services";
+import { memberApiService } from "@/api/member/services/memberApiService";
 import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
@@ -67,6 +68,10 @@ const AllMembers = () => {
     mutationFn: workspaceApiService.changeMemberRole,
   });
 
+  const { mutate: removeMember, isPending: isRemoving } = useMutation({
+    mutationFn: memberApiService.removeMember,
+  });
+
   const handleSelect = (roleId: string, memberId: string) => {
     if (!roleId || !memberId) return;
     const payload = {
@@ -85,6 +90,33 @@ const AllMembers = () => {
         toast({
           title: "Success",
           description: "Member's role changed successfully",
+          variant: "success",
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleRemove = (memberId: string) => {
+    if (!memberId) return;
+
+    const confirmed = window.confirm('Are you sure you want to remove this member from the workspace?');
+    if (!confirmed) return;
+
+    removeMember(memberId, {
+      onSuccess: () => {
+        queryClient.invalidateQueries({
+          queryKey: ["members", workspaceId],
+        });
+        toast({
+          title: "Success",
+          description: "Member removed successfully",
           variant: "success",
         });
       },
@@ -124,6 +156,13 @@ const AllMembers = () => {
           const avatarColor = getAvatarColor(name);
           const email = userObj?.email || "No email";
           const memberId = userObj?._id || (typeof userObj === 'string' ? userObj : "");
+          const roleName = typeof member.role === 'string' ? member.role : member.role?.name;
+          const canRemoveMember =
+            !!user?._id &&
+            !!member.invitedBy &&
+            member.invitedBy === user._id &&
+            memberId !== user._id &&
+            roleName !== 'Owner';
 
           return (
             <div key={member._id} className="flex items-center justify-between space-x-4">
@@ -145,24 +184,34 @@ const AllMembers = () => {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {canRemoveMember && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  className="min-w-20"
+                  disabled={isLoading || isRemoving}
+                  onClick={() => handleRemove(member._id)}
+                >
+                  Remove
+                </Button>
+              )}
               <Popover open={openPopoverId === member._id} onOpenChange={(open) => setOpenPopoverId(open ? member._id : null)}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
                     size="sm"
-                      className="ml-auto min-w-24 disabled:opacity-95 disabled:pointer-events-none"
+                    className="ml-auto min-w-24 disabled:opacity-95 disabled:pointer-events-none"
                     disabled={
                       isLoading ||
                       !canChange ||
                       memberId === user?._id
                     }
                   >
-                          {(() => {
-                            const roleName = typeof member.role === 'string' ? member.role : member.role?.name;
-                            return roleName
-                              ? roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
-                              : 'Member';
-                          })()}{' '}
+                    {(() => {
+                      return roleName
+                        ? roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
+                        : 'Member';
+                    })()}{' '}
                     {canChange && memberId !== user?._id && (
                       <ChevronDown className="text-muted-foreground" />
                     )}

@@ -134,6 +134,7 @@ export type AllMembersInWorkspaceResponseType = {
       name: string;
       permissions?: PermissionType[];
     };
+    invitedBy?: string | null;
     joinedAt: string;
     createdAt: string;
   }[];
