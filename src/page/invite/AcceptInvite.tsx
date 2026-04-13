@@ -1,5 +1,5 @@
 import { Loader } from "lucide-react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -18,7 +18,8 @@ const AcceptInvite = () => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
-  const token = searchParams.get("token");
+  const params = useParams();
+  const token = searchParams.get("token") || params.token;
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: async (inviteToken: string) => {
@@ -57,6 +58,11 @@ const AcceptInvite = () => {
 
         // Handle different response structures
         const accessToken = data?.accessToken || data?.data?.accessToken;
+        const workspaceId =
+          data?.member?.workspaceId ||
+          data?.data?.member?.workspaceId ||
+          data?.workspaceId ||
+          data?.data?.workspaceId;
         
         if (accessToken) {
           console.log("🔐 Access token received, storing...");
@@ -76,9 +82,9 @@ const AcceptInvite = () => {
 
           console.log("🚀 Redirecting to workspace");
 
-          // Wait a moment then redirect to workspace or dashboard
+          // Wait a moment then redirect to the invited workspace when available
           setTimeout(() => {
-            navigate("/workspace");
+            navigate(workspaceId ? `/workspace/${workspaceId}` : "/workspace");
           }, 500);
         } else {
           console.error("❌ No accessToken in response:", data);

@@ -22,6 +22,7 @@ import WorkItemDetailsPage from "@/page/workspace/WorkItemDetailsPage";
 
 export const authenticationRoutePaths = [
   { path: AUTH_ROUTES.SIGN_IN, element: <SignIn /> },
+  { path: AUTH_ROUTES.LOGIN, element: <SignIn /> },
   { path: AUTH_ROUTES.SIGN_UP, element: <SignUp /> },
   { path: AUTH_ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
   { path: AUTH_ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
@@ -48,6 +49,8 @@ export const protectedRoutePaths = [
 export const baseRoutePaths = [
   { path: BASE_ROUTE.INVITE_URL, element: <InviteUser /> },
   { path: "/invite", element: <AcceptInvite /> },
+  { path: "/invite/", element: <AcceptInvite /> },
+  { path: "/invite/:token", element: <AcceptInvite /> },
 ];
 
 

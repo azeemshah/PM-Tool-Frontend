@@ -47,7 +47,7 @@ export const JoinWorkspacePage: React.FC = () => {
             <p className="text-gray-600">
               Already have an account?{' '}
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate('/')}
                 className="text-blue-600 hover:text-blue-700 font-medium"
               >
                 Sign in

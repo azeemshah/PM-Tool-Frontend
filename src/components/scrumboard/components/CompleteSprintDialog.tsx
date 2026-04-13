@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -6,19 +6,19 @@ import {
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
-import { Sprint } from '@/api/scrumboard/types';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { cn } from '@/lib/utils';
+} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Sprint } from "@/api/scrumboard/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { cn } from "@/lib/utils";
 
 interface CompleteSprintDialogProps {
   open: boolean;
@@ -38,14 +38,14 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
   isLoading,
 }) => {
   const [sendToBacklog, setSendToBacklog] = useState(true);
-  const [selectedSprintId, setSelectedSprintId] = useState<string>('');
+  const [selectedSprintId, setSelectedSprintId] = useState<string>("");
 
   const handleConfirm = () => {
     if (sendToBacklog) {
       onConfirm();
     } else {
       if (!selectedSprintId) {
-        alert('Please select a sprint');
+        alert("Please select a sprint");
         return;
       }
       onConfirm(selectedSprintId);
@@ -60,8 +60,8 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
         <DialogHeader>
           <DialogTitle>Complete Sprint: {sprint.name}</DialogTitle>
           <DialogDescription>
-            You have {nonDoneItemsCount} work items that are not in "Done" status.
-            Where would you like to send them?
+            You have {nonDoneItemsCount} work items that are not in "Done"
+            status. Where would you like to send them?
           </DialogDescription>
         </DialogHeader>
 
@@ -72,14 +72,22 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
               "p-4 rounded-lg border-2 cursor-pointer transition-colors",
               sendToBacklog
                 ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
-                : "border-gray-200 dark:border-gray-800"
+                : "border-gray-200 dark:border-gray-800",
             )}
             onClick={() => setSendToBacklog(true)}
           >
             <div className="flex items-start gap-3">
-              <Checkbox checked={sendToBacklog} onCheckedChange={setSendToBacklog} className="mt-1" />
+              <Checkbox
+                checked={sendToBacklog}
+                onCheckedChange={(checked) =>
+                  setSendToBacklog(checked === true)
+                }
+                className="mt-1"
+              />
               <div className="flex-1">
-                <Label className="font-medium cursor-pointer">Send to Backlog</Label>
+                <Label className="font-medium cursor-pointer">
+                  Send to Backlog
+                </Label>
                 <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1">
                   All non-done items will be moved to the backlog
                 </p>
@@ -93,19 +101,29 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
               "p-4 rounded-lg border-2 cursor-pointer transition-colors",
               !sendToBacklog
                 ? "border-blue-500 bg-blue-50 dark:bg-blue-950/40"
-                : "border-gray-200 dark:border-gray-800"
+                : "border-gray-200 dark:border-gray-800",
             )}
             onClick={() => setSendToBacklog(false)}
           >
             <div className="flex items-start gap-3">
-              <Checkbox checked={!sendToBacklog} onCheckedChange={() => setSendToBacklog(false)} className="mt-1" />
+              <Checkbox
+                checked={!sendToBacklog}
+                onCheckedChange={() => setSendToBacklog(false)}
+                className="mt-1"
+              />
               <div className="flex-1">
-                <Label className="font-medium cursor-pointer">Send to Another Sprint</Label>
+                <Label className="font-medium cursor-pointer">
+                  Send to Another Sprint
+                </Label>
                 <p className="text-sm text-gray-500 dark:text-muted-foreground mt-1 mb-3">
-                  Items will maintain their current statuses in the selected sprint
+                  Items will maintain their current statuses in the selected
+                  sprint
                 </p>
                 {!sendToBacklog && (
-                  <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                  <Select
+                    value={selectedSprintId}
+                    onValueChange={setSelectedSprintId}
+                  >
                     <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a sprint..." />
                     </SelectTrigger>
@@ -133,8 +151,11 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
           <Button variant="outline" onClick={onClose} disabled={isLoading}>
             Cancel
           </Button>
-          <Button onClick={handleConfirm} disabled={isLoading || (!sendToBacklog && !selectedSprintId)}>
-            {isLoading ? 'Completing...' : 'Complete Sprint'}
+          <Button
+            onClick={handleConfirm}
+            disabled={isLoading || (!sendToBacklog && !selectedSprintId)}
+          >
+            {isLoading ? "Completing..." : "Complete Sprint"}
           </Button>
         </DialogFooter>
       </DialogContent>

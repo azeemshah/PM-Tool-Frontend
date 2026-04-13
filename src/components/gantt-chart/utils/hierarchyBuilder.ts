@@ -1,4 +1,4 @@
-import type { GanttItem, GanttTreeNode } from '../types/gantt';
+import type { GanttItem, GanttTreeNode } from "../types/gantt";
 
 /**
  * Build tree structure from flat array of items
@@ -18,7 +18,7 @@ export function buildHierarchyTree(items: GanttItem[]): GanttTreeNode[] {
       item,
       children: [],
       level: 0,
-      isExpanded: item.type === 'epic',
+      isExpanded: item.type === "epic",
       barStart: 0,
       barWidth: 0,
       progressPercent: 0,
@@ -32,9 +32,12 @@ export function buildHierarchyTree(items: GanttItem[]): GanttTreeNode[] {
 
     if (item.parent) {
       // Handle both string ID and populated object
-      const parentId = typeof item.parent === 'object' && '_id' in item.parent 
-        ? (item.parent as any)._id 
-        : item.parent;
+      const parentId =
+        typeof item.parent === "object" &&
+        item.parent !== null &&
+        "_id" in item.parent
+          ? (item.parent as any)._id
+          : item.parent;
 
       const parentNode = nodeMap.get(parentId);
       if (parentNode) {
@@ -75,7 +78,7 @@ export function getVisibleNodes(nodes: GanttTreeNode[]): GanttTreeNode[] {
  */
 export function findNodeById(
   nodes: GanttTreeNode[],
-  id: string
+  id: string,
 ): GanttTreeNode | null {
   for (const node of nodes) {
     if (node.item._id === id) return node;
@@ -90,7 +93,7 @@ export function findNodeById(
  */
 export function toggleNodeExpansion(
   nodes: GanttTreeNode[],
-  id: string
+  id: string,
 ): GanttTreeNode[] {
   const node = findNodeById(nodes, id);
   if (node) {
