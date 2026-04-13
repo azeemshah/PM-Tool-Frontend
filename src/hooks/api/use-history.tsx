@@ -1,18 +1,25 @@
-import { useQuery } from '@tanstack/react-query';
-import API from '@/lib/axios-client';
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import API from "@/lib/axios-client";
 
-export type ActivityType = 'create' | 'edit' | 'move' | 'status_change' | 'time_logged' | 'comment' | 'delete';
+export type ActivityType =
+  | "create"
+  | "edit"
+  | "move"
+  | "status_change"
+  | "time_logged"
+  | "comment"
+  | "delete";
 
 export interface HistoryParams {
   userId?: string;
   projectId?: string;
   taskId?: string;
-  type?: ActivityType | 'all';
+  type?: ActivityType | "all";
   from?: string;
   to?: string;
   page?: number;
   limit?: number;
-  sortOrder?: 'asc' | 'desc';
+  sortOrder?: "asc" | "desc";
 }
 
 export interface Activity {
@@ -50,11 +57,11 @@ export interface HistoryResponse {
 
 export function useGetHistory(params: HistoryParams) {
   return useQuery({
-    queryKey: ['history', params],
+    queryKey: ["history", params],
     queryFn: async () => {
-      const { data } = await API.get<HistoryResponse>('/pm-history', { params });
+      const { data } = await API.get("/pm-history", { params });
       return data;
     },
-    keepPreviousData: true,
+    placeholderData: keepPreviousData,
   });
 }

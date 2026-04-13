@@ -1,4 +1,4 @@
-import { ItemType, ItemStatus, ItemPriority } from '@/api/issue/types';
+import { ItemType, ItemStatus, ItemPriority } from "@/api/issue/types";
 
 /**
  * Gantt Chart Data Types
@@ -21,7 +21,7 @@ export interface GanttItem {
   timeSpent?: number;
   remainingEstimate?: number;
   storyPoints?: number;
-  parent?: string;
+  parent?: string | { _id: string } | null;
   workspace: string;
   path: string;
   createdAt: string;
@@ -38,7 +38,7 @@ export interface GanttTreeNode {
   progressPercent: number;
 }
 
-export type ViewType = 'week' | 'month';
+export type ViewType = "week" | "month";
 
 export interface GanttFilters {
   statuses?: ItemStatus[];
