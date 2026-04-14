@@ -78,6 +78,7 @@ const AcceptInvite = () => {
           toast({
             title: "Success",
             description: "Invitation accepted! Redirecting...",
+            variant: "success",
           });
 
           console.log("🚀 Redirecting to workspace");
