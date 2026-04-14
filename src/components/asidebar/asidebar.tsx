@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { EllipsisIcon, Loader, LogOut, Camera } from "lucide-react";
 import { authApiService } from "@/api/auth/services";
 import { useToast } from "@/hooks/use-toast";
-import { baseURL } from "@/lib/base-url";
+import { getProfileImageUrl } from "@/lib/helper";
 import {
   Sidebar,
   SidebarHeader,
@@ -56,13 +56,6 @@ const Asidebar = () => {
   const workspaceId = useWorkspaceId();
 
   const [isOpen, setIsOpen] = useState(false);
-
-  const getProfileImageUrl = (path: string | null | undefined) => {
-    if (!path) return "";
-    if (path.startsWith("http")) return path;
-    const host = baseURL.replace("/api/v1", "");
-    return `${host}${path}`;
-  };
 
   return (
     <>

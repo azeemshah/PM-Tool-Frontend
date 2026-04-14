@@ -5,8 +5,11 @@ import { baseURL } from './base-url';
 export const getProfileImageUrl = (path: string | null | undefined) => {
   if (!path) return "";
   if (path.startsWith("http")) return path;
+  const normalizedPath = path
+    .replace("/api/v1/user/profile-picture-file/", "/api/v1/pm-user/profile-picture-file/")
+    .replace("/user/profile-picture-file/", "/pm-user/profile-picture-file/");
   const host = baseURL.replace("/api/v1", "");
-  const cleanPath = path.startsWith("/") ? path : `/${path}`;
+  const cleanPath = normalizedPath.startsWith("/") ? normalizedPath : `/${normalizedPath}`;
   return `${host}${cleanPath}`;
 };
 
