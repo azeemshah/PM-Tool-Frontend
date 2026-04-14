@@ -22,6 +22,11 @@ export type registerType = {
   password: string;
 };
 
+export type UpdateProfileType = {
+  name: string;
+  email: string;
+};
+
 // USER TYPE
 export type UserType = {
   _id: string;

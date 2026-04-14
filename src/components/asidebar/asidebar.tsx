@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { Link } from "react-router-dom";
-import { EllipsisIcon, Loader, LogOut, Camera } from "lucide-react";
+import { EllipsisIcon, Loader, LogOut, Camera, Pencil, KeyRound } from "lucide-react";
 import { authApiService } from "@/api/auth/services";
 import { useToast } from "@/hooks/use-toast";
 import { getProfileImageUrl } from "@/lib/helper";
@@ -28,6 +28,8 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import Logo from "@/components/logo";
 import LogoutDialog from "./logout-dialog";
+import EditProfileDialog from "./edit-profile-dialog";
+import ChangePasswordDialog from "./change-password-dialog.tsx";
 import { WorkspaceSwitcher } from "./workspace-switcher";
 import { NavMain } from "./nav-main";
 import { Separator } from "../ui/separator";
@@ -56,6 +58,8 @@ const Asidebar = () => {
   const workspaceId = useWorkspaceId();
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditProfileOpen, setIsEditProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
 
   return (
     <>
@@ -98,7 +102,7 @@ const Asidebar = () => {
                   className="place-self-center self-center animate-spin"
                 />
               ) : (
-                <DropdownMenu>
+                <DropdownMenu modal={false}>
                   <DropdownMenuTrigger asChild>
                     <SidebarMenuButton
                       size="lg"
@@ -139,7 +143,16 @@ const Asidebar = () => {
                     align="start"
                     sideOffset={4}
                   >
-                    <DropdownMenuGroup></DropdownMenuGroup>
+                    <DropdownMenuGroup>
+                      <DropdownMenuItem onClick={() => setIsEditProfileOpen(true)}>
+                        <Pencil />
+                        Edit profile
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => setIsChangePasswordOpen(true)}>
+                        <KeyRound />
+                        Change password
+                      </DropdownMenuItem>
+                    </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => setIsOpen(true)}>
                       <LogOut />
@@ -155,6 +168,14 @@ const Asidebar = () => {
       </Sidebar>
 
       <LogoutDialog isOpen={isOpen} setIsOpen={setIsOpen} />
+      <EditProfileDialog
+        isOpen={isEditProfileOpen}
+        setIsOpen={setIsEditProfileOpen}
+      />
+      <ChangePasswordDialog
+        isOpen={isChangePasswordOpen}
+        setIsOpen={setIsChangePasswordOpen}
+      />
     </>
   );
 };

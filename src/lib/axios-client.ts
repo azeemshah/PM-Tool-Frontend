@@ -191,6 +191,15 @@ if (!baseURL) {
       // Default fallback for POST
       return { data: { message: "ok (local)" } };
     },
+    patch: async (url: string, data?: any) => {
+      if (url.includes("/pm-user/profile")) {
+        sampleUser.name = data?.name || sampleUser.name;
+        sampleUser.email = data?.email || sampleUser.email;
+        return { data: { message: "updated (local)", user: sampleUser } };
+      }
+
+      return { data: { message: "updated (local)" } };
+    },
     put: async (_url: string, _data?: any) => {
       return { data: { message: "updated (local)" } };
     },
@@ -227,6 +236,15 @@ if (!baseURL) {
     },
     async (error: any) => {
       const { data, status } = error.response || {};
+      const originalRequest = error.config;
+      const requestUrl = String(originalRequest?.url || "");
+      const isPublicAuthRequest =
+        requestUrl.includes("/pm-auth/login") ||
+        requestUrl.includes("/pm-auth/register") ||
+        requestUrl.includes("/pm-auth/forgot-password") ||
+        requestUrl.includes("/pm-auth/reset-password") ||
+        requestUrl.includes("/pm-auth/verify-login-otp") ||
+        requestUrl.includes("/pm-auth/verify-email");
 
       // Handle 403 Forbidden - Insufficient permissions
       if (status === 403) {
@@ -244,8 +262,23 @@ if (!baseURL) {
         return Promise.reject(customError);
       }
 
+      // For public auth flows, surface backend error and do not redirect.
+      if (status === 401 && isPublicAuthRequest) {
+        const customError: CustomError = {
+          ...error,
+          errorCode: data?.errorCode || "UNAUTHORIZED",
+          response: {
+            ...error.response,
+            data: {
+              ...data,
+              message: data?.message || "Invalid credentials",
+            },
+          },
+        };
+        return Promise.reject(customError);
+      }
+
       // Attempt to refresh access token on 401 responses and retry once
-      const originalRequest = error.config;
       if (status === 401 && !originalRequest?._retry) {
         originalRequest._retry = true;
         try {

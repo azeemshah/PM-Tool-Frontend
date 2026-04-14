@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { authApiService } from '../services';
-import { loginType, registerType, LoginResponseType, CurrentUserResponseType } from '@/types/api.type';
+import { loginType, registerType, UpdateProfileType } from '@/types/api.type';
 
 export const useLogin = () => {
   return useMutation({
@@ -52,5 +52,11 @@ export const useGetCurrentUser = (enabled = true) => {
 export const useUploadProfilePicture = () => {
   return useMutation({
     mutationFn: (file: File) => authApiService.uploadProfilePicture(file),
+  });
+};
+
+export const useUpdateProfile = () => {
+  return useMutation({
+    mutationFn: (data: UpdateProfileType) => authApiService.updateProfile(data),
   });
 };

@@ -4,6 +4,7 @@ import {
   registerType,
   LoginResponseType,
   CurrentUserResponseType,
+  UpdateProfileType,
 } from "@/types/api.type";
 
 export const authApiService = {
@@ -52,6 +53,13 @@ export const authApiService = {
 
   getCurrentUser: async (): Promise<CurrentUserResponseType> => {
     const response = await API.get("/pm-user/current");
+    return response.data;
+  },
+
+  updateProfile: async (
+    data: UpdateProfileType,
+  ): Promise<CurrentUserResponseType> => {
+    const response = await API.patch("/pm-user/profile", data);
     return response.data;
   },
 
