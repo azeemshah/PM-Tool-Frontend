@@ -44,6 +44,9 @@ interface DataTableProps<TData, TValue> {
   pagination?: PaginationProps;
   onPageChange?: (page: number) => void;
   onPageSizeChange?: (size: number) => void;
+  onRowClick?: (row: TData) => void;
+  onRowSelectionChange?: (selectedRows: TData[]) => void;
+  resetRowSelection?: boolean;
 }
 
 export function DataTable<TData, TValue>({
@@ -54,6 +57,9 @@ export function DataTable<TData, TValue>({
   pagination,
   onPageChange,
   onPageSizeChange,
+  onRowClick,
+  onRowSelectionChange,
+  resetRowSelection,
 }: DataTableProps<TData, TValue>) {
   const { totalCount = 0, pageNumber = 1, pageSize = 10 } = pagination || {};
 
@@ -83,8 +89,24 @@ export function DataTable<TData, TValue>({
     getSortedRowModel: getSortedRowModel(),
     getFilteredRowModel: getFilteredRowModel(),
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: setRowSelection,
+    onRowSelectionChange: (updater) => {
+      const newSelection = typeof updater === 'function' ? updater(rowSelection) : updater;
+      setRowSelection(newSelection);
+      // Extract selected rows and pass them up
+      const selectedRowIndices = Object.keys(newSelection)
+        .filter(key => newSelection[key as any])
+        .map(key => parseInt(key));
+      const selectedRows = selectedRowIndices.map(idx => data[idx]).filter(Boolean);
+      onRowSelectionChange?.(selectedRows);
+    },
   });
+
+  // Reset row selection when resetRowSelection flag changes
+  React.useEffect(() => {
+    if (resetRowSelection) {
+      setRowSelection({});
+    }
+  }, [resetRowSelection]);
 
   return (
     <div className="w-full space-y-2">
@@ -117,7 +139,7 @@ export function DataTable<TData, TValue>({
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
-      <div className="rounded-md border">
+      <div className="rounded-md border overflow-x-auto scrollbar">
         {isLoading ? (
           <TableSkeleton columns={6} rows={10} />
         ) : (
@@ -146,6 +168,14 @@ export function DataTable<TData, TValue>({
                   <TableRow
                     key={row.id}
                     data-state={row.getIsSelected() && "selected"}
+                    className="cursor-pointer"
+                    onClick={(e) => {
+                      const target = e.target as HTMLElement;
+                      if (target.closest('input[type="checkbox"]') || target.closest('button')) {
+                        return;
+                      }
+                      onRowClick && onRowClick(row.original as TData);
+                    }}
                   >
                     {row.getVisibleCells().map((cell) => (
                       <TableCell key={cell.id}>
@@ -182,3 +212,7 @@ export function DataTable<TData, TValue>({
     </div>
   );
 }
+
+
+
+

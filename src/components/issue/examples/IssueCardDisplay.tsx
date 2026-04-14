@@ -7,6 +7,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import type { Issue, IssueType, IssuePriority } from '@/api/issue/types';
+import { IssueTypeIcon } from '../IssueTypeIcon';
 
 interface IssueCardProps {
   issue: Issue;
@@ -25,17 +26,6 @@ export function IssueCard({
   onDelete,
   showHierarchy = true,
 }: IssueCardProps) {
-  const getTypeIcon = (type: IssueType) => {
-    const icons: Record<IssueType, string> = {
-      epic: '🎯',
-      story: '📖',
-      task: '✓',
-      bug: '🐛',
-      subtask: '→',
-    };
-    return icons[type];
-  };
-
   const getPriorityColor = (priority?: IssuePriority) => {
     const colors: Record<IssuePriority, string> = {
       lowest: 'bg-gray-100 text-gray-800',
@@ -63,7 +53,7 @@ export function IssueCard({
       {/* Header with Type and Key */}
       <div className="flex items-start justify-between mb-2">
         <div className="flex items-center gap-2">
-          <span className="text-lg">{getTypeIcon(issue.type)}</span>
+          <IssueTypeIcon type={issue.type} />
           <div>
             <h3 className="font-semibold text-sm">{issue.title}</h3>
             {issue.key && (
@@ -71,7 +61,7 @@ export function IssueCard({
             )}
           </div>
         </div>
-        
+
         {/* Action buttons */}
         <div className="flex gap-2">
           {onEdit && (
@@ -194,7 +184,7 @@ export function IssuesGroupedByEpic({ issues }: { issues: Issue[] }) {
           {/* Epic Header */}
           <div className="mb-3">
             <h2 className="text-lg font-bold flex items-center gap-2">
-              🎯 {epic.title}
+              <IssueTypeIcon type="epic" /> {epic.title}
             </h2>
             {epic.description && (
               <p className="text-sm text-gray-600">{epic.description}</p>
@@ -221,7 +211,7 @@ export function IssuesTreeView({ issues }: { issues: Issue[] }) {
   const renderIssue = (issue: Issue, level = 0) => (
     <div key={issue._id} style={{ marginLeft: `${level * 20}px` }} className="mb-2">
       <div className="flex items-center gap-2 p-2 bg-gray-50 rounded">
-        <span>{issue.type === 'epic' ? '🎯' : issue.type === 'story' ? '📖' : issue.type === 'task' ? '✓' : issue.type === 'bug' ? '🐛' : '→'}</span>
+        <IssueTypeIcon type={issue.type} />
         <span className="font-medium">{issue.title}</span>
       </div>
 
@@ -237,3 +227,8 @@ export function IssuesTreeView({ issues }: { issues: Issue[] }) {
     </div>
   );
 }
+
+
+
+
+

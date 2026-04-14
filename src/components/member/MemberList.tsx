@@ -6,6 +6,7 @@
 import React, { useEffect } from 'react';
 import { useMember } from '@/hooks/useMember';
 import type { Member } from '@/api/member/types';
+import { getProfileImageUrl } from '@/lib/helper';
 
 interface MemberListProps {
   workspaceId: string;
@@ -49,28 +50,31 @@ export const MemberList: React.FC<MemberListProps> = ({
 
   return (
     <div className="space-y-4">
-      {members.map((member) => (
+      {members.map((member) => {
+        const m = member as any;
+        const userObj = m.user || m.userId;
+        return (
         <div
           key={member._id}
           className="flex items-center justify-between bg-white p-4 rounded-lg shadow-sm"
         >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 flex items-center justify-center rounded-full bg-blue-100 text-blue-700 font-semibold">
-              {member.userId?.profilePicture ? (
-                <img src={member.userId.profilePicture} alt={member.userName || member.userId.name || ''} className="w-10 h-10 rounded-full" />
+              {userObj?.profilePicture ? (
+                <img src={getProfileImageUrl(userObj.profilePicture)} alt={userObj.name || ''} className="w-10 h-10 rounded-full" />
               ) : (
-                <span>{initials(member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name)}</span>
+                <span>{initials(userObj?.name)}</span>
               )}
             </div>
 
             <div>
-              <div className="font-medium text-gray-900">{member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name || 'Unknown'}</div>
-              <div className="text-sm text-gray-600">{member.userId?.email}</div>
+              <div className="font-medium text-gray-900">{userObj?.name || 'Unknown'}</div>
+              <div className="text-sm text-gray-600">{userObj?.email}</div>
             </div>
           </div>
 
           <div className="flex items-center gap-4">
-              <div className="px-4 py-1 border rounded-full text-sm text-gray-700 bg-white">{(typeof member.role === 'string' ? member.role : member.roleId?.name) || 'Member'}</div>
+              <div className="px-4 py-1 border rounded-full text-sm text-gray-700 bg-white">{member.roleId?.name || 'Member'}</div>
             <button
               onClick={() => handleRemove(member._id)}
               className="text-sm text-red-600 hover:text-red-800"
@@ -79,9 +83,14 @@ export const MemberList: React.FC<MemberListProps> = ({
             </button>
           </div>
         </div>
-      ))}
+      )})}
     </div>
   );
 };
 
 export default MemberList;
+
+
+
+
+

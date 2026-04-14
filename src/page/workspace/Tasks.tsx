@@ -1,15 +1,27 @@
-import CreateTaskDialog from "@/components/workspace/task/create-task-dialog";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import TaskTable from "@/components/workspace/task/task-table";
 import { IssueCreateDialog } from "@/components/issue";
 import { useIssueCreateDialog } from "@/hooks/useIssueCreateDialog";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
+import type { IssueType } from "@/api/issue/types";
+import { workspaceApiService } from "@/api/workspace/services";
 
 export default function Tasks() {
   const workspaceId = useWorkspaceId();
   const dialogState = useIssueCreateDialog();
-  const projectId = null;
+  const [defaultIssueType, setDefaultIssueType] = useState<IssueType | undefined>();
+
+  // Fetch workspace to get board type
+  const { data: workspaceResponse } = useQuery({
+    queryKey: ['workspace', workspaceId],
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
+  });
+
+  const workspace = workspaceResponse?.workspace;
+  const boardType = (workspace?.boardType || 'kanban') as 'kanban' | 'scrumboard';
 
   return (
     <div className="w-full h-full flex-col space-y-8 pt-3">
@@ -22,21 +34,32 @@ export default function Tasks() {
         </div>
         <div className="flex gap-2">
           <Button
-            onClick={() => dialogState.open(projectId || 'default', workspaceId)}
-            size="sm"
-            className="gap-2"
+            onClick={() => {
+              setDefaultIssueType(undefined);
+              dialogState.open(workspaceId);
+            }}
           >
-            <Plus className="h-4 w-4" />
+            <Plus />
             New Issue
           </Button>
-          <CreateTaskDialog />
+          <Button
+            onClick={() => {
+              setDefaultIssueType("task");
+              dialogState.open(workspaceId);
+            }}
+          >
+            <Plus />
+            New Task
+          </Button>
         </div>
       </div>
+
       <IssueCreateDialog
         isOpen={dialogState.isOpen}
-        onOpenChange={(open) => open ? dialogState.open(projectId || 'default', workspaceId) : dialogState.close()}
-        projectId={dialogState.projectId || projectId || 'default'}
+        onOpenChange={(open) => open ? dialogState.open(workspaceId) : dialogState.close()}
         workspaceId={dialogState.workspaceId || workspaceId}
+        defaultType={defaultIssueType}
+        boardType={boardType}
       />
       {/* {Task Table} */}
       <div>
@@ -45,3 +68,8 @@ export default function Tasks() {
     </div>
   );
 }
+
+
+
+
+

@@ -22,11 +22,13 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
   roles = [],
 }) => {
   const [isEditingRole, setIsEditingRole] = useState(false);
-  const initialSelectedRole = member.roleId?._id || (typeof member.role === 'string' ? member.role : undefined);
+  const m = member as any;
+  const userObj = m.user || m.userId;
+  const initialSelectedRole = m.roleId?._id || (typeof m.role === 'string' ? m.role : undefined);
   const [selectedRole, setSelectedRole] = useState(initialSelectedRole);
 
   const handleRoleChange = () => {
-    if (onEditRole && selectedRole !== member.roleId._id) {
+    if (onEditRole && selectedRole !== m.roleId._id) {
       onEditRole(selectedRole);
       setIsEditingRole(false);
     }
@@ -37,18 +39,18 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
       <div className="flex items-start justify-between">
         <div className="flex-1">
           <div className="flex items-center gap-4">
-            {member.userId?.profilePicture && (
+            {userObj?.profilePicture && (
               <img
-                src={member.userId.profilePicture}
-                alt={member.userName || member.userId.name || ''}
+                src={userObj.profilePicture}
+                alt={userObj.name || ''}
                 className="w-16 h-16 rounded-full"
               />
             )}
             <div>
               <h3 className="text-xl font-semibold text-gray-900">
-                {member.userName || `${member.userId?.firstName || ''} ${member.userId?.lastName || ''}`.trim() || member.userId?.name || 'Unknown'}
+                {userObj?.name || 'Unknown'}
               </h3>
-              <p className="text-gray-600">{member.userId?.email}</p>
+              <p className="text-gray-600">{userObj?.email}</p>
             </div>
           </div>
 
@@ -86,10 +88,7 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
                 </div>
               ) : (
                 <p className="text-lg font-semibold text-gray-900 mt-1">
-                  {(() => {
-                    const roleName = typeof member.role === 'string' ? member.role : member.roleId?.name;
-                    return roleName || 'Member';
-                  })()}
+                  {member.roleId?.name || 'Member'}
                 </p>
               )}
             </div>
@@ -145,3 +144,8 @@ export const MemberDetails: React.FC<MemberDetailsProps> = ({
 };
 
 export default MemberDetails;
+
+
+
+
+

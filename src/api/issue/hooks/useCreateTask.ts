@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { CreateTaskDTO, Task } from '../../types';
+import { CreateTaskDTO, Task } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateTask() {
@@ -17,8 +17,13 @@ export function useCreateTask() {
 			issueApiService.createTask(epicId, data),
 		onSuccess: (task: Task) => {
 			queryClient.invalidateQueries({ queryKey: ['tasks'] });
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+			queryClient.invalidateQueries({ queryKey: ['recent-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: `Task "${task.title}" created successfully`,
@@ -34,3 +39,8 @@ export function useCreateTask() {
 		},
 	});
 }
+
+
+
+
+

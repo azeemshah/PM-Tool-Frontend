@@ -5,7 +5,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { Story, Task, Bug } from '../../types';
+import { Story, Task, Bug } from '../types';
 
 export function useGetEpicChildren(epicId: string | null) {
 	return useQuery({
@@ -18,3 +18,8 @@ export function useGetEpicChildren(epicId: string | null) {
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	});
 }
+
+
+
+
+

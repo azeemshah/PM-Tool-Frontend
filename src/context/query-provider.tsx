@@ -24,3 +24,8 @@ export default function QueryProvider({ children }: Props) {
     <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
   );
 }
+
+
+
+
+

@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { registerMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -32,7 +32,7 @@ const SignUp = () => {
   const returnUrl = searchParams.get("returnUrl");
 
   const { mutate, isPending } = useMutation({
-    mutationFn: registerMutationFn,
+    mutationFn: authApiService.register,
   });
 
   const formSchema = z.object({
@@ -57,18 +57,53 @@ const SignUp = () => {
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
     mutate(values as any, {
-      onSuccess: (data: any) => {
-        if (data?.accessToken) {
-          localStorage.setItem('accessToken', data.accessToken);
-          API.defaults.headers.common['Authorization'] = `Bearer ${data.accessToken}`;
-        }
-        const decodedUrl = returnUrl ? decodeURIComponent(returnUrl) : null;
-        // If returnUrl provided (e.g., invite link), redirect there, otherwise go to root
-        navigate(decodedUrl || '/');
+      onSuccess: () => {
+        // Clear form
+        form.reset();
+        
+        // Show success message and wait for user to verify
+        // Instead of redirecting to login, we show a success page or message
+        // For now, we'll keep the user on the signup page but replace the form content
+        // or redirect to a dedicated "check your email" page.
+        // Let's redirect to a check-email page (which we need to create or just show a toast and disable form)
+        
+        // Simple approach: Toast + disable form + maybe redirect to a "verify-instruction" page
+        // But user asked to "not go to login page".
+        
+        toast({
+          title: "Account created",
+          description: "Please check your email to verify your account.",
+        });
+
+        // Redirect to a dedicated verification pending page or just show state here
+        // For simplicity given current structure, let's navigate to a "check-email" route
+        // We will create this route next.
+        navigate('/check-email');
       },
       onError: (error: any) => {
-        console.log(error);
-        toast({ title: 'Error', description: error.message, variant: 'destructive' });
+        console.error('Signup error:', error);
+
+        // Extract error message from various possible response formats
+        let errorMessage = 'Failed to create account. Please try again.';
+
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+
+        // Handle specific error cases
+        if (error?.response?.status === 409) {
+          errorMessage = 'This email is already registered. Please sign in or use a different email.';
+        }
+
+        toast({
+          title: 'Error',
+          description: errorMessage,
+          variant: 'destructive'
+        });
       },
     });
   };
@@ -81,7 +116,7 @@ const SignUp = () => {
           className="flex items-center gap-2 self-center font-medium"
         >
           <Logo />
-          TM Tool
+          PM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
@@ -204,3 +239,8 @@ const SignUp = () => {
 };
 
 export default SignUp;
+
+
+
+
+

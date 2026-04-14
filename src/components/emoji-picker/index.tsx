@@ -54,3 +54,8 @@ const EmojiPickerComponent: React.FC<EmojiPickerComponentProps> = ({
 };
 
 export default EmojiPickerComponent;
+
+
+
+
+

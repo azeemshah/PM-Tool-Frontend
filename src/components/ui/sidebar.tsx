@@ -34,6 +34,10 @@ type SidebarContext = {
   setOpenMobile: (open: boolean) => void;
   isMobile: boolean;
   toggleSidebar: () => void;
+  width: string;
+  setWidth: (width: string) => void;
+  isDragging: boolean;
+  setIsDragging: (isDragging: boolean) => void;
 };
 
 const SidebarContext = React.createContext<SidebarContext | null>(null);
@@ -69,6 +73,8 @@ const SidebarProvider = React.forwardRef<
   ) => {
     const isMobile = useIsMobile();
     const [openMobile, setOpenMobile] = React.useState(false);
+    const [width, setWidth] = React.useState(SIDEBAR_WIDTH);
+    const [isDragging, setIsDragging] = React.useState(false);
 
     // This is the internal state of the sidebar.
     // We use openProp and setOpenProp for control from outside the component.
@@ -125,8 +131,24 @@ const SidebarProvider = React.forwardRef<
         openMobile,
         setOpenMobile,
         toggleSidebar,
+        width,
+        setWidth,
+        isDragging,
+        setIsDragging,
       }),
-      [state, open, setOpen, isMobile, openMobile, setOpenMobile, toggleSidebar]
+      [
+        state,
+        open,
+        setOpen,
+        isMobile,
+        openMobile,
+        setOpenMobile,
+        toggleSidebar,
+        width,
+        setWidth,
+        isDragging,
+        setIsDragging,
+      ]
     );
 
     return (
@@ -135,7 +157,7 @@ const SidebarProvider = React.forwardRef<
           <div
             style={
               {
-                "--sidebar-width": SIDEBAR_WIDTH,
+                "--sidebar-width": width,
                 "--sidebar-width-icon": SIDEBAR_WIDTH_ICON,
                 ...style,
               } as React.CSSProperties
@@ -175,7 +197,7 @@ const Sidebar = React.forwardRef<
     },
     ref
   ) => {
-    const { isMobile, state, openMobile, setOpenMobile } = useSidebar();
+    const { isMobile, state, openMobile, setOpenMobile, isDragging } = useSidebar();
 
     if (collapsible === "none") {
       return (
@@ -229,7 +251,8 @@ const Sidebar = React.forwardRef<
             "group-data-[side=right]:rotate-180",
             variant === "floating" || variant === "inset"
               ? "group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4))]"
-              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]"
+              : "group-data-[collapsible=icon]:w-[--sidebar-width-icon]",
+            isDragging && "transition-none duration-0"
           )}
         />
         <div
@@ -242,7 +265,8 @@ const Sidebar = React.forwardRef<
             variant === "floating" || variant === "inset"
               ? "p-2 group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)_+_theme(spacing.4)_+2px)]"
               : "group-data-[collapsible=icon]:w-[--sidebar-width-icon] group-data-[side=left]:border-r group-data-[side=right]:border-l",
-            className
+            className,
+            isDragging && "transition-none duration-0"
           )}
           {...props}
         >
@@ -289,7 +313,50 @@ const SidebarRail = React.forwardRef<
   HTMLButtonElement,
   React.ComponentProps<"button">
 >(({ className, ...props }, ref) => {
-  const { toggleSidebar } = useSidebar();
+  const { toggleSidebar, setWidth, setIsDragging } = useSidebar();
+  const isDraggingRef = React.useRef(false);
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const sidebar = e.currentTarget.parentElement;
+    if (!sidebar) return;
+
+    const side = sidebar.dataset.side || "left";
+    const startWidth = sidebar.getBoundingClientRect().width;
+    const startX = e.clientX;
+
+    const handleMouseMove = (event: MouseEvent) => {
+      if (Math.abs(event.clientX - startX) > 5) {
+        isDraggingRef.current = true;
+        setIsDragging(true);
+      }
+
+      const delta = event.clientX - startX;
+      const newWidth = side === "left" ? startWidth + delta : startWidth - delta;
+
+      // Min width 100px, Max width 600px
+      if (newWidth > 100 && newWidth < 600) {
+        setWidth(`${newWidth}px`);
+      }
+    };
+
+    const handleMouseUp = () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      window.removeEventListener("mouseup", handleMouseUp);
+      document.body.style.cursor = "";
+      setIsDragging(false);
+      // Reset dragging state after a small delay to allow onClick to check it
+      setTimeout(() => {
+        isDraggingRef.current = false;
+      }, 0);
+    };
+
+    document.body.style.cursor = "col-resize";
+    window.addEventListener("mousemove", handleMouseMove);
+    window.addEventListener("mouseup", handleMouseUp);
+  };
 
   return (
     <button
@@ -297,7 +364,12 @@ const SidebarRail = React.forwardRef<
       data-sidebar="rail"
       aria-label="Toggle Sidebar"
       tabIndex={-1}
-      onClick={toggleSidebar}
+      onClick={() => {
+        if (!isDraggingRef.current) {
+          toggleSidebar();
+        }
+      }}
+      onMouseDown={handleMouseDown}
       title="Toggle Sidebar"
       className={cn(
         "absolute inset-y-0 z-20 hidden w-4 -translate-x-1/2 transition-all ease-linear after:absolute after:inset-y-0 after:left-1/2 after:w-[2px] hover:after:bg-sidebar-border group-data-[side=left]:-right-4 group-data-[side=right]:left-0 sm:flex",
@@ -614,7 +686,7 @@ const SidebarMenuAction = React.forwardRef<
         "peer-data-[size=lg]/menu-button:top-2.5",
         "group-data-[collapsible=icon]:hidden",
         showOnHover &&
-          "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
+        "group-focus-within/menu-item:opacity-100 group-hover/menu-item:opacity-100 data-[state=open]:opacity-100 peer-data-[active=true]/menu-button:text-sidebar-accent-foreground md:opacity-0",
         className
       )}
       {...props}
@@ -761,3 +833,8 @@ export {
   SidebarTrigger,
   useSidebar,
 };
+
+
+
+
+

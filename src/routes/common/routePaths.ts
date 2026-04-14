@@ -3,8 +3,12 @@ export const isAuthRoute = (pathname: string): boolean => {
   if (Object.values(AUTH_ROUTES).includes(pathname)) {
     return true;
   }
-  // Check if it's an invite route
+  // Check if it's an invite route (both workspace invite and token invite)
   if (pathname.includes("/invite/workspace/") && pathname.includes("/join")) {
+    return true;
+  }
+  // Check if it's a token-based invite route (handled via query params in Outlet check)
+  if (pathname === "/invite") {
     return true;
   }
   return false;
@@ -17,19 +21,28 @@ export const AUTH_ROUTES = {
   RESET_PASSWORD: "/reset-password",
   CHANGE_PASSWORD: "/change-password",
   GOOGLE_OAUTH_CALLBACK: "/google/oauth/callback",
+  VERIFY_EMAIL: "/verify-email",
+  CHECK_EMAIL: "/check-email",
+  VERIFY_OTP: "/verify-otp",
 };
 
 export const PROTECTED_ROUTES = {
   WORKSPACE: "/workspace/:workspaceId",
   BOARD: "/workspace/:workspaceId/board",
   BOARD_DETAIL: "/workspace/:workspaceId/boards/:boardId",
+  SPRINT_EDIT: "/workspace/:workspaceId/sprints/:sprintId/edit",
   TASKS: "/workspace/:workspaceId/tasks",
+  HISTORY: "/workspace/:workspaceId/history",
   MEMBERS: "/workspace/:workspaceId/members",
   SETTINGS: "/workspace/:workspaceId/settings",
-  PROJECT_DETAILS: "/workspace/:workspaceId/project/:projectId",
   WORKFLOWS: "/workspace/:workspaceId/workflows",
+  GANTT: "/workspace/:workspaceId/gantt",
 };
 
 export const BASE_ROUTE = {
   INVITE_URL: "/invite/workspace/:inviteCode/join",
 };
+
+
+
+

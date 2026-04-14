@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { CreateSubtaskDTO, Subtask } from '../../types';
+import { CreateSubtaskDTO, Subtask } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateSubtask() {
@@ -16,8 +16,13 @@ export function useCreateSubtask() {
 		mutationFn: ({ parentIssueId, data }: { parentIssueId: string; data: CreateSubtaskDTO }) =>
 			issueApiService.createSubtask(parentIssueId, data),
 		onSuccess: (subtask: Subtask) => {
+			// Invalidate all related queries to refresh data across the app
 			queryClient.invalidateQueries({ queryKey: ['subtasks'] });
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: `Subtask "${subtask.title}" created successfully`,
@@ -33,3 +38,8 @@ export function useCreateSubtask() {
 		},
 	});
 }
+
+
+
+
+

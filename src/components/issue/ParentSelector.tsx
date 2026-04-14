@@ -1,6 +1,6 @@
 /**
  * ParentSelector Component
- * Select parent issue based on type (Epic for Story/Task/Bug, Story/Task/Bug for Subtask)
+ * Select parent issue based on type (Epic for Story/Task/Bug/Improvement, Story/Task/Bug/Improvement for Subtask)
  */
 
 import React, { useMemo } from 'react';
@@ -11,7 +11,7 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select';
-import { IssueType, Epic, Story, Task, Bug } from '@/api/issue/types';
+import { IssueType, Epic, Story, Task, Bug, Improvement } from '@/api/issue/types';
 import { useGetEpics } from '@/api/issue/hooks';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -21,10 +21,13 @@ interface ParentSelectorProps {
 	onChange: (parentId: string) => void;
 	projectId: string | null;
 	disabled?: boolean;
-	epicChildren?: (Story | Task | Bug)[]; // For subtask parent selection
+	optional?: boolean; // For Story/Task/Bug/Improvement, Epic is optional
+	epicChildren?: (Story | Task | Bug | Improvement)[]; // For subtask parent selection
+	showLabel?: boolean; // Whether to show the internal label (default: true)
 }
+import { IssueTypeIcon } from './IssueTypeIcon';
 
-type ParentIssue = Epic | Story | Task | Bug;
+type ParentIssue = Epic | Story | Task | Bug | Improvement;
 
 export function ParentSelector({
 	issueType,
@@ -32,15 +35,27 @@ export function ParentSelector({
 	onChange,
 	projectId,
 	disabled = false,
+	optional = false,
 	epicChildren = [],
+	showLabel = true,
 }: ParentSelectorProps) {
 	const { data: epics = [], isLoading: epicsLoading } = useGetEpics(projectId);
 
 	// Determine what to show based on issue type
 	const parentLabel = issueType === 'subtask' ? 'Parent Issue' : 'Epic';
-	const showSelector = ['story', 'task', 'bug', 'subtask'].includes(issueType as string);
+	const showSelector = ['story', 'task', 'bug', 'improvement', 'subtask'].includes(issueType as string);
 
-	// For Subtask: show Story/Task/Bug; for Story/Task/Bug: show Epics
+	// Debug logging
+	console.log('🔍 ParentSelector Debug:', {
+		issueType,
+		projectId,
+		parentLabel,
+		epicsLoading,
+		epicsData: epics,
+		epicCount: epics?.length ?? 0,
+	});
+
+	// For Subtask: show Story/Task/Bug/Improvement; for Story/Task/Bug/Improvement: show Epics
 	const parentOptions: ParentIssue[] = useMemo(() => {
 		if (issueType === 'subtask') {
 			return epicChildren; // Story/Task/Bug from epic
@@ -54,12 +69,18 @@ export function ParentSelector({
 
 	return (
 		<div className="space-y-2">
-			<label className="text-sm font-medium">{parentLabel}</label>
-			
+			{showLabel && (
+				<label className="text-sm font-medium">
+					{parentLabel}
+					{!optional && issueType !== 'subtask' && ' *'}
+					{optional && issueType !== 'subtask' && <span className="text-xs font-extralight ml-2">Optional</span>}
+				</label>
+			)}
+
 			{epicsLoading ? (
 				<Skeleton className="w-full h-10" />
 			) : (
-				<Select value={parentId} onValueChange={onChange} disabled={disabled || parentOptions.length === 0}>
+				<Select value={parentId} onValueChange={onChange} disabled={disabled || (parentOptions.length === 0 && !optional)}>
 					<SelectTrigger className="w-full">
 						<SelectValue placeholder={`Select ${parentLabel.toLowerCase()}...`} />
 					</SelectTrigger>
@@ -72,7 +93,7 @@ export function ParentSelector({
 							parentOptions.map((parent) => (
 								<SelectItem key={parent._id} value={parent._id}>
 									<div className="flex items-center gap-2">
-										<TypeIcon type={parent.type} />
+										<IssueTypeIcon type={parent.type} />
 										<span>{parent.title}</span>
 									</div>
 								</SelectItem>
@@ -86,23 +107,16 @@ export function ParentSelector({
 				<div className="text-xs text-amber-600">
 					{issueType === 'subtask'
 						? 'Select an Epic first to see available parent issues'
-						: 'No Epics available. Create an Epic first.'}
+						: optional
+							? 'No Epics available. You can create this without Epic and add it later.'
+							: 'No Epics available. Create an Epic first.'}
 				</div>
 			)}
 		</div>
 	);
 }
 
-/**
- * Type icon helper
- */
-function TypeIcon({ type }: { type: IssueType }) {
-	const icons: Record<IssueType, string> = {
-		epic: '🎯',
-		story: '📖',
-		task: '✓',
-		bug: '🐛',
-		subtask: '→',
-	};
-	return <span>{icons[type]}</span>;
-}
+
+
+
+

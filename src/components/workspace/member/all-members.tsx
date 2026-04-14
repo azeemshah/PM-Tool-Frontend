@@ -1,4 +1,5 @@
 import { ChevronDown, Loader } from "lucide-react";
+import { useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -16,23 +17,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { getAvatarColor, getAvatarFallbackText } from "@/lib/helper";
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from "@/lib/helper";
 import { useAuthContext } from "@/context/auth-provider";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { changeWorkspaceMemberRoleMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
-  
-  console.log('Auth user object:', { 
-    user,
-    userId: user?._id,
-    userEmail: user?.email,
-    userName: user?.name
-  });
+  const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
 
   const canChangeMemberRole = hasPermission(Permissions.CHANGE_MEMBER_ROLE);
 
@@ -49,8 +44,6 @@ const AllMembers = () => {
     { _id: 'member', name: 'MEMBER' },
   ];
 
-  console.log('AllMembers data:', { data, members, roles, workspaceId });
-
   // Check if user is workspace owner by checking their member role
   // Try matching by both ID and email since IDs might not match perfectly
   const userMember = members.find((m: any) => {
@@ -59,35 +52,19 @@ const AllMembers = () => {
     const currentUserId = user?._id;
     const currentUserEmail = user?.email;
     
-    const idMatch = memberId === currentUserId;
+    const idMatch = memberId && currentUserId && memberId === currentUserId;
     const emailMatch = memberEmail && currentUserEmail && memberEmail === currentUserEmail;
-    
-    console.log('Member match check:', { 
-      memberId,
-      memberEmail,
-      currentUserId, 
-      currentUserEmail,
-      idMatch,
-      emailMatch,
-      matched: idMatch || emailMatch
-    });
     
     return idMatch || emailMatch;
   });
   
   const isWorkspaceOwner = userMember?.role === 'Owner' || (userMember?.role as any)?.name === 'OWNER';
   
-  console.log('Owner detection:', { 
-    userMember, 
-    isWorkspaceOwner,
-    memberRole: userMember?.role,
-  });
-
   // Owner can always change roles, otherwise check permission
   const canChange = isWorkspaceOwner || canChangeMemberRole;
 
   const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: changeWorkspaceMemberRoleMutationFn,
+    mutationFn: workspaceApiService.changeMemberRole,
   });
 
   const handleSelect = (roleId: string, memberId: string) => {
@@ -104,6 +81,7 @@ const AllMembers = () => {
         queryClient.invalidateQueries({
           queryKey: ["members", workspaceId],
         });
+        setOpenPopoverId(null);
         toast({
           title: "Success",
           description: "Member's role changed successfully",
@@ -128,15 +106,31 @@ const AllMembers = () => {
 
       {members && members.length > 0 ? (
         members.map((member) => {
-          const name = member.userId?.name;
+          if (!member) return null;
+          // The backend returns { user: {...}, role: "..." } structure in the result array
+          // See member.service.ts getWorkspaceMembers method
+          const userObj = member.user || member.userId; 
+          
+          // Helper to get name from user object which might have firstName/lastName or just name
+          const getName = (u: any) => {
+             if (!u) return "Unknown User";
+             if (u.name) return u.name;
+             if (u.firstName || u.lastName) return `${u.firstName || ''} ${u.lastName || ''}`.trim();
+             return "Unknown User";
+          };
+
+          const name = getName(userObj);
           const initials = getAvatarFallbackText(name);
           const avatarColor = getAvatarColor(name);
+          const email = userObj?.email || "No email";
+          const memberId = userObj?._id || (typeof userObj === 'string' ? userObj : "");
+
           return (
             <div key={member._id} className="flex items-center justify-between space-x-4">
             <div className="flex items-center space-x-4">
               <Avatar className="h-8 w-8">
                 <AvatarImage
-                  src={member.userId?.profilePicture || ""}
+                  src={getProfileImageUrl(userObj?.profilePicture) || ""}
                   alt="Image"
                 />
                 <AvatarFallback className={avatarColor}>
@@ -146,12 +140,12 @@ const AllMembers = () => {
               <div>
                 <p className="text-sm font-medium leading-none">{name}</p>
                 <p className="text-sm text-muted-foreground">
-                  {member.userId.email}
+                  {email}
                 </p>
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Popover>
+              <Popover open={openPopoverId === member._id} onOpenChange={(open) => setOpenPopoverId(open ? member._id : null)}>
                 <PopoverTrigger asChild>
                   <Button
                     variant="outline"
@@ -160,7 +154,7 @@ const AllMembers = () => {
                     disabled={
                       isLoading ||
                       !canChange ||
-                      member.userId._id === user?._id
+                      memberId === user?._id
                     }
                   >
                           {(() => {
@@ -169,7 +163,7 @@ const AllMembers = () => {
                               ? roleName.charAt(0).toUpperCase() + roleName.slice(1).toLowerCase()
                               : 'Member';
                           })()}{' '}
-                    {canChange && member.userId._id !== user?._id && (
+                    {canChange && memberId !== user?._id && (
                       <ChevronDown className="text-muted-foreground" />
                     )}
                   </Button>
@@ -238,3 +232,8 @@ const AllMembers = () => {
 };
 
 export default AllMembers;
+
+
+
+
+

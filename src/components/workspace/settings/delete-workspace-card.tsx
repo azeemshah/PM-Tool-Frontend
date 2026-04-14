@@ -6,7 +6,7 @@ import { useAuthContext } from "@/context/auth-provider";
 import useConfirmDialog from "@/hooks/use-confirm-dialog";
 import { toast } from "@/hooks/use-toast";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
@@ -20,16 +20,27 @@ const DeleteWorkspaceCard = () => {
   const { open, onOpenDialog, onCloseDialog } = useConfirmDialog();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: deleteWorkspaceMutationFn,
+    mutationFn: workspaceApiService.deleteWorkspace,
   });
 
   const handleConfirm = () => {
     mutate(workspaceId, {
       onSuccess: (data) => {
+        toast({
+          title: "Success",
+          description: "Workspace deleted successfully",
+          variant: "success",
+        });
         queryClient.invalidateQueries({
           queryKey: ["userWorkspaces"],
         });
-        navigate(`/workspace/${data.currentWorkspace}`);
+        // Navigate to next workspace or dashboard
+        if (data.currentWorkspace) {
+          navigate(`/workspace/${data.currentWorkspace}`);
+        } else {
+          // No other workspaces, go to dashboard
+          navigate("/");
+        }
         setTimeout(() => onCloseDialog(), 100);
       },
       onError: (error) => {
@@ -43,7 +54,7 @@ const DeleteWorkspaceCard = () => {
   };
   return (
     <>
-      <div className="w-full">
+     <div className="w-full">
         <div className="mb-5 border-b">
           <h1
             className="text-[17px] tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5
@@ -93,3 +104,8 @@ const DeleteWorkspaceCard = () => {
 };
 
 export default DeleteWorkspaceCard;
+
+
+
+
+

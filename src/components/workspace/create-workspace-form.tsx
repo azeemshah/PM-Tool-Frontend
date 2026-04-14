@@ -14,10 +14,11 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "../ui/textarea";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { createWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import BoardTypeSelector from "./board-type-selector";
 
 export default function CreateWorkspaceForm({
   onClose,
@@ -29,7 +30,7 @@ export default function CreateWorkspaceForm({
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: createWorkspaceMutationFn,
+    mutationFn: workspaceApiService.createWorkspace,
   });
 
   const formSchema = z.object({
@@ -37,6 +38,9 @@ export default function CreateWorkspaceForm({
       message: "Workspace name is required",
     }),
     description: z.string().trim(),
+    boardType: z.enum(["kanban", "scrumboard"], {
+      errorMap: () => ({ message: "Please select a board type" }),
+    }),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -44,12 +48,13 @@ export default function CreateWorkspaceForm({
     defaultValues: {
       name: "",
       description: "",
+      boardType: "kanban",
     },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate({ name: values.name || '', description: values.description || '' } as any, {
+    mutate({ name: values.name || '', description: values.description || '', boardType: values.boardType } as any, {
       onSuccess: (data) => {
         queryClient.resetQueries({
           queryKey: ["userWorkspaces"],
@@ -57,7 +62,12 @@ export default function CreateWorkspaceForm({
 
         const workspace = data.workspace;
         onClose();
-        navigate(`/workspace/${workspace._id}`);
+        setTimeout(() => {
+          // Manual cleanup to prevent UI freeze
+          document.body.style.pointerEvents = "";
+          document.body.style.overflow = "";
+          navigate(`/workspace/${workspace._id}`);
+        }, 300);
       },
       onError: (error) => {
         toast({
@@ -77,7 +87,7 @@ export default function CreateWorkspaceForm({
             className="text-2xl tracking-[-0.16px] dark:text-[#fcfdffef] font-semibold mb-1.5
            text-center sm:text-left"
           >
-            Let's build a Workspace
+            Let's build a Project
           </h1>
           <p className="text-muted-foreground text-lg leading-tight">
             Optimize workflow by ensuring every project is available from one central spot.
@@ -92,7 +102,7 @@ export default function CreateWorkspaceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                      Workspace name
+                      Project name
                     </FormLabel>
                     <FormControl>
                       <Input
@@ -116,7 +126,7 @@ export default function CreateWorkspaceForm({
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel className="dark:text-[#f1f7feb5] text-sm">
-                      Workspace description
+                      Project description
                       <span className="text-xs font-extralight ml-2">
                         Optional
                       </span>
@@ -129,7 +139,7 @@ export default function CreateWorkspaceForm({
                       />
                     </FormControl>
                     <FormDescription>
-                      - Invite your team to join by sharing a quick note about your Workspace.
+                      - Invite your team to join by sharing a quick note about your Project.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -137,13 +147,15 @@ export default function CreateWorkspaceForm({
               />
             </div>
 
+            <BoardTypeSelector />
+
             <Button
               disabled={isPending}
-              className="w-full h-[40px] text-white font-semibold"
+              className="w-full h-[40px] font-semibold"
               type="submit"
             >
               {isPending && <Loader className="animate-spin" />}
-              Create Workspace
+              Create Project
             </Button>
           </form>
         </Form>
@@ -156,3 +168,8 @@ export default function CreateWorkspaceForm({
     </main>
   );
 }
+
+
+
+
+

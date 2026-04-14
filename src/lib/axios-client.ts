@@ -1,7 +1,7 @@
 import { CustomError } from "@/types/custom-error.type";
 import axios from "axios";
 
-const baseURL = import.meta.env.VITE_API_BASE_URL;
+const baseURL = import.meta.env.VITE_API_BASE_URL || "http://127.0.0.1:5000/api/v1";
 
 // Kanban boards storage in memory
 const sampleBoards: any[] = [];
@@ -36,35 +36,11 @@ if (!baseURL) {
     },
   };
 
-  const sampleProjects = [
-    {
-      _id: "proj-1",
-      name: "Website Redesign",
-      emoji: "🎨",
-      description: "Redesign the marketing site",
-      workspace: sampleWorkspace._id,
-      createdBy: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-    {
-      _id: "proj-2",
-      name: "Mobile App",
-      emoji: "📱",
-      description: "Build mobile companion app",
-      workspace: sampleWorkspace._id,
-      createdBy: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    },
-  ];
-
   const sampleTasks = [
     {
       _id: "task-1",
       title: "Create wireframes",
       description: "Landing page wireframes",
-      project: { _id: "proj-1", emoji: "🎨", name: "Website Redesign" },
       priority: "medium",
       status: "todo",
       assignedTo: { _id: sampleUser._id, name: sampleUser.name, profilePicture: sampleUser.profilePicture },
@@ -91,44 +67,25 @@ if (!baseURL) {
   ];
 
   const emptyPagination = {
-    totalCount: sampleProjects.length,
+    totalCount: sampleTasks.length,
     pageSize: 10,
     pageNumber: 1,
     totalPages: 1,
     skip: 0,
-    limit: sampleProjects.length,
+    limit: sampleTasks.length,
   };
 
   API = {
     get: async (url: string) => {
-      // projects list
-      if (url.includes("/project/workspace") && url.includes("/all")) {
-        return {
-          data: {
-            message: "local",
-            projects: sampleProjects,
-            pagination: emptyPagination,
-          },
-        };
-      }
-
-      // single project by id: /project/:projectId/workspace/:workspaceId
-      if (url.match(/\/project\/[a-zA-Z0-9\-]+\/workspace\/[a-zA-Z0-9\-]+$/)) {
-        const match = url.match(/\/project\/([a-zA-Z0-9\-]+)\/workspace\/([a-zA-Z0-9\-]+)$/);
-        const projectId = match ? match[1] : null;
-        const project = sampleProjects.find((p) => p._id === projectId) || sampleProjects[0];
-        return { data: { message: "local", project } };
-      }
-
-      if (url.includes("/workspace/all")) {
+      if (url.includes("/pm-workspace/all")) {
         return { data: { message: "local", workspaces: [sampleWorkspace] } };
       }
 
-      if (url.includes("/workspace/members")) {
+      if (url.includes("/pm-workspace/members")) {
         return { data: { message: "local", members: sampleMembers, roles: sampleRoles } };
       }
 
-      if (url.includes("/workspace/analytics") || (url.includes("/project/") && url.includes("/analytics"))) {
+      if (url.includes("/pm-workspace/analytics")) {
         return {
           data: {
             message: "local",
@@ -141,7 +98,7 @@ if (!baseURL) {
         return { data: { message: "local", tasks: sampleTasks, pagination: emptyPagination } };
       }
 
-      if (url.includes("/user/current")) {
+      if (url.includes("/pm-user/current")) {
         // Check if user is authenticated by looking at localStorage
         const isAuthenticated = localStorage.getItem("mockAuthToken") === "true";
         if (!isAuthenticated) {
@@ -150,17 +107,17 @@ if (!baseURL) {
         return { data: { message: "local", user: sampleUser } };
       }
 
-      if (url.match(/\/workspace\/[a-zA-Z0-9\-]+$/)) {
+      if (url.match(/\/pm-workspace\/[a-zA-Z0-9\-]+$/)) {
         return { data: { message: "local", workspace: { ...sampleWorkspace, members: sampleMembers } } };
       }
 
       // Kanban boards endpoints (GET)
-      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+      if (url.includes("/pm-kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
         return { data: sampleBoards };
       }
 
-      if (url.match(/\/kanban\/boards\/[a-zA-Z0-9]+$/)) {
-        const match = url.match(/\/kanban\/boards\/([a-zA-Z0-9]+)$/);
+      if (url.match(/\/pm-kanban\/boards\/[a-zA-Z0-9]+$/)) {
+        const match = url.match(/\/pm-kanban\/boards\/([a-zA-Z0-9]+)$/);
         const boardId = match ? match[1] : null;
         const board = sampleBoards.find((b) => b._id === boardId);
         if (board) {
@@ -173,34 +130,51 @@ if (!baseURL) {
       return { data: {} };
     },
     post: async (url: string, _data?: any) => {
-      if (url.includes("/auth/login")) {
+      if (url.includes("/pm-auth/login")) {
         // Store auth state when user logs in
         localStorage.setItem("mockAuthToken", "true");
         return { data: { message: "logged in (local)", user: sampleUser } };
       }
-      if (url.includes("/auth/register")) {
+      if (url.includes("/pm-auth/register")) {
         // Store auth state when user registers
         localStorage.setItem("mockAuthToken", "true");
         return { data: { message: "registered (local)", user: sampleUser } };
       }
-      if (url.includes("/auth/logout")) {
+      if (url.includes("/pm-auth/logout")) {
         // Clear auth state when user logs out
         localStorage.removeItem("mockAuthToken");
         return { data: { message: "logged out (local)" } };
       }
-      if (url.includes("/workspace/create/new")) {
+      if (url.includes("/pm-workspace/create/new")) {
         return { data: { message: "created (local)", workspace: sampleWorkspace } };
       }
-      if (url.includes("/member/workspace") && url.includes("/join")) {
+      if (url.includes("/pm-member/workspace") && url.includes("/join")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
       // also support new endpoint path used by backend
-      if (url.includes("/members/join/")) {
+      if (url.includes("/pm-members/join/")) {
         return { data: { message: "joined (local)", workspaceId: sampleWorkspace._id } };
       }
 
+      // Email invite acceptance
+      if (url.includes("/pm-members/invite/accept")) {
+        console.log("[Mock] Accept invitation called");
+        localStorage.setItem("mockAuthToken", "true");
+        return { 
+          data: { 
+            message: "Login successful (local)",
+            accessToken: "mock-token-" + Date.now(),
+            member: {
+              id: sampleUser._id,
+              email: sampleUser.email,
+              role: "Member"
+            }
+          } 
+        };
+      }
+
       // Kanban: Create board (POST)
-      if (url.includes("/kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
+      if (url.includes("/pm-kanban/boards") && !url.includes("/columns") && !url.includes("/items")) {
         const newBoard = {
           _id: `board-${boardIdCounter++}`,
           name: _data?.name || "New Board",
@@ -254,12 +228,28 @@ if (!baseURL) {
     async (error: any) => {
       const { data, status } = error.response || {};
 
+      // Handle 403 Forbidden - Insufficient permissions
+      if (status === 403) {
+        const customError: CustomError = {
+          ...error,
+          errorCode: data?.errorCode || "FORBIDDEN",
+          response: {
+            ...error.response,
+            data: {
+              ...data,
+              message: data?.message || "Insufficient permission",
+            },
+          },
+        };
+        return Promise.reject(customError);
+      }
+
       // Attempt to refresh access token on 401 responses and retry once
       const originalRequest = error.config;
       if (status === 401 && !originalRequest?._retry) {
         originalRequest._retry = true;
         try {
-          const refreshResp = await axios.post(`${baseURL}/auth/refresh`, {}, { withCredentials: true });
+          const refreshResp = await axios.post(`${baseURL}/pm-auth/refresh`, {}, { withCredentials: true });
           const accessToken = refreshResp?.data?.accessToken;
           if (accessToken) {
             localStorage.setItem('accessToken', accessToken);
@@ -297,4 +287,9 @@ if (!baseURL) {
 }
 
 export default API;
+
+
+
+
+
 

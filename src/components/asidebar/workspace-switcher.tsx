@@ -21,7 +21,7 @@ import { useNavigate } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import useCreateWorkspaceDialog from "@/hooks/use-create-workspace-dialog";
 import { useQuery } from "@tanstack/react-query";
-import { getAllWorkspacesUserIsMemberQueryFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 
 type WorkspaceType = {
   _id: string;
@@ -39,7 +39,7 @@ export function WorkspaceSwitcher() {
 
   const { data, isPending } = useQuery({
     queryKey: ["userWorkspaces"],
-    queryFn: getAllWorkspacesUserIsMemberQueryFn,
+    queryFn: workspaceApiService.getAllWorkspacesUserIsMember,
     staleTime: 1,
     refetchOnMount: true,
   });
@@ -67,7 +67,7 @@ export function WorkspaceSwitcher() {
   return (
     <>
       <SidebarGroupLabel className="w-full justify-between pr-0">
-        <span>Workspaces</span>
+        <span>Projects</span>
         <button
           onClick={onOpen}
           className="flex size-5 items-center justify-center rounded-full border"
@@ -81,7 +81,7 @@ export function WorkspaceSwitcher() {
             <DropdownMenuTrigger asChild>
               <SidebarMenuButton
                 size="lg"
-                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground bg-gray-10"
+                className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground hover:bg-sidebar-accent"
               >
                 {activeWorkspace ? (
                   <>
@@ -92,13 +92,13 @@ export function WorkspaceSwitcher() {
                       <span className="truncate font-semibold">
                         {activeWorkspace?.name}
                       </span>
-                      <span className="truncate text-xs">Free</span>
+                      <span className="truncate text-xs">Project Tool</span>
                     </div>
                   </>
                 ) : (
                   <div className="grid flex-1 text-left text-sm leading-tight">
                     <span className="truncate font-semibold">
-                      No Workspace selected
+                      No Project selected
                     </span>
                   </div>
                 )}
@@ -112,7 +112,7 @@ export function WorkspaceSwitcher() {
               sideOffset={4}
             >
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                Workspaces
+                Projects
               </DropdownMenuLabel>
               {isPending ? <Loader className=" w-5 h-5 animate-spin" /> : null}
 
@@ -143,7 +143,7 @@ export function WorkspaceSwitcher() {
                   <Plus className="size-4" />
                 </div>
                 <div className="font-medium text-muted-foreground">
-                  Add workspace
+                  Add project
                 </div>
               </DropdownMenuItem>
             </DropdownMenuContent>
@@ -153,3 +153,8 @@ export function WorkspaceSwitcher() {
     </>
   );
 }
+
+
+
+
+

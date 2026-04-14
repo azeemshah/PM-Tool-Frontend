@@ -1,9 +1,11 @@
 export const TaskStatusEnum = {
-  BACKLOG: "BACKLOG",
-  TODO: "TODO",
-  IN_PROGRESS: "IN_PROGRESS",
-  IN_REVIEW: "IN_REVIEW",
-  DONE: "DONE",
+  BACKLOG: "Backlog",
+  TO_DO: "To Do",
+  IN_PROGRESS: "In Progress",
+  IN_REVIEW: "In Review",
+  BLOCKED: "Blocked",
+  DONE: "Done",
+  CLOSED: "Closed",
 } as const;
 
 export const TaskPriorityEnum = {
@@ -11,8 +13,8 @@ export const TaskPriorityEnum = {
   MEDIUM: "MEDIUM",
   HIGH: "HIGH",
 } as const;
-export type TaskStatusEnumType = keyof typeof TaskStatusEnum;
-export type TaskPriorityEnumType = keyof typeof TaskPriorityEnum;
+export type TaskStatusEnumType = typeof TaskStatusEnum[keyof typeof TaskStatusEnum];
+export type TaskPriorityEnumType = typeof TaskPriorityEnum[keyof typeof TaskPriorityEnum];
 
 export const SubtaskStatusEnum = {
   BACKLOG: "BACKLOG",
@@ -48,3 +50,8 @@ export const Permissions = {
 } as const;
 
 export type PermissionType = keyof typeof Permissions;
+
+
+
+
+

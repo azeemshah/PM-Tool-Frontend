@@ -21,7 +21,7 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { loginMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -32,7 +32,7 @@ const SignIn = () => {
   const returnUrl = searchParams.get("returnUrl");
 
   const { mutate, isPending } = useMutation({
-    mutationFn: loginMutationFn,
+    mutationFn: authApiService.login,
   });
 
   const formSchema = z.object({
@@ -57,9 +57,19 @@ const SignIn = () => {
 
     mutate({ email: values.email || '', password: values.password || '' }, {
       onSuccess: (data) => {
+        // Check if OTP was sent
+        if ((data as any).message && (data as any).email) {
+          toast({
+            title: "OTP Sent",
+            description: "Please check your email for the verification code.",
+          });
+          navigate('/verify-otp', { state: { email: (data as any).email } });
+          return;
+        }
+
         const user = data.user;
         // set Authorization header for subsequent requests
-        const bearer = data.accessToken || data.token || data?.access_token;
+        const bearer = data.accessToken || data.token || (data as any)?.access_token;
         if (bearer) {
           localStorage.setItem('accessToken', bearer);
           API.defaults.headers.common['Authorization'] = `Bearer ${bearer}`;
@@ -71,10 +81,28 @@ const SignIn = () => {
           : user?.currentWorkspace?._id;
         navigate(decodedUrl || (workspaceId ? `/workspace/${workspaceId}` : `/workspace`));
       },
-      onError: (error) => {
+      onError: (error: any) => {
+        console.error('Login error:', error);
+        
+        // Extract error message from various possible response formats
+        let errorMessage = 'Failed to login. Please try again.';
+        
+        if (error?.response?.data?.message) {
+          errorMessage = error.response.data.message;
+        } else if (error?.response?.data?.error) {
+          errorMessage = error.response.data.error;
+        } else if (error?.message) {
+          errorMessage = error.message;
+        }
+        
+        // Handle specific error cases
+        if (error?.response?.status === 401) {
+          errorMessage = 'Invalid email or password.';
+        }
+        
         toast({
           title: "Error",
-          description: error.message,
+          description: errorMessage,
           variant: "destructive",
         });
       },
@@ -89,7 +117,7 @@ const SignIn = () => {
           className="flex items-center gap-2 self-center font-medium"
         >
           <Logo />
-          TM Tool
+          PM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
@@ -192,3 +220,8 @@ const SignIn = () => {
 };
 
 export default SignIn;
+
+
+
+
+

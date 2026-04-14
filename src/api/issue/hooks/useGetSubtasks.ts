@@ -1,11 +1,11 @@
 /**
  * Hook: useGetSubtasks
- * Fetch Subtasks under a parent (Story/Task/Bug)
+ * Fetch Subtasks under a parent (Story/Task/Bug/Improvement)
  */
 
 import { useQuery } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { Subtask } from '../../types';
+import { Subtask } from '../types';
 
 export function useGetSubtasks(parentIssueId: string | null) {
 	return useQuery({
@@ -18,3 +18,8 @@ export function useGetSubtasks(parentIssueId: string | null) {
 		staleTime: 5 * 60 * 1000, // 5 minutes
 	});
 }
+
+
+
+
+

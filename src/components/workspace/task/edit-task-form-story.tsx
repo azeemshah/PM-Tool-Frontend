@@ -2,7 +2,8 @@ import { z } from "zod";
 import { format } from "date-fns";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { CalendarIcon, Loader } from "lucide-react";
+import { CalendarIcon, Loader, Download, Trash2 } from "lucide-react";
+import { useEffect, useState } from "react";
 import {
   Form,
   FormControl,
@@ -31,15 +32,21 @@ import { Calendar } from "@/components/ui/calendar";
 import {
   getAvatarColor,
   getAvatarFallbackText,
+  getProfileImageUrl,
   transformOptions,
 } from "@/lib/helper";
 import useWorkspaceId from "@/hooks/use-workspace-id";
 import { TaskPriorityEnum, TaskStatusEnum } from "@/constant";
 import useGetWorkspaceMembers from "@/hooks/api/use-get-workspace-members";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { updateTaskMutationFn } from "@/lib/api";
+import { attachmentApiService } from "@/api/attachment/services";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
+import FileUpload from "@/components/ui/file-upload";
+import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
+import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
+import { getStatusIcon } from "./table/data";
 
 interface Task {
   _id: string;
@@ -56,27 +63,36 @@ interface Task {
   storyId?: string;
 }
 
+type AttachmentUI = { _id: string; url: string; name: string };
+
 export default function EditTaskForm(props: {
   task: Task;
   storyId?: string;
+  workspaceId?: string;
   onClose: () => void;
 }) {
   const { task, storyId, onClose } = props;
 
   const queryClient = useQueryClient();
   const workspaceId = useWorkspaceId();
+  const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId);
+  const [attachments, setAttachments] = useState<AttachmentUI[]>([]);
+  const [deletingAttachment, setDeletingAttachment] = useState<string | null>(null);
 
   const { mutate, isPending } = useMutation({
-    mutationFn: updateTaskMutationFn,
+    mutationFn: ({ taskId, data }: { taskId: string; data: any }) =>
+      issueApiService.updateTask(taskId, data),
   });
 
   const { data: memberData } = useGetWorkspaceMembers(workspaceId);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
 
   const members = Array.isArray(memberData) ? memberData : (memberData?.members || []);
 
   // Workspace Members
   const membersOptions = members?.map((member) => {
-    const name = member.userId?.name || "Unknown";
+    const userObj = member.user || member.userId;
+    const name = userObj?.name || (userObj?.firstName ? `${userObj.firstName} ${userObj.lastName || ''}`.trim() : "Unknown");
     const initials = getAvatarFallbackText(name);
     const avatarColor = getAvatarColor(name);
 
@@ -84,13 +100,13 @@ export default function EditTaskForm(props: {
       label: (
         <div className="flex items-center space-x-2">
           <Avatar className="h-7 w-7">
-            <AvatarImage src={member.userId?.profilePicture || ""} alt={name} />
+            <AvatarImage src={getProfileImageUrl(userObj?.profilePicture)} alt={name} />
             <AvatarFallback className={avatarColor}>{initials}</AvatarFallback>
           </Avatar>
           <span>{name}</span>
         </div>
       ),
-      value: member.userId._id,
+      value: userObj?._id || (typeof userObj === 'string' ? userObj : ""),
     };
   });
 
@@ -99,14 +115,11 @@ export default function EditTaskForm(props: {
       message: "Title is required",
     }),
     description: z.string().trim().optional(),
-    status: z.enum(
-      Object.values(TaskStatusEnum) as [keyof typeof TaskStatusEnum],
-      {
-        required_error: "Status is required",
-      }
-    ),
+    status: z.string().min(1, {
+      message: "Status is required",
+    }),
     priority: z.enum(
-      Object.values(TaskPriorityEnum) as [keyof typeof TaskPriorityEnum],
+      Object.values(TaskPriorityEnum) as [string, ...string[]],
       {
         required_error: "Priority is required",
       }
@@ -134,24 +147,38 @@ export default function EditTaskForm(props: {
   const taskStatusList = Object.values(TaskStatusEnum);
   const taskPriorityList = Object.values(TaskPriorityEnum);
 
-  const statusOptions = transformOptions(taskStatusList);
   const priorityOptions = transformOptions(taskPriorityList);
+
+  useEffect(() => {
+    const loadAttachments = async () => {
+      try {
+        const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
+        setAttachments((items as any[]).map((item: any) => ({
+          _id: String(item._id || ''),
+          url: String(item.url || ''),
+          name: String(item.name || ''),
+        })));
+      } catch (e) {
+        // ignore
+      }
+    };
+    loadAttachments();
+  }, [task._id]);
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
     const payload = {
-      taskId: task._id,
-      data: {
-        title: values.title,
-        description: values.description,
-        status: values.status,
-        priority: values.priority,
-        assignedTo: values.assignedTo,
-        dueDate: values.dueDate.toISOString(),
-      },
+      title: values.title,
+      description: values.description,
+      status: values.status,
+      priority: values.priority,
+      assignedTo: values.assignedTo,
+      dueDate: values.dueDate.toISOString(),
     };
 
-    mutate(payload, {
+    mutate(
+      { taskId: task._id, data: payload },
+      {
       onSuccess: () => {
         const invalidateKey = storyId || task.storyId;
         if (invalidateKey) {
@@ -159,6 +186,8 @@ export default function EditTaskForm(props: {
             queryKey: ["tasks", invalidateKey],
           });
         }
+        queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
+        queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
 
         toast({
           title: "Success",
@@ -175,6 +204,69 @@ export default function EditTaskForm(props: {
         });
       },
     });
+  };
+
+  const handleAttachmentUploaded = async (url: string) => {
+    try {
+      if (url) {
+        const name = url.split('/').pop() || 'attachment';
+        setAttachments((prev) => [...prev, { _id: `temp-${Date.now()}`, url, name }]);
+      }
+      const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
+      if (Array.isArray(items) && items.length > 0) {
+        setAttachments((items as any[]).map((item: any) => ({
+          _id: String(item._id || ''),
+          url: String(item.url || ''),
+          name: String(item.name || ''),
+        })));
+      }
+      toast({
+        title: "Success",
+        description: "Attachment uploaded successfully",
+        variant: "success",
+      });
+      queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load attachments after upload",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleDeleteAttachment = async (att: AttachmentUI) => {
+    if (!confirm("Are you sure you want to delete this attachment?")) return;
+
+    setDeletingAttachment(att._id || att.url);
+    try {
+      let targetId = att._id;
+      if (!targetId || targetId.startsWith('temp-')) {
+        const items = await attachmentApiService.getWorkItemAttachments(String(task._id));
+        const match = items.find((x) => x.url === att.url || x.name === att.name);
+        targetId = match?._id ? String(match._id) : "";
+      }
+      if (!targetId) {
+        await attachmentApiService.deleteAttachmentByUrl(att.url);
+        setAttachments((prev) => prev.filter((a) => a.url !== att.url));
+      } else {
+        await attachmentApiService.deleteAttachmentById(targetId);
+        setAttachments((prev) => prev.filter((a) => a._id !== att._id && a.url !== att.url));
+      }
+      toast({
+        title: "Success",
+        description: "Attachment deleted successfully",
+        variant: "success",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete attachment",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAttachment(null);
+    }
   };
 
   return (
@@ -276,7 +368,7 @@ export default function EditTaskForm(props: {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Due Date</FormLabel>
-                    <Popover>
+                    <Popover open={isCalendarOpen} onOpenChange={setIsCalendarOpen} modal={true}>
                       <PopoverTrigger asChild>
                         <FormControl>
                           <Button
@@ -295,15 +387,18 @@ export default function EditTaskForm(props: {
                           </Button>
                         </FormControl>
                       </PopoverTrigger>
-                      <PopoverContent className="w-auto p-0" align="start">
+                      <PopoverContent className="w-auto p-0 z-[100]" align="start">
                         <Calendar
                           mode="single"
                           selected={field.value}
-                          onSelect={field.onChange}
+                          onSelect={(e) => {
+                            field.onChange(e);
+                            setIsCalendarOpen(false);
+                          }}
                           disabled={
                             (date) =>
                               date >
-                                new Date("2100-12-31") //Prevent selection beyond a far future date
+                              new Date("2100-12-31") //Prevent selection beyond a far future date
                           }
                           initialFocus
                           defaultMonth={field.value || new Date()}
@@ -338,15 +433,22 @@ export default function EditTaskForm(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {statusOptions?.map((status) => (
-                          <SelectItem
-                            className="!capitalize"
-                            key={status.value}
-                            value={status.value}
-                          >
-                            {status.label}
-                          </SelectItem>
-                        ))}
+                        {dynamicStatuses?.map((status) => {
+                          const colors = getGanttStatusColor(status.value);
+                          const StatusIcon = getStatusIcon(status.value);
+                          return (
+                            <SelectItem
+                              className="!capitalize"
+                              key={status.value}
+                              value={status.value}
+                            >
+                              <div className="flex items-center gap-2">
+                                {StatusIcon && <StatusIcon className={`h-4 w-4 ${colors.text}`} />}
+                                <span>{status.label}</span>
+                              </div>
+                            </SelectItem>
+                          );
+                        })}
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -390,6 +492,79 @@ export default function EditTaskForm(props: {
               />
             </div>
 
+            {/* Attachments Section */}
+            <div className="border-t pt-4 mt-4">
+              <FormLabel className="text-base font-semibold mb-3 block">Attachments</FormLabel>
+
+              {/* Upload Section */}
+              <div className="mb-4">
+                <FileUpload
+                  type="task"
+                  id={task._id}
+                  onUploaded={handleAttachmentUploaded}
+                />
+              </div>
+
+              {/* Attachments List */}
+              {attachments.length > 0 ? (
+                <div className="space-y-2">
+                  <p className="text-sm text-gray-600 mb-2">
+                    {attachments.length} attachment{attachments.length !== 1 ? "s" : ""}
+                  </p>
+                  <div className="space-y-2 max-h-48 overflow-y-auto scrollbar">
+                    {attachments.map((att, index) => {
+                      const fileNameRaw = att.name || att.url.split("/").pop() || `Attachment ${index + 1}`;
+                      const fileName = (() => {
+                        const parts = String(fileNameRaw).split("-");
+                        return parts.length >= 3 ? parts.slice(2).join("-") : fileNameRaw;
+                      })();
+                      const apiBase: string | undefined = import.meta.env.VITE_API_BASE_URL as any;
+                      const apiOrigin = (() => {
+                        try {
+                          return apiBase ? new URL(apiBase).origin : window.location.origin;
+                        } catch {
+                          return window.location.origin;
+                        }
+                      })();
+                      const absoluteUrl = (att.url && att.url.startsWith("http")) ? att.url : `${apiOrigin}${att.url}`;
+                      return (
+                        <div
+                          key={att._id}
+                          className="flex items-center justify-between p-2 bg-gray-100 rounded-md cursor-pointer"
+                          onClick={() => window.open(absoluteUrl, '_blank', 'noopener')}
+                        >
+                          <a
+                            href={absoluteUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-2 text-blue-600 hover:underline truncate flex-1"
+                          >
+                            <Download className="h-4 w-4 flex-shrink-0" />
+                            <span className="truncate text-sm">{fileName}</span>
+                          </a>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleDeleteAttachment(att); }}
+                            disabled={deletingAttachment === att._id || deletingAttachment === att.url}
+                            className="p-1 text-red-600 hover:bg-red-50 rounded transition-colors disabled:opacity-50"
+                            title="Delete attachment"
+                          >
+                            {deletingAttachment === att._id || deletingAttachment === att.url ? (
+                              <Loader className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Trash2 className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <p className="text-sm text-gray-500">No attachments yet</p>
+              )}
+            </div>
+
             <Button
               className="flex place-self-end  h-[40px] text-white font-semibold"
               type="submit"
@@ -404,3 +579,4 @@ export default function EditTaskForm(props: {
     </div>
   );
 }
+

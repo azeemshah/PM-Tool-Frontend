@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useCallback } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { logoutMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import API from "@/lib/axios-client";
 import { toast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
@@ -25,7 +25,7 @@ const LogoutDialog = (props: {
   const queryClient = useQueryClient();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: logoutMutationFn,
+    mutationFn: authApiService.logout,
     onSuccess: () => {
       // Clear all auth data
       localStorage.removeItem("accessToken");
@@ -91,3 +91,8 @@ const LogoutDialog = (props: {
 };
 
 export default LogoutDialog;
+
+
+
+
+

@@ -6,6 +6,9 @@ import {
   Users,
   CheckCircle,
   LayoutDashboard,
+  Clock,
+  BarChart3,
+  Kanban,
 } from "lucide-react";
 import {
   SidebarGroup,
@@ -15,8 +18,8 @@ import {
 } from "@/components/ui/sidebar";
 import { Link, useLocation } from "react-router-dom";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { useAuthContext } from "@/context/auth-provider";
-import { Permissions } from "@/constant";
+import { useQuery } from "@tanstack/react-query";
+import { workspaceApiService } from "@/api/workspace/services";
 
 type ItemType = {
   title: string;
@@ -25,16 +28,19 @@ type ItemType = {
 };
 
 export function NavMain() {
-  const { hasPermission } = useAuthContext();
-
-  const canManageSettings = hasPermission(
-    Permissions.MANAGE_WORKSPACE_SETTINGS
-  );
-
   const workspaceId = useWorkspaceId();
   const location = useLocation();
 
   const pathname = location.pathname;
+
+  const { data: workspaceData } = useQuery({
+    queryKey: ["workspace", workspaceId],
+    queryFn: () => workspaceApiService.getWorkspaceById(workspaceId),
+    enabled: !!workspaceId,
+  });
+
+  const workspace = workspaceData?.workspace;
+  const boardLabel = workspace?.boardType === "scrumboard" ? "Scrum Board" : "Kanban";
 
   const items: ItemType[] = [
     {
@@ -43,30 +49,35 @@ export function NavMain() {
       icon: LayoutDashboard,
     },
     {
-      title: "Board",
-      url: `/workspace/${workspaceId}/board`,
-      icon: LayoutDashboard,
-    },
-    {
       title: "Tasks",
       url: `/workspace/${workspaceId}/tasks`,
       icon: CheckCircle,
+    },
+    {
+      title: boardLabel,
+      url: `/workspace/${workspaceId}/board`,
+      icon: Kanban,
+    },
+    {
+      title: "Gantt Chart",
+      url: `/workspace/${workspaceId}/gantt`,
+      icon: BarChart3,
+    },
+    {
+      title: "History",
+      url: `/workspace/${workspaceId}/history`,
+      icon: Clock,
     },
     {
       title: "Members",
       url: `/workspace/${workspaceId}/members`,
       icon: Users,
     },
-
-    ...(canManageSettings
-      ? [
-          {
-            title: "Settings",
-            url: `/workspace/${workspaceId}/settings`,
-            icon: Settings,
-          },
-        ]
-      : []),
+    {
+      title: "Settings",
+      url: `/workspace/${workspaceId}/settings`,
+      icon: Settings,
+    },
   ];
   return (
     <SidebarGroup>
@@ -85,3 +96,8 @@ export function NavMain() {
     </SidebarGroup>
   );
 }
+
+
+
+
+

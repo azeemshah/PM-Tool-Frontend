@@ -1,10 +1,15 @@
 import { useQuery } from "@tanstack/react-query";
-import { getWorkflowsQueryFn } from "@/lib/api";
+import { workflowApiService } from "@/api/workflow/services";
 
 export default function useGetWorkflows() {
   return useQuery({
     queryKey: ["workflows"],
-    queryFn: getWorkflowsQueryFn,
+    queryFn: workflowApiService.getWorkflows,
     staleTime: 1000 * 60 * 2,
   });
 }
+
+
+
+
+

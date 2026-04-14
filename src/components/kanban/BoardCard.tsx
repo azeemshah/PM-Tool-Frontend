@@ -1,0 +1,708 @@
+import { KanbanCard } from '@/api/kanban/types';
+import { Issue, UpdateIssueDTO } from '@/api/issue/types';
+import { MessageSquare, Paperclip, ListChecks, Flag, Clock, Zap, ArrowRight, Circle, AtSign, X } from 'lucide-react';
+import useWorkspaceId from '@/hooks/use-workspace-id';
+import useGetWorkspaceMembers from '@/hooks/api/use-get-workspace-members';
+import { useGetKanbanBoardLists } from '@/api/kanban/hooks/lists/useGetKanbanBoardLists';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { priorities, issueTypes } from '@/components/workspace/task/table/data';
+import { formatStatusToEnum, formatDuration } from '@/lib/helper';
+import { TaskPriorityEnum } from '@/constant';
+import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
+import React, { useMemo, useContext, useState, useRef } from 'react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { issueApiService } from '@/api/issue/services/issueApiService';
+import { toast } from '@/hooks/use-toast';
+import { getStatusIcon } from '@/components/workspace/task/table/data';
+import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
+import { TimerContext } from '../workspace/task/timer-context';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Textarea } from '@/components/ui/textarea';
+import { useGetComments, useCreateComment } from '@/api/comment/hooks';
+import useAuth from '@/hooks/api/use-auth';
+import { commentApiService } from '@/api/comment/services/commentApiService';
+import { formatDistanceToNow } from 'date-fns';
+
+interface BoardCardProps {
+  card: KanbanCard | Issue;
+  tagsMap?: Map<string, string>;
+  labelsMap?: Map<string, { name: string; color: string }>;
+  boardId?: string;
+}
+
+export function BoardCard({ card, tagsMap, labelsMap, boardId }: BoardCardProps) {
+  const workspaceId = useWorkspaceId();
+  const { activeTimer, elapsedSeconds } = useContext(TimerContext);
+
+  const { data: membersData } = useGetWorkspaceMembers(workspaceId);
+  const members = membersData?.members || [];
+
+  const { data: lists } = useGetKanbanBoardLists(boardId || null);
+  const queryClient = useQueryClient();
+
+  const updateIssueMutation = useMutation({
+    mutationFn: ({ itemId, data }: { itemId: string; data: Pick<UpdateIssueDTO, 'status' | 'column'> }) =>
+      issueApiService.updateItem(itemId, data),
+    onSuccess: () => {
+      // Invalidate queries to refresh the board
+      queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['kanban-board-cards'] });
+      queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
+      toast({
+        title: 'Success',
+        description: 'Card moved successfully',
+      });
+    },
+    onError: () => {
+      toast({
+        title: 'Error',
+        description: 'Failed to move card',
+        variant: 'destructive',
+      });
+    }
+  });
+
+  const getStatusForList = (listName: string) => {
+    const name = listName.toLowerCase().trim().replace(/[\s-_]+/g, '');
+    const map: Record<string, string> = {
+      todo: 'to-do',
+      backlog: 'to-do',
+      inprogress: 'in-progress',
+      inreview: 'in-review',
+      done: 'done',
+      blocked: 'blocked',
+    };
+    if (map[name]) return map[name];
+    if (name.includes('review')) return 'in-review';
+    if (name.includes('progress')) return 'in-progress';
+    if (name.includes('todo')) return 'to-do';
+    if (name.includes('done')) return 'done';
+    return name;
+  };
+
+  // Determine if this is an Issue or KanbanCard
+  const isIssue = 'type' in card && ['epic', 'story', 'task', 'bug', 'improvement', 'subtask'].includes(String((card as any).type).toLowerCase());
+  const issue = isIssue ? (card as Issue) : null;
+
+  // Get card properties (handle both Issue and KanbanCard)
+  const cardType = issue?.type || (card as KanbanCard).type || 'task';
+  const cardTitle = issue?.title || (card as KanbanCard).title || '';
+  const cardPriority = issue?.priority || (card as KanbanCard).priority || '';
+  const cardAssignee = issue?.assignee || (card as any)?.assignee;
+  const cardComments = issue?.comments || (card as KanbanCard).comments || [];
+  const cardAttachments = issue?.attachments || (card as KanbanCard).attachments || [];
+  const cardChecklists = (card as KanbanCard).checklists || [];
+
+  const cardDueDate = issue?.dueDate || (card as any)?.dueDate;
+  const cardStatus = issue?.status || (card as any)?.status;
+  const cardTags = issue?.labels || (card as KanbanCard).labels || [];
+
+  const isOverdue = useMemo(() => {
+    if (!cardDueDate) return false;
+    const due = new Date(cardDueDate);
+    const now = new Date();
+    // Assuming status normalization is consistent
+    const statusEnum = formatStatusToEnum(String(cardStatus || ''));
+    return due < now && statusEnum !== 'DONE';
+  }, [cardDueDate, cardStatus]);
+
+  const hasComments = (cardComments?.length || 0) > 0;
+  const hasAttachments = (cardAttachments?.length || 0) > 0;
+  const hasChecklists = (cardChecklists?.length || 0) > 0;
+  const completedChecklistItems = cardChecklists?.reduce((count, checklist) =>
+    count + (checklist.checkItems?.filter(item => item.checked).length || 0), 0
+  ) || 0;
+  const totalChecklistItems = cardChecklists?.reduce((count, checklist) =>
+    count + (checklist.checkItems?.length || 0), 0
+  ) || 0;
+
+  const meta: any = card as any;
+  let hierarchyLabel: string | null = null;
+
+  if (issue) {
+    const t = String(issue.type || '').toLowerCase();
+    if (t === 'subtask') {
+      if (meta.parentTitle) {
+        const parentType = meta.parentType ? String(meta.parentType).toLowerCase() : '';
+        const prefix =
+          parentType === 'story'
+            ? 'Story'
+            : parentType === 'task'
+              ? 'Task'
+              : parentType === 'bug'
+                ? 'Bug'
+                : 'Parent';
+        hierarchyLabel = `${prefix}: ${meta.parentTitle}`;
+      }
+    }
+  }
+
+  const issueId = issue?._id ? String(issue._id) : '';
+  const workItemId = issueId || String((meta._id || meta.id || ''));
+
+  const { data: commentsData, isLoading: isCommentsLoading } = useGetComments(workItemId);
+  const { data: authData } = useAuth();
+  const currentUser = authData?.user;
+  const currentUserId = currentUser?.id || currentUser?._id;
+
+  const [newQuickComment, setNewQuickComment] = useState('');
+  const [quickAttachments, setQuickAttachments] = useState<{ fileName: string; fileUrl: string; fileType?: string }[]>([]);
+  const [quickMentionOpen, setQuickMentionOpen] = useState(false);
+  const [quickErrorMsg, setQuickErrorMsg] = useState<string | null>(null);
+  const [isQuickUploading, setIsQuickUploading] = useState(false);
+  const quickFileInputRef = useRef<HTMLInputElement | null>(null);
+  const [isMessengerOpen, setIsMessengerOpen] = useState(false);
+
+  const { mutate: createQuickComment, isPending: isCreatingQuickComment } = useCreateComment();
+
+  const mentionMembers = useMemo(() => {
+    const rawMembers = Array.isArray(membersData) ? membersData : (membersData?.members || []);
+    return rawMembers
+      .map((m: any) => m.user || m.userId)
+      .filter((u: any) => u && (u._id || typeof u === 'string'));
+  }, [membersData]);
+
+  const recentComments = useMemo(() => {
+    if (!commentsData || !Array.isArray(commentsData)) return [];
+    const sorted = [...commentsData].sort(
+      (a: any, b: any) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+    );
+    return sorted.slice(0, 2);
+  }, [commentsData]);
+
+  const getCommentUserName = (u: any) => {
+    if (!u) return 'Unknown User';
+    if (typeof u === 'string') return 'Unknown User';
+    if (u.name) return u.name;
+    if (u.username) return u.username;
+    if (u.firstName || u.lastName) return `${u.firstName || ''} ${u.lastName || ''}`.trim();
+    return 'Unknown User';
+  };
+
+  const handleQuickFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    setQuickErrorMsg(null);
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      if (file.size > 2 * 1024 * 1024) {
+        setQuickErrorMsg('File size must be less than 2MB');
+        if (quickFileInputRef.current) quickFileInputRef.current.value = '';
+        return;
+      }
+      setIsQuickUploading(true);
+      try {
+        if (!workItemId) return;
+        const result = await commentApiService.uploadAttachment(workItemId, file);
+        if (result.success || result.url) {
+          setQuickAttachments(prev => [
+            ...prev,
+            { fileName: result.fileName, fileUrl: result.url, fileType: file.type },
+          ]);
+        }
+      } catch (error) {
+        console.error('Failed to upload attachment:', error);
+      } finally {
+        setIsQuickUploading(false);
+        if (quickFileInputRef.current) quickFileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const removeQuickAttachment = (index: number) => {
+    setQuickAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const insertQuickMention = (memberName: string) => {
+    setNewQuickComment(prev => prev + `@${memberName} `);
+    setQuickMentionOpen(false);
+  };
+
+  const handleQuickSubmit = () => {
+    if (!workItemId) return;
+    if (!currentUserId) return;
+    if (!newQuickComment.trim() && quickAttachments.length === 0) return;
+    createQuickComment({
+      workItemId,
+      content: newQuickComment,
+      userId: currentUserId,
+      attachments: quickAttachments,
+    });
+    setNewQuickComment('');
+    setQuickAttachments([]);
+  };
+
+  const stopFooterEvent = (event: React.SyntheticEvent) => {
+    event.stopPropagation();
+  };
+
+  return (
+    <div className="bg-white dark:bg-card border border-gray-200 dark:border-border rounded-lg p-3 hover:shadow-md transition-shadow cursor-pointer group">
+      {/* Top row: type badge */}
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-2">
+          {(() => {
+            const typeValue = String(cardType || '').trim();
+            const normalizedType = typeValue.toLowerCase();
+            const issueType = issueTypes.find(
+              (t) =>
+                t.value.toLowerCase() === normalizedType ||
+                t.label.toLowerCase() === normalizedType
+            );
+
+            if (!issueType) {
+              return (
+                <Badge variant="outline" className="uppercase text-[10px] px-2 py-0.5">
+                  {cardType}
+                </Badge>
+              );
+            }
+
+            const Icon = issueType.icon;
+            return (
+              <Badge
+                variant="outline"
+                className={`flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 ${issueType.className}`}
+              >
+                <Icon className="h-3 w-3 text-inherit" />
+                <span className="capitalize">{issueType.label}</span>
+              </Badge>
+            );
+          })()}
+        </div>
+
+        {/* Story points and time tracking badges */}
+        <div className="flex items-center gap-1">
+          {(card as any)?.storyPoints && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-purple-100 text-purple-700 hover:bg-purple-100 dark:bg-purple-900/30 dark:text-purple-400 border-0">
+              <Zap className="h-3 w-3" />
+              {(card as any).storyPoints}
+            </Badge>
+          )}
+          {(card as any)?.timeSpent > 0 && (
+            <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-blue-100 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 border-0">
+              <Clock className="h-3 w-3" />
+              {formatDuration((card as any).timeSpent)}
+            </Badge>
+          )}
+
+          {(() => {
+            if (!activeTimer) return null;
+
+            // Check if this card is the active one
+            const activeWorkItemId = activeTimer.workItemId?._id || activeTimer.workItemId || activeTimer.issueId || activeTimer.workItem?._id || activeTimer.workItem;
+            const currentCardId = (card as any)._id || (card as any).id;
+
+            if (String(activeWorkItemId) === String(currentCardId)) {
+              return (
+                <Badge variant="outline" className="flex items-center gap-1 px-2 py-0.5 text-xs bg-orange-100 text-orange-700 hover:bg-orange-100 dark:bg-orange-900/30 dark:text-orange-400 border border-orange-200 shadow-sm">
+                  <Clock className="h-3 w-3 animate-pulse" />
+                  <span className="font-mono">{formatDuration(elapsedSeconds / 60)}</span>
+                </Badge>
+              );
+            }
+            return null;
+          })()}
+        </div>
+      </div>
+
+      {/* Labels */}
+      {
+        cardTags && cardTags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-2 items-center">
+            <span className="text-[10px] text-gray-500 font-medium mr-1">Labels:</span>
+            {cardTags.slice(0, 3).map((label: any) => {
+              const labelId = typeof label === 'string' ? label : (label._id || label.id);
+              let labelText = typeof label === 'string' ? label : (label.name || label.label || 'Unknown');
+              let labelColor = '#3b82f6'; // Default blue
+
+              if (labelsMap && labelsMap.has(labelId)) {
+                const resolved = labelsMap.get(labelId)!;
+                labelText = resolved.name;
+                if (resolved.color) labelColor = resolved.color;
+              }
+
+              const key = labelId || labelText;
+
+              return (
+                <span
+                  key={key}
+                  className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-white font-medium truncate max-w-[100px]"
+                  style={{ backgroundColor: labelColor }}
+                  title={labelText}
+                >
+                  {labelText}
+                </span>
+              );
+            })}
+            {cardTags.length > 3 && (
+              <span className="inline-flex text-[10px] px-2 py-0.5 rounded-full text-gray-600 bg-gray-100 dark:bg-gray-800 dark:text-gray-300">
+                +{cardTags.length - 3}
+              </span>
+            )}
+          </div>
+        )
+      }
+
+      {/* Title */}
+      <div className="mb-3">
+        <h4 className="text-sm font-medium text-gray-900 dark:text-foreground line-clamp-3 inline">
+          {cardTitle}
+        </h4>
+        {meta.epicTitle && (
+          <span className="ml-2 inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400">
+            {meta.epicTitle}
+          </span>
+        )}
+      </div>
+
+      {isOverdue && (
+        <div className="mb-2">
+          <Badge
+            variant="outline"
+            className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium rounded-md shadow-sm border-0 bg-red-100 text-red-700 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 w-fit"
+          >
+            <Flag className="h-3 w-3 text-inherit" />
+            <span className="capitalize">Overdue</span>
+          </Badge>
+        </div>
+      )}
+
+      {
+        hierarchyLabel && (
+          <p className="text-xs text-gray-500 dark:text-muted-foreground mb-2">
+            {hierarchyLabel}
+          </p>
+        )
+      }
+
+      {/* Footer with icons, priority and assignee */}
+      <div className="flex items-center justify-between text-xs text-gray-500 dark:text-muted-foreground">
+        <div className="flex items-center gap-3">
+          {/* Priority badge */}
+          {cardPriority && (
+            <div className="flex items-center">
+              {(() => {
+                const p = String(cardPriority).toLowerCase();
+                const Icon =
+                  p === 'high' || p === 'urgent'
+                    ? priorities.find(x => x.value === 'high')?.icon
+                    : p === 'medium'
+                      ? priorities.find(x => x.value === 'medium')?.icon
+                      : priorities.find(x => x.value === 'low')?.icon;
+
+                return Icon ? (
+                  <Icon className={`h-3.5 w-3.5 ${p === 'high' || p === 'urgent' ? 'text-red-500' :
+                    p === 'medium' ? 'text-orange-500' : 'text-blue-500'
+                    }`} />
+                ) : null;
+              })()}
+            </div>
+          )}
+          <span className="text-xs text-gray-500 dark:text-muted-foreground">
+            {issue && issue.issueId ? issue.issueId : ''}
+          </span>
+
+          {hasComments && (
+            <div className="flex items-center gap-1">
+              <MessageSquare size={14} />
+              <span>{cardComments?.length || 0}</span>
+            </div>
+          )}
+          {hasAttachments && (
+            <div className="flex items-center gap-1">
+              <Paperclip size={14} />
+              <span>{cardAttachments?.length || 0}</span>
+            </div>
+          )}
+          {hasChecklists && (
+            <div className="flex items-center gap-1">
+              <ListChecks size={14} />
+              <span>
+                {completedChecklistItems}/{totalChecklistItems}
+              </span>
+            </div>
+          )}
+        </div>
+
+        {/* Right side: Reporter + Messenger + Move Action */}
+        <div
+          className="flex items-center gap-2"
+          onClick={stopFooterEvent}
+          onMouseDown={stopFooterEvent}
+          onPointerDown={stopFooterEvent}
+        >
+          <div className="flex items-center gap-1">
+            {workItemId && (
+              <Popover open={isMessengerOpen} onOpenChange={setIsMessengerOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-80 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm font-medium text-gray-900 dark:text-foreground">Recent messages</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      {hasComments && (
+                        <span className="text-[11px] text-gray-500 dark:text-muted-foreground">
+                          {cardComments?.length || 0} total
+                        </span>
+                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          setIsMessengerOpen(false);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 max-h-40 overflow-y-auto">
+                    {isCommentsLoading && (
+                      <div className="text-xs text-gray-500 dark:text-muted-foreground">Loading comments...</div>
+                    )}
+                    {!isCommentsLoading && recentComments.length === 0 && (
+                      <div className="text-xs text-gray-500 dark:text-muted-foreground">No comments yet.</div>
+                    )}
+                    {!isCommentsLoading &&
+                      recentComments.map((comment: any) => (
+                        <div key={comment._id} className="text-xs text-gray-800 dark:text-gray-200 bg-gray-50 dark:bg-gray-900/40 rounded-md p-2">
+                          <div className="flex items-center justify-between mb-1">
+                            <span className="font-semibold">
+                              {getCommentUserName(comment.userId)}
+                            </span>
+                            <span className="text-[10px] text-gray-500 dark:text-muted-foreground">
+                              {formatDistanceToNow(new Date(comment.createdAt), { addSuffix: true })}
+                            </span>
+                          </div>
+                          {comment.content && (
+                            <div className="whitespace-pre-wrap">
+                              {comment.content.length > 120 ? `${comment.content.slice(0, 120)}…` : comment.content}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                  </div>
+
+                  <div className="space-y-2">
+                    <Textarea
+                      placeholder="Add a comment..."
+                      value={newQuickComment}
+                      onChange={(e) => setNewQuickComment(e.target.value)}
+                      className="min-h-[60px] text-xs bg-white dark:bg-muted/30"
+                    />
+                    {quickErrorMsg && (
+                      <div className="text-[11px] text-red-500">{quickErrorMsg}</div>
+                    )}
+                    {quickAttachments.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {quickAttachments.map((att, index) => (
+                          <div
+                            key={`${att.fileName}-${index}`}
+                            className="flex items-center gap-1 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-md text-[11px]"
+                          >
+                            <Paperclip className="w-3 h-3 text-gray-500" />
+                            <span className="max-w-[120px] truncate">{att.fileName}</span>
+                            <button
+                              type="button"
+                              onClick={() => removeQuickAttachment(index)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              ×
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between">
+                      <div className="flex gap-2">
+                        <Popover open={quickMentionOpen} onOpenChange={setQuickMentionOpen}>
+                          <PopoverTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 px-2 text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                            >
+                              <AtSign className="w-3 h-3 mr-1" />
+                              Mention
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="p-0 w-[200px]" align="start">
+                            <Command>
+                              <CommandInput placeholder="Search member..." />
+                              <CommandList>
+                                <CommandEmpty>No member found.</CommandEmpty>
+                                <CommandGroup>
+                                  {mentionMembers?.map((member: any) => (
+                                    <CommandItem
+                                      key={member._id}
+                                      value={getCommentUserName(member)}
+                                      onSelect={() => insertQuickMention(getCommentUserName(member))}
+                                    >
+                                      <Avatar className="w-6 h-6 mr-2">
+                                        <AvatarImage src={getProfileImageUrl(member.profilePicture)} />
+                                        <AvatarFallback className="text-[10px]">
+                                          {getAvatarFallbackText(getCommentUserName(member))}
+                                        </AvatarFallback>
+                                      </Avatar>
+                                      <span>{getCommentUserName(member)}</span>
+                                    </CommandItem>
+                                  ))}
+                                </CommandGroup>
+                              </CommandList>
+                            </Command>
+                          </PopoverContent>
+                        </Popover>
+
+                        <input
+                          type="file"
+                          ref={quickFileInputRef}
+                          className="hidden"
+                          onChange={handleQuickFileSelect}
+                        />
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-8 px-2 text-[11px] text-gray-500 hover:text-gray-900 dark:hover:text-gray-100"
+                          onClick={() => quickFileInputRef.current?.click()}
+                          disabled={isQuickUploading}
+                        >
+                          <Paperclip className="w-3 h-3 mr-1" />
+                          {isQuickUploading ? '...' : 'Attach'}
+                        </Button>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        className="h-8 px-3 text-xs"
+                        onClick={handleQuickSubmit}
+                        disabled={
+                          isCreatingQuickComment ||
+                          isQuickUploading ||
+                          (!newQuickComment.trim() && quickAttachments.length === 0) ||
+                          !currentUserId
+                        }
+                      >
+                        {isCreatingQuickComment ? 'Sending...' : 'Send'}
+                      </Button>
+                    </div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
+
+            {(() => {
+              if (issue?.reporter) {
+                return (
+                  <div className="flex items-center">
+                    <Avatar className="h-7 w-7">
+                      <AvatarImage src={getProfileImageUrl((issue.reporter as any)?.profilePicture) || ''} alt={issue.reporter?.name} />
+                      <AvatarFallback className={getAvatarColor(issue.reporter?.name || '')}>
+                        {getAvatarFallbackText(issue.reporter?.name || '')}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                );
+              }
+
+              const r = (card as any).reporter;
+              let resolved: any = null;
+              if (!r) return null;
+              if (typeof r === 'string') {
+                const m = members.find((mem: any) => String(mem.userId?._id) === String(r));
+                resolved = m?.userId || null;
+              } else if (r.userId) {
+                resolved = r.userId;
+              } else {
+                resolved = r;
+              }
+
+              if (!resolved) {
+                return null;
+              }
+
+              return (
+                <div className="flex items-center">
+                  <Avatar className="h-7 w-7">
+                    <AvatarImage src={getProfileImageUrl(resolved?.profilePicture) || ''} alt={resolved?.name || 'User'} />
+                    <AvatarFallback className={getAvatarColor(resolved?.name || '')}>
+                      {resolved?.name ? getAvatarFallbackText(resolved.name) : ''}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
+              );
+            })()}
+          </div>
+
+          {lists && lists.length > 0 && (
+            <div onClick={(e) => e.stopPropagation()}>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-6 w-6 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800">
+                    <ArrowRight className="h-3.5 w-3.5 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-40">
+                  {lists.map((list) => {
+                    const StatusIcon = getStatusIcon(list.name);
+                    const colors = getGanttStatusColor(list.name);
+
+                    return (
+                      <DropdownMenuItem
+                        key={list._id}
+                        onClick={() => {
+                          const newStatus = getStatusForList(list.name);
+                          updateIssueMutation.mutate({
+                            itemId: (card as any)._id || (card as any).id,
+                            data: { column: list._id, status: newStatus }
+                          });
+                        }}
+                        className="cursor-pointer"
+                      >
+                        {StatusIcon && <StatusIcon className={`mr-2 h-4 w-4 ${colors.text}`} />}
+                        <span>{list.name}</span>
+                      </DropdownMenuItem>
+                    );
+                  })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          )}
+        </div>
+      </div>
+    </div >
+  );
+}
+
+
+
+
+

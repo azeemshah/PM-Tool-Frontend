@@ -17,7 +17,7 @@ export const getBoardsQueryFn = async (workspaceId?: string, projectId?: string)
           _id: 'mock-board-1',
           name: 'Demo Board',
           columns: [
-            { _id: 'mock-col-1', name: 'To Do', workItems: [ { _id: 'mock-wi-1', title: 'Sample task 1', type: 'Task', assignee: { name: 'Alice' } }, { _id: 'mock-wi-2', title: 'Sample task 2', type: 'Bug', assignee: { name: 'Bob' } } ] },
+            { _id: 'mock-col-1', name: 'ToDo', workItems: [ { _id: 'mock-wi-1', title: 'Sample task 1', type: 'Task', assignee: { name: 'Alice' } }, { _id: 'mock-wi-2', title: 'Sample task 2', type: 'Bug', assignee: { name: 'Bob' } } ] },
             { _id: 'mock-col-2', name: 'In Progress', workItems: [ { _id: 'mock-wi-3', title: 'Sample task 3', type: 'Task', assignee: { name: 'Carol' } } ] },
             { _id: 'mock-col-3', name: 'Done', workItems: [ { _id: 'mock-wi-4', title: 'Sample task 4', type: 'Task', assignee: { name: 'Dan' } } ] },
           ],
@@ -35,3 +35,8 @@ export default function useGetBoards(workspaceId?: string, projectId?: string) {
     staleTime: 1000 * 60 * 2,
   });
 }
+
+
+
+
+

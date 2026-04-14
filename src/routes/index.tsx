@@ -10,10 +10,10 @@ import AppLayout from "@/layout/app.layout";
 import BaseLayout from "@/layout/base.layout";
 import NotFound from "@/page/errors/NotFound";
 import WorkspaceRedirect from "@/page/workspace/WorkspaceRedirect";
-// import { ScrumboardLayout } from "@/components/scrumboard";
-// import { ScrumboardBoardView } from "@/components/scrumboard";
-// import { BoardsView } from "@/components/scrumboard/views/BoardsView";
-// import { ScrumboardAppContextProvider } from "@/contexts/ScrumboardAppContext";
+// import { KanbanLayout } from "@/components/kanban";
+// import { KanbanBoardView } from "@/components/kanban";
+// import { BoardsView } from "@/components/kanban/views/BoardsView";
+// import { KanbanAppContextProvider } from "@/contexts/KanbanAppContext";
 import { Suspense } from "react";
 
 function AppRoutes() {
@@ -63,13 +63,13 @@ function AppRoutes() {
             ))}
           </Route>
 
-          {/* Scrumboard Routes - Disabled due to type errors */}
+          {/* Kanban Routes - Disabled due to type errors */}
           {/* <Route
-            path="scrumboard"
+            path="Kanban"
             element={
-              <ScrumboardAppContextProvider>
-                <ScrumboardLayout />
-              </ScrumboardAppContextProvider>
+              <KanbanAppContextProvider>
+                <KanbanLayout />
+              </KanbanAppContextProvider>
             }
           >
             <Route path="boards" element={<BoardsView />} />
@@ -77,7 +77,7 @@ function AppRoutes() {
               path="boards/:boardId"
               element={
                 <Suspense fallback={<LoadingFallback />}>
-                  <ScrumboardBoardView />
+                  <KanbanBoardView />
                 </Suspense>
               }
             />
@@ -92,3 +92,8 @@ function AppRoutes() {
 }
 
 export default AppRoutes;
+
+
+
+
+

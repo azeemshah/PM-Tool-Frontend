@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { BASE_ROUTE } from "@/routes/common/routePaths";
 import useAuth from "@/hooks/api/use-auth";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { invitedUserJoinWorkspaceMutationFn } from "@/lib/api";
+import { workspaceApiService } from "@/api/workspace/services";
 import { toast } from "@/hooks/use-toast";
 import { useEffect } from "react";
 
@@ -27,7 +27,7 @@ const InviteUser = () => {
   const user = authData?.user;
 
   const { mutate, isPending: isLoading } = useMutation({
-    mutationFn: invitedUserJoinWorkspaceMutationFn,
+    mutationFn: workspaceApiService.inviteUserJoinWorkspace,
   });
 
   // Auto-join when user is logged in
@@ -100,16 +100,16 @@ const InviteUser = () => {
           className="flex items-center gap-2 self-center font-medium"
         >
           <Logo />
-          TM Tool
+          PM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader className="text-center">
               <CardTitle className="text-xl">
-                Hey there! You're invited to join a TM Tool Workspace!
+                Hey there! You're invited to join a PM Tool Workspace!
               </CardTitle>
               <CardDescription>
-                Looks like you need to be logged into your TM Tool account to
+                Looks like you need to be logged into your PM Tool account to
                 join this Workspace.
               </CardDescription>
             </CardHeader>
@@ -162,3 +162,8 @@ const InviteUser = () => {
 };
 
 export default InviteUser;
+
+
+
+
+

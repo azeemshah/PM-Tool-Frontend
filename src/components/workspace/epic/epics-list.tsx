@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import CreateEpicForm from "./create-epic-form";
 import EditEpicForm from "./edit-epic-form";
-import { getEpicsQueryFn, deleteEpicMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -31,13 +31,13 @@ export default function EpicsList({ projectId }: { projectId: string }) {
 
   const { data: epicsData, isLoading } = useQuery({
     queryKey: ["epics", projectId],
-    queryFn: () => getEpicsQueryFn(projectId),
+    queryFn: () => issueApiService.getEpicsByProject(projectId),
   });
 
-  const epics = epicsData?.epics || [];
+  const epics = Array.isArray(epicsData) ? epicsData : [];
 
   const { mutate: deleteEpic, isPending: isDeleting } = useMutation({
-    mutationFn: deleteEpicMutationFn,
+    mutationFn: issueApiService.deleteEpic,
   });
 
   const handleDelete = (epicId: string) => {
@@ -167,3 +167,8 @@ export default function EpicsList({ projectId }: { projectId: string }) {
     </div>
   );
 }
+
+
+
+
+

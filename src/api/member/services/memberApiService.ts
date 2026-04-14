@@ -13,9 +13,10 @@ import type {
   MemberResponse,
   UserRole,
   JoinWorkspaceResponse,
-} from './types';
 
-const MEMBER_ENDPOINT = '/members';
+} from '../types';
+
+const MEMBER_ENDPOINT = '/pm-members';
 
 export const memberApiService = {
   /**
@@ -23,7 +24,7 @@ export const memberApiService = {
    */
   async addMember(data: CreateMemberDTO): Promise<Member> {
     try {
-      const response = await API.post<MemberResponse<Member>>(
+      const response = await API.post(
         MEMBER_ENDPOINT,
         data
       );
@@ -35,11 +36,27 @@ export const memberApiService = {
   },
 
   /**
+   * Invite a member to a workspace
+   */
+  async inviteMember(data: { email: string; role: "ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER" | "WATCHER"; workspaceId: string }): Promise<Member> {
+    try {
+      const response = await API.post(
+        `${MEMBER_ENDPOINT}/invite`,
+        { email: data.email, role: data.role, workspaceId: data.workspaceId }
+      );
+      return response.data.data || response.data;
+    } catch (error) {
+      console.error('inviteMember error:', error);
+      throw error;
+    }
+  },
+
+  /**
    * Get all members in a workspace
    */
   async getWorkspaceMembers(workspaceId: string): Promise<Member[]> {
     try {
-      const response = await API.get<MemberResponse<Member[]>>(
+      const response = await API.get(
         `${MEMBER_ENDPOINT}/workspace/${workspaceId}`
       );
       
@@ -59,7 +76,7 @@ export const memberApiService = {
    */
   async getMember(memberId: string): Promise<Member> {
     try {
-      const response = await API.get<MemberResponse<Member>>(
+      const response = await API.get(
         `${MEMBER_ENDPOINT}/${memberId}`
       );
       return response.data.data || response.data;
@@ -74,7 +91,7 @@ export const memberApiService = {
    */
   async getUserRoleInWorkspace(workspaceId: string): Promise<UserRole> {
     try {
-      const response = await API.get<MemberResponse<UserRole>>(
+      const response = await API.get(
         `${MEMBER_ENDPOINT}/me/role/${workspaceId}`
       );
       return response.data.data || response.data;
@@ -92,7 +109,7 @@ export const memberApiService = {
     data: UpdateMemberDTO
   ): Promise<Member> {
     try {
-      const response = await API.put<MemberResponse<Member>>(
+      const response = await API.put(
         `${MEMBER_ENDPOINT}/${memberId}`,
         data
       );
@@ -120,7 +137,7 @@ export const memberApiService = {
    */
   async joinWorkspaceByInvite(inviteCode: string): Promise<JoinWorkspaceResponse> {
     try {
-      const response = await API.post<MemberResponse<JoinWorkspaceResponse>>(
+      const response = await API.post(
         `${MEMBER_ENDPOINT}/join/${inviteCode}`
       );
       return response.data.data || response.data;
@@ -135,7 +152,7 @@ export const memberApiService = {
    */
   async getMemberStats(workspaceId: string): Promise<MemberStats> {
     try {
-      const response = await API.get<MemberResponse<MemberStats>>(
+      const response = await API.get(
         `${MEMBER_ENDPOINT}/workspace/${workspaceId}/stats`
       );
       return response.data.data || response.data;

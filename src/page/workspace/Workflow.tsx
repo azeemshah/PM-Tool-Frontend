@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import useGetWorkflows from '@/hooks/api/use-get-workflows';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createWorkflowMutationFn, deleteWorkflowMutationFn } from '@/lib/api';
+import { workflowApiService } from '@/api/workflow/services';
 import WorkflowEditor from '@/components/workflow/WorkflowEditor';
 
 const WorkflowPage = () => {
@@ -13,12 +13,12 @@ const WorkflowPage = () => {
   const [selected, setSelected] = useState<string | null>(null);
 
   const createMutation = useMutation({
-    mutationFn: (data: any) => createWorkflowMutationFn(data),
+    mutationFn: (data: any) => workflowApiService.createWorkflow(data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflows"] }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: (id: string) => deleteWorkflowMutationFn(id),
+    mutationFn: (id: string) => workflowApiService.deleteWorkflow(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["workflows"] });
       setSelected(null);
@@ -58,3 +58,8 @@ const WorkflowPage = () => {
 };
 
 export default WorkflowPage;
+
+
+
+
+

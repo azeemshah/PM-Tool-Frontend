@@ -1,10 +1,6 @@
 import { useQueryClient, useQuery, useMutation } from "@tanstack/react-query";
 import { useState } from "react";
-import {
-  getTasksQueryFn,
-  deleteTaskMutationFn,
-  updateTaskMutationFn,
-} from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -48,7 +44,7 @@ interface Task {
   dueDate?: string;
 }
 
-export default function TasksList({ storyId }: { storyId: string }) {
+export default function TasksList({ workspaceId }: { workspaceId: string }) {
   const queryClient = useQueryClient();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -56,14 +52,14 @@ export default function TasksList({ storyId }: { storyId: string }) {
   const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
   const { data, isLoading, isError } = useQuery({
-    queryKey: ["tasks", storyId],
-    queryFn: () => getTasksQueryFn(storyId),
+    queryKey: ["tasks", workspaceId],
+    queryFn: () => issueApiService.getTasksByWorkspace(workspaceId, { limit: 100 }),
   });
 
   const deleteMutation = useMutation({
-    mutationFn: deleteTaskMutationFn,
+    mutationFn: issueApiService.deleteTask,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["tasks", storyId] });
+      queryClient.invalidateQueries({ queryKey: ["tasks", workspaceId] });
       toast({
         title: "Success",
         description: "Task deleted successfully",
@@ -81,7 +77,7 @@ export default function TasksList({ storyId }: { storyId: string }) {
     },
   });
 
-  const tasks = data?.data || data || [];
+  const tasks = data?.data || [];
 
   const handleEdit = (task: Task) => {
     setSelectedTask(task);
@@ -192,7 +188,7 @@ export default function TasksList({ storyId }: { storyId: string }) {
             </DialogDescription>
           </DialogHeader>
           <CreateTaskForm
-            storyId={storyId}
+            workspaceId={workspaceId}
             onClose={() => setIsCreateDialogOpen(false)}
           />
         </DialogContent>
@@ -212,7 +208,7 @@ export default function TasksList({ storyId }: { storyId: string }) {
           {selectedTask && (
             <EditTaskFormStory
               task={selectedTask}
-              storyId={storyId}
+              workspaceId={workspaceId}
               onClose={() => {
                 setIsEditDialogOpen(false);
                 setSelectedTask(null);
@@ -248,3 +244,8 @@ export default function TasksList({ storyId }: { storyId: string }) {
     </div>
   );
 }
+
+
+
+
+

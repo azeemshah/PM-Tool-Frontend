@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import useGetWorkflow from '@/hooks/api/use-get-workflow';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createWorkflowStateMutationFn, createWorkflowTransitionMutationFn, deleteWorkflowStateMutationFn, deleteWorkflowTransitionMutationFn } from '@/lib/api';
+import { workflowApiService } from '@/api/workflow/services';
 
 const WorkflowEditor: React.FC<{ workflowId: string }> = ({ workflowId }) => {
   const { data, isLoading } = useGetWorkflow(workflowId);
@@ -13,22 +13,22 @@ const WorkflowEditor: React.FC<{ workflowId: string }> = ({ workflowId }) => {
   const [toState, setToState] = useState('');
 
   const createStateMutation = useMutation({
-    mutationFn: ({ workflowId, data }: any) => createWorkflowStateMutationFn({ workflowId, data }),
+    mutationFn: ({ workflowId, data }: any) => workflowApiService.createState({ workflowId, data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflow", workflowId] }),
   });
 
   const deleteStateMutation = useMutation({
-    mutationFn: ({ workflowId, stateId }: any) => deleteWorkflowStateMutationFn({ workflowId, stateId }),
+    mutationFn: ({ workflowId, stateId }: any) => workflowApiService.deleteState({ workflowId, stateId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflow", workflowId] }),
   });
 
   const createTransitionMutation = useMutation({
-    mutationFn: ({ workflowId, data }: any) => createWorkflowTransitionMutationFn({ workflowId, data }),
+    mutationFn: ({ workflowId, data }: any) => workflowApiService.createTransition({ workflowId, data }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflow", workflowId] }),
   });
 
   const deleteTransitionMutation = useMutation({
-    mutationFn: ({ workflowId, transitionId }: any) => deleteWorkflowTransitionMutationFn({ workflowId, transitionId }),
+    mutationFn: ({ workflowId, transitionId }: any) => workflowApiService.deleteTransition({ workflowId, transitionId }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["workflow", workflowId] }),
   });
 
@@ -114,3 +114,8 @@ const WorkflowEditor: React.FC<{ workflowId: string }> = ({ workflowId }) => {
 };
 
 export default WorkflowEditor;
+
+
+
+
+

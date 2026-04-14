@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog";
 import CreateStoryForm from "./create-story-form";
 import EditStoryForm from "./edit-story-form";
-import { getStoriesQueryFn, deleteStoryMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
@@ -31,13 +31,13 @@ export default function StoriesList({ epicId }: { epicId: string }) {
 
   const { data: storiesData, isLoading } = useQuery({
     queryKey: ["stories", epicId],
-    queryFn: () => getStoriesQueryFn(epicId),
+    queryFn: () => issueApiService.getEpicChildren(epicId),
   });
 
-  const stories = storiesData?.stories || [];
+  const stories = Array.isArray(storiesData) ? storiesData : [];
 
   const { mutate: deleteStory, isPending: isDeleting } = useMutation({
-    mutationFn: deleteStoryMutationFn,
+    mutationFn: issueApiService.deleteStory,
   });
 
   const handleDelete = (storyId: string) => {
@@ -167,3 +167,8 @@ export default function StoriesList({ epicId }: { epicId: string }) {
     </div>
   );
 }
+
+
+
+
+

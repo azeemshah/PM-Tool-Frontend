@@ -21,14 +21,14 @@ import {
 import { Input } from "@/components/ui/input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
-import { changePasswordMutationFn } from "@/lib/api";
+import { authApiService } from "@/api/auth/services";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
 
 const ChangePassword = () => {
   const navigate = useNavigate();
 
-  const { mutate, isPending } = useMutation({ mutationFn: changePasswordMutationFn });
+  const { mutate, isPending } = useMutation({ mutationFn: authApiService.changePassword });
 
   const formSchema = z.object({
     currentPassword: z.string().trim().min(1, { message: "Current password is required" }),
@@ -58,7 +58,7 @@ const ChangePassword = () => {
       <div className="flex w-full max-w-sm flex-col gap-6">
         <Link to="/" className="flex items-center gap-2 self-center font-medium">
           <Logo />
-          TM Tool
+          PM Tool
         </Link>
         <div className="flex flex-col gap-6">
           <Card>
@@ -121,3 +121,8 @@ const ChangePassword = () => {
 };
 
 export default ChangePassword;
+
+
+
+
+

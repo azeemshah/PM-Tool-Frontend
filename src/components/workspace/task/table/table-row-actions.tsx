@@ -12,10 +12,10 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { ConfirmDialog } from "@/components/resuable/confirm-dialog";
-import { TaskType } from "@/types/api.type";
+import { TaskType } from "@/api/issue/types";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import useWorkspaceId from "@/hooks/use-workspace-id";
-import { deleteTaskMutationFn } from "@/lib/api";
+import { issueApiService } from "@/api/issue/services/issueApiService";
 import { toast } from "@/hooks/use-toast";
 import EditTaskDialog from "../edit-task-dialog"; // Import the Edit Dialog
 
@@ -31,7 +31,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const workspaceId = useWorkspaceId();
 
   const { mutate, isPending } = useMutation({
-    mutationFn: deleteTaskMutationFn,
+    mutationFn: issueApiService.deleteIssue,
   });
 
   const task = row.original;
@@ -39,19 +39,27 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
   const taskCode = task.taskCode;
 
   const handleConfirm = () => {
-    mutate(
-      taskId,
-      {
-        onSuccess: (data) => {
-          queryClient.invalidateQueries({ queryKey: ["all-tasks", workspaceId] });
-          toast({ title: "Success", description: data.message, variant: "success" });
-          setTimeout(() => setOpenDialog(false), 100);
-        },
-        onError: (error) => {
-          toast({ title: "Error", description: error.message, variant: "destructive" });
-        },
-      }
-    );
+    mutate(taskId, {
+      onSuccess: () => {
+        setOpenDialog(false);
+
+        setTimeout(() => {
+          // Manual cleanup to prevent UI freeze
+          document.body.style.pointerEvents = "";
+          document.body.style.overflow = "";
+
+          queryClient.invalidateQueries({ queryKey: ["all-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["recent-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["workspace-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["project-analytics"] });
+          queryClient.invalidateQueries({ queryKey: ["gantt-data", workspaceId] });
+          toast({ title: "Success", description: `Task ${taskCode} deleted successfully`, variant: "success" });
+        }, 300);
+      },
+      onError: (error: any) => {
+        toast({ title: "Error", description: error.message || "Failed to delete task", variant: "destructive" });
+      },
+    });
   };
 
   return (
@@ -65,24 +73,36 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-[160px]">
           {/* Edit Task Option */}
-          <DropdownMenuItem className="cursor-pointer" onClick={() => setOpenEditDialog(true)}>
-            <Pencil className="w-4 h-4 mr-2" /> Edit Task
-          </DropdownMenuItem>
+          {/* <DropdownMenuItem
+            className="cursor-pointer"
+            onClick={(e) => {
+              e.stopPropagation();
+              setOpenEditDialog(true);
+            }}
+          >
+            <Pencil className="w-4 h-4 mr-2" /> Edit Issue
+          </DropdownMenuItem> */}
           <DropdownMenuSeparator />
 
           {/* Delete Task Option */}
           <DropdownMenuItem
             className="!text-destructive cursor-pointer"
-            onClick={() => setOpenDialog(true)}
+            onClick={(e) => e.stopPropagation()}
+            onSelect={() => {
+              setTimeout(() => {
+                setOpenDialog(true);
+              }, 100);
+            }}
           >
-            Delete Task
+            Delete Issue
             <DropdownMenuShortcut>⌘⌫</DropdownMenuShortcut>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
 
       {/* Edit Task Dialog */}
-      <EditTaskDialog task={task} isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)} />
+      <EditTaskDialog task={task} isOpen={openEditDialog} onClose={() => setOpenEditDialog(false)}
+      />
 
       {/* Delete Task Confirmation Dialog */}
       <ConfirmDialog
@@ -98,3 +118,7 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
     </>
   );
 }
+
+
+
+

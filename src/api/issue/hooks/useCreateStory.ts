@@ -5,7 +5,7 @@
 
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { issueApiService } from '../services/issueApiService';
-import { CreateStoryDTO, Story } from '../../types';
+import { CreateStoryDTO, Story } from '../types';
 import { useToast } from '@/hooks/use-toast';
 
 export function useCreateStory() {
@@ -16,9 +16,14 @@ export function useCreateStory() {
 		mutationFn: ({ epicId, data }: { epicId: string; data: CreateStoryDTO }) =>
 			issueApiService.createStory(epicId, data),
 		onSuccess: (story: Story) => {
+			// Invalidate all related queries to refresh data across the app
 			queryClient.invalidateQueries({ queryKey: ['stories'] });
+			queryClient.invalidateQueries({ queryKey: ['all-tasks'] });
 			queryClient.invalidateQueries({ queryKey: ['epic-children'] });
 			queryClient.invalidateQueries({ queryKey: ['issues'] });
+			queryClient.invalidateQueries({ queryKey: ['gantt-data'] });
+			queryClient.invalidateQueries({ queryKey: ['workspace-analytics'] });
+			queryClient.invalidateQueries({ queryKey: ['project-analytics'] });
 			toast({
 				title: 'Success',
 				description: `Story "${story.title}" created successfully`,
@@ -34,3 +39,8 @@ export function useCreateStory() {
 		},
 	});
 }
+
+
+
+
+

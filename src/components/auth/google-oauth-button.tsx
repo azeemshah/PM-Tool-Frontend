@@ -5,7 +5,7 @@ const GoogleOauthButton = (props: { label: string }) => {
   const { label } = props;
 
   const handleClick = () => {
-    window.location.href = `${baseURL}/auth/google`;
+    window.location.href = `${baseURL}/pm-auth/google`;
   };
   return (
     <Button
@@ -26,3 +26,8 @@ const GoogleOauthButton = (props: { label: string }) => {
 };
 
 export default GoogleOauthButton;
+
+
+
+
+
