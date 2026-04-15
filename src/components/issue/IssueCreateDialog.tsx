@@ -46,6 +46,7 @@ import { attachmentApiService } from '@/api/attachment/services';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
+import { useAuthContext } from '@/context/auth-provider';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -106,6 +107,7 @@ export function IssueCreateDialog({
     boardType = 'kanban',
 }: IssueCreateDialogProps) {
     const queryClient = useQueryClient();
+    const { user } = useAuthContext();
     
     // Try to get context if available, but don't fail if not wrapped in provider
     let selectedColumnName: string | null = null;
@@ -287,12 +289,24 @@ export function IssueCreateDialog({
     // Set default reporter
     useEffect(() => {
         if (members.length > 0 && !reporterId) {
-            const firstMember = members[0];
-            const userObj = firstMember.user || firstMember.userId;
-            const id = (typeof userObj === 'string' ? userObj : userObj?._id) || '';
-            setReporterId(id);
+            const currentUserId = user?._id ? String(user._id) : '';
+            const memberIds = members
+                .map((member: any) => {
+                    const userObj = member.user || member.userId;
+                    return typeof userObj === 'string' ? userObj : userObj?._id;
+                })
+                .filter(Boolean);
+
+            const preferredId =
+                currentUserId && memberIds.includes(currentUserId)
+                    ? currentUserId
+                    : (memberIds[0] || '');
+
+            if (preferredId) {
+                setReporterId(preferredId);
+            }
         }
-    }, [members, reporterId]);
+    }, [members, reporterId, user?._id]);
 
     // Pre-fill status from selected column
     useEffect(() => {

@@ -399,7 +399,11 @@ export function KanbanBoardView() {
                 queryClient.invalidateQueries({ queryKey: ['gantt-data', workspaceId] });
               } catch (error) {
                 console.error('Error moving issue card:', error);
-                setDragError('Failed to move card. Please try again.');
+                const message =
+                  (error as any)?.response?.data?.message ||
+                  (error as any)?.message ||
+                  'Failed to move card. Please try again.';
+                setDragError(message);
                 // Revert
                 queryClient.setQueryData(queryKey, previousData);
               }
@@ -418,7 +422,11 @@ export function KanbanBoardView() {
           }
         } catch (err) {
           console.error('Error moving card:', err);
-          setDragError('Failed to move card. Please try again.');
+          const message =
+            (err as any)?.response?.data?.message ||
+            (err as any)?.message ||
+            'Failed to move card. Please try again.';
+          setDragError(message);
           lastDragState.current = null;
         }
       }

@@ -50,6 +50,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib/helper';
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
+import { useAuthContext } from '@/context/auth-provider';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -83,6 +84,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
   listId,
 }) => {
   const queryClient = useQueryClient();
+  const { user } = useAuthContext();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const customFieldsSectionRef = useRef<HTMLDivElement | null>(null);
   const newFieldNameRef = useRef<HTMLInputElement | null>(null);
@@ -171,7 +173,7 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       type: 'Task',
       priority: 'Medium',
       status: 'Backlog',
-      reporterId: reporterOptions?.[0]?.value || '',
+      reporterId: '',
       dueDate: undefined,
       labels: [],
       tags: [],
@@ -179,6 +181,27 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
       storyPoints: '',
     },
   });
+
+  useEffect(() => {
+    if (!open) return;
+
+    const selectedReporter = form.getValues('reporterId');
+    if (selectedReporter) return;
+
+    const currentUserId = user?._id ? String(user._id) : '';
+    const optionValues = (reporterOptions as any[])
+      .map((option) => String(option?.value || ''))
+      .filter(Boolean);
+
+    const preferredReporter =
+      currentUserId && optionValues.includes(currentUserId)
+        ? currentUserId
+        : (optionValues[0] || '');
+
+    if (preferredReporter) {
+      form.setValue('reporterId', preferredReporter, { shouldValidate: true });
+    }
+  }, [open, form, reporterOptions, user?._id]);
 
   useEffect(() => {
     if (!open) {

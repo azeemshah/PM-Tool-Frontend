@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -47,6 +47,7 @@ import { TagInput } from '@/components/tag/TagInput';
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { getStatusIcon } from "./table/data";
 import { Badge } from "@/components/ui/badge";
+import { useAuthContext } from "@/context/auth-provider";
 
 export default function CreateTaskForm(props: {
   workspaceId?: string;
@@ -58,6 +59,7 @@ export default function CreateTaskForm(props: {
 
   const queryClient = useQueryClient();
   const workspaceId = propWorkspaceId || useWorkspaceId();
+  const { user } = useAuthContext();
 
   const { statuses: dynamicStatuses } = useGetWorkspaceStatuses(workspaceId);
   const { data: boards = [] } = useGetKanbanBoards(workspaceId);
@@ -125,13 +127,32 @@ export default function CreateTaskForm(props: {
       title: "",
       description: "",
       dueDate: undefined,
-      reporter: members.length > 0 ? members[0].userId._id : "",
+      reporter: "",
       labels: [],
       tags: [],
       storyPoints: undefined,
       originalEstimate: undefined,
     },
   });
+
+  useEffect(() => {
+    const currentReporter = form.getValues("reporter");
+    if (currentReporter) return;
+
+    const currentUserId = user?._id ? String(user._id) : "";
+    const optionValues = membersOptions
+      .map((option) => String(option.value || ""))
+      .filter(Boolean);
+
+    const preferredReporter =
+      currentUserId && optionValues.includes(currentUserId)
+        ? currentUserId
+        : (optionValues[0] || "");
+
+    if (preferredReporter) {
+      form.setValue("reporter", preferredReporter, { shouldValidate: true });
+    }
+  }, [form, membersOptions, user?._id]);
 
   const STATUSES = ["todo", "in_progress", "in_review", "done"];
   const PRIORITIES = ["low", "medium", "high"];

@@ -57,7 +57,9 @@ export function DataTableRowActions({ row }: DataTableRowActionsProps) {
         }, 300);
       },
       onError: (error: any) => {
-        toast({ title: "Error", description: error.message || "Failed to delete task", variant: "destructive" });
+        const message =
+          error?.response?.data?.message || error?.message || "Failed to delete task";
+        toast({ title: "Error", description: message, variant: "destructive" });
       },
     });
   };
