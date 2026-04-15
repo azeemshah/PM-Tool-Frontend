@@ -33,25 +33,42 @@ const ResetPassword = () => {
 
   const { mutate, isPending } = useMutation({ mutationFn: authApiService.resetPassword });
 
-  const formSchema = z.object({
-    token: z.string().min(1, { message: "Token is required" }).optional(),
-    newPassword: z.string().trim().min(8, { message: "Password is required" }),
-  });
+  const formSchema = z
+    .object({
+      newPassword: z.string().trim().min(8, { message: "Password must be at least 8 characters" }),
+      confirmPassword: z.string().trim().min(8, { message: "Please retype your password" }),
+    })
+    .refine((data) => data.newPassword === data.confirmPassword, {
+      message: "New Password and Retype New Password must be same",
+      path: ["confirmPassword"],
+    });
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: { token: tokenFromQuery, newPassword: "" },
+    defaultValues: { newPassword: "", confirmPassword: "" },
   });
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     if (isPending) return;
-    mutate(values as any, {
+
+    if (!tokenFromQuery) {
+      toast({ title: "Error", description: "Invalid reset link", variant: "destructive" });
+      return;
+    }
+
+    mutate({ token: tokenFromQuery, newPassword: values.newPassword }, {
       onSuccess: () => {
         toast({ title: "Success", description: "Password has been reset." });
         navigate("/");
       },
       onError: (error: any) => {
-        toast({ title: "Error", description: error.message, variant: "destructive" });
+        const errorMessage =
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          error?.message ||
+          "Failed to reset password";
+
+        toast({ title: "Error", description: errorMessage, variant: "destructive" });
       },
     });
   };
@@ -76,12 +93,12 @@ const ResetPassword = () => {
                     <div className="grid gap-2">
                       <FormField
                         control={form.control}
-                        name="token"
+                        name="newPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="dark:text-[#f1f7feb5] text-sm">Token</FormLabel>
+                            <FormLabel className="dark:text-[#f1f7feb5] text-sm">New Password</FormLabel>
                             <FormControl>
-                              <Input placeholder="Reset token" className="!h-[48px]" {...field} />
+                              <PasswordInput className="!h-[48px]" {...field} />
                             </FormControl>
 
                             <FormMessage />
@@ -92,10 +109,10 @@ const ResetPassword = () => {
                     <div className="grid gap-2">
                       <FormField
                         control={form.control}
-                        name="newPassword"
+                        name="confirmPassword"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="dark:text-[#f1f7feb5] text-sm">New Password</FormLabel>
+                            <FormLabel className="dark:text-[#f1f7feb5] text-sm">Retype New Password</FormLabel>
                             <FormControl>
                               <PasswordInput className="!h-[48px]" {...field} />
                             </FormControl>
