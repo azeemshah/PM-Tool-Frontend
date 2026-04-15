@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 
 const ChangePasswordDialog = (props: {
@@ -112,9 +112,8 @@ const ChangePasswordDialog = (props: {
         <form className="grid gap-4" onSubmit={handleSubmit}>
           <div className="grid gap-2">
             <Label htmlFor="current-password">Current Password</Label>
-            <Input
+            <PasswordInput
               id="current-password"
-              type="password"
               value={currentPassword}
               onChange={(event) => setCurrentPassword(event.target.value)}
               placeholder="Enter current password"
@@ -124,9 +123,8 @@ const ChangePasswordDialog = (props: {
 
           <div className="grid gap-2">
             <Label htmlFor="new-password">New Password</Label>
-            <Input
+            <PasswordInput
               id="new-password"
-              type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
               placeholder="Enter new password"
@@ -136,9 +134,8 @@ const ChangePasswordDialog = (props: {
 
           <div className="grid gap-2">
             <Label htmlFor="confirm-password">Retype Password</Label>
-            <Input
+            <PasswordInput
               id="confirm-password"
-              type="password"
               value={confirmPassword}
               onChange={(event) => setConfirmPassword(event.target.value)}
               placeholder="Retype new password"

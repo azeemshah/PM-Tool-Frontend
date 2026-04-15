@@ -19,6 +19,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import Logo from "@/components/logo";
 import { useMutation } from "@tanstack/react-query";
 import { authApiService } from "@/api/auth/services";
@@ -174,11 +175,7 @@ const SignIn = () => {
                                 </Link>
                               </div>
                               <FormControl>
-                                <Input
-                                  type="password"
-                                  className="!h-[48px]"
-                                  {...field}
-                                />
+                                <PasswordInput className="!h-[48px]" {...field} />
                               </FormControl>
 
                               <FormMessage />
