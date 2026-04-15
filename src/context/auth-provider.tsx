@@ -27,7 +27,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
   const navigate = useNavigate();
-  const workspaceId = useWorkspaceId();
+  const routeWorkspaceId = useWorkspaceId();
 
   const {
     data: authData,
@@ -37,6 +37,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     refetch: refetchAuth,
   } = useAuth();
   const user = authData?.user;
+
+  const userWorkspaceId =
+    typeof user?.currentWorkspace === "string"
+      ? user.currentWorkspace
+      : user?.currentWorkspace?._id;
+
+  const workspaceId = routeWorkspaceId || userWorkspaceId || "";
 
   const {
     data: workspaceData,

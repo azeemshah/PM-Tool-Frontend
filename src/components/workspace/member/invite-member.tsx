@@ -23,7 +23,7 @@ import { memberApiService } from "@/api/member/services/memberApiService";
 import { BASE_ROUTE } from "@/routes/common/routePaths";
 
 const InviteMember = () => {
-  const { workspace, workspaceLoading } = useAuthContext();
+  const { workspace, workspaceLoading, user } = useAuthContext();
 
   const [email, setEmail] = useState("");
   const [role, setRole] = useState<"ADMIN" | "TEAM_LEAD" | "PROJECT_MANAGER" | "MEMBER" | "VIEWER" | "WATCHER">("MEMBER");
@@ -61,7 +61,12 @@ const InviteMember = () => {
       return;
     }
 
-    if (!workspace) {
+    const fallbackWorkspaceId =
+      typeof user?.currentWorkspace === "string"
+        ? user.currentWorkspace
+        : user?.currentWorkspace?._id;
+
+    if (!workspace && !fallbackWorkspaceId) {
       toast({
         title: "Error",
         description: "Workspace information not loaded",
@@ -71,7 +76,7 @@ const InviteMember = () => {
     }
 
     // Get workspaceId - prefer _id (MongoDB ID) over id
-    const workspaceId = workspace._id || workspace.id;
+    const workspaceId = workspace?._id || workspace?.id || fallbackWorkspaceId;
 
     if (!workspaceId) {
       toast({

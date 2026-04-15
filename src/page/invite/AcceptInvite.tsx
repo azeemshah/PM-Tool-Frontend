@@ -1,5 +1,5 @@
 import { Loader } from "lucide-react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import {
   Card,
   CardContent,
@@ -11,7 +11,7 @@ import Logo from "@/components/logo";
 import { Button } from "@/components/ui/button";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
-import { useEffect } from "react";
+import useAuth from "@/hooks/api/use-auth";
 import API from "@/lib/axios-client";
 
 const AcceptInvite = () => {
@@ -20,6 +20,10 @@ const AcceptInvite = () => {
   const [searchParams] = useSearchParams();
   const params = useParams();
   const token = searchParams.get("token") || params.token;
+  const { data: authData, isPending: authLoading } = useAuth();
+  const user = authData?.user;
+
+  const returnUrl = encodeURIComponent(token ? `/invite?token=${token}` : "/invite");
 
   const { mutate, isPending: isLoading } = useMutation({
     mutationFn: async (inviteToken: string) => {
@@ -30,19 +34,21 @@ const AcceptInvite = () => {
     },
   });
 
-  // Auto-accept when token is available
-  useEffect(() => {
-    if (token) {
-      handleAcceptInvite();
-    }
-  }, [token]);
-
   const handleAcceptInvite = () => {
     if (!token) {
       console.error("❌ No token provided");
       toast({
         title: "Error",
         description: "No invitation token provided",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!user) {
+      toast({
+        title: "Login Required",
+        description: "Please login or sign up with invited email first.",
         variant: "destructive",
       });
       return;
@@ -56,45 +62,25 @@ const AcceptInvite = () => {
         console.log("✅ Invitation accepted successfully");
         console.log("📦 Response data:", data);
 
-        // Handle different response structures
-        const accessToken = data?.accessToken || data?.data?.accessToken;
         const workspaceId =
           data?.member?.workspaceId ||
           data?.data?.member?.workspaceId ||
           data?.workspaceId ||
           data?.data?.workspaceId;
-        
-        if (accessToken) {
-          console.log("🔐 Access token received, storing...");
-          // Store the access token
-          localStorage.setItem("accessToken", accessToken);
 
-          // Clear the mock auth token to trigger a fresh auth query
-          localStorage.removeItem("mockAuthToken");
+        queryClient.invalidateQueries({ queryKey: ["authUser"] });
+        queryClient.invalidateQueries({ queryKey: ["userWorkspaces"] });
 
-          // Invalidate auth queries to refresh user data
-          queryClient.invalidateQueries({ queryKey: ["authUser"] });
+        toast({
+          title: "Success",
+          description: "Invitation accepted! Redirecting...",
+          variant: "success",
+        });
 
-          toast({
-            title: "Success",
-            description: "Invitation accepted! Redirecting...",
-            variant: "success",
-          });
-
-          console.log("🚀 Redirecting to workspace");
-
-          // Wait a moment then redirect to the invited workspace when available
-          setTimeout(() => {
-            navigate(workspaceId ? `/workspace/${workspaceId}` : "/workspace");
-          }, 500);
-        } else {
-          console.error("❌ No accessToken in response:", data);
-          toast({
-            title: "Error",
-            description: "Invalid response from server - no token received",
-            variant: "destructive",
-          });
-        }
+        console.log("🚀 Redirecting to workspace");
+        setTimeout(() => {
+          navigate(workspaceId ? `/workspace/${workspaceId}` : "/workspace");
+        }, 500);
       },
       onError: (error: any) => {
         console.error("❌ Invitation acceptance failed");
@@ -121,11 +107,6 @@ const AcceptInvite = () => {
           description: errorMessage,
           variant: "destructive",
         });
-
-        // Redirect back after showing error
-        setTimeout(() => {
-          navigate("/");
-        }, 3000);
       },
     });
   };
@@ -140,27 +121,43 @@ const AcceptInvite = () => {
         <div className="flex flex-col gap-6">
           <Card>
             <CardHeader className="text-center">
-              <CardTitle className="text-xl">
-                Accepting Your Invitation
-              </CardTitle>
+              <CardTitle className="text-xl">Workspace Invitation</CardTitle>
               <CardDescription>
-                Please wait while we process your invitation...
+                Accept this invite with your PM Tool account.
               </CardDescription>
             </CardHeader>
-            <CardContent className="flex items-center justify-center">
-              {isLoading ? (
+            <CardContent className="flex items-center justify-center min-h-24">
+              {authLoading || isLoading ? (
                 <Loader className="!w-12 !h-12 animate-spin" />
               ) : (
-                <div className="text-center">
-                  <p className="text-gray-600 mb-4">
-                    {token
-                      ? "Processing invitation..."
-                      : "No invitation token found"}
-                  </p>
+                <div className="text-center w-full">
                   {!token && (
-                    <Button onClick={() => navigate("/")} className="mt-4">
-                      Go to Login
-                    </Button>
+                    <div>
+                      <p className="text-gray-600 mb-4">No invitation token found.</p>
+                      <Button onClick={() => navigate("/")}>Go to Login</Button>
+                    </div>
+                  )}
+
+                  {token && !user && (
+                    <div className="flex flex-col md:flex-row items-center gap-2">
+                      <Link className="flex-1 w-full text-base" to={`/sign-up?returnUrl=${returnUrl}`}>
+                        <Button className="w-full">Signup</Button>
+                      </Link>
+                      <Link className="flex-1 w-full text-base" to={`/?returnUrl=${returnUrl}`}>
+                        <Button variant="secondary" className="w-full border">
+                          Login
+                        </Button>
+                      </Link>
+                    </div>
+                  )}
+
+                  {token && user && (
+                    <div className="space-y-4">
+                      <p className="text-gray-600">Logged in as {user.email}</p>
+                      <Button onClick={handleAcceptInvite} className="w-full">
+                        Accept Invitation
+                      </Button>
+                    </div>
                   )}
                 </div>
               )}
