@@ -71,4 +71,19 @@ export const authApiService = {
     });
     return response.data;
   },
+
+  deleteAccount: async (options?: { deleteOwnedWorkspaces?: boolean }) => {
+    const response = await API.delete("/pm-user/account", {
+      data: {
+        deleteOwnedWorkspaces: !!options?.deleteOwnedWorkspaces,
+      },
+    });
+    try {
+      delete API.defaults.headers.common["Authorization"];
+      localStorage.removeItem("accessToken");
+    } catch {
+      // Ignore errors
+    }
+    return response.data;
+  },
 };

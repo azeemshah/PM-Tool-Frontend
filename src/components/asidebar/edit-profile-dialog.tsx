@@ -4,6 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { authApiService } from "@/api/auth/services";
 import { useAuthContext } from "@/context/auth-provider";
 import { useToast } from "@/hooks/use-toast";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -23,6 +24,7 @@ const EditProfileDialog = (props: {
   const { isOpen, setIsOpen } = props;
   const { user, refetchAuth } = useAuthContext();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -56,6 +58,41 @@ const EditProfileDialog = (props: {
     },
   });
 
+  const { mutate: deleteAccount, isPending: isDeleting } = useMutation({
+    mutationFn: (options?: { deleteOwnedWorkspaces?: boolean }) => authApiService.deleteAccount(options),
+    onSuccess: () => {
+      setIsOpen(false);
+      toast({
+        title: "Account deleted",
+        description: "Your account has been permanently deleted.",
+      });
+      navigate("/");
+    },
+    onError: (error: any, variables) => {
+      const message = error?.response?.data?.message || error?.message || "Failed to delete account";
+      const isOwnedWorkspaceConflict =
+        error?.response?.status === 409 &&
+        String(message).toLowerCase().includes("workspace");
+
+      if (isOwnedWorkspaceConflict && !variables?.deleteOwnedWorkspaces) {
+        const shouldDeleteAll = window.confirm(
+          "You own one or more workspaces. Do you want to delete all owned workspaces and your account?",
+        );
+
+        if (shouldDeleteAll) {
+          deleteAccount({ deleteOwnedWorkspaces: true });
+        }
+        return;
+      }
+
+      toast({
+        title: "Error",
+        description: message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -73,6 +110,14 @@ const EditProfileDialog = (props: {
       name: normalizedName,
       email: email.trim().toLowerCase(),
     });
+  };
+
+  const handleDeleteAccount = () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to permanently delete your account? This action cannot be undone.",
+    );
+    if (!confirmed) return;
+    deleteAccount();
   };
 
   return (
@@ -118,6 +163,19 @@ const EditProfileDialog = (props: {
               Save changes
             </Button>
           </DialogFooter>
+
+          <div className="pt-2 border-t border-border">
+            <Button
+              type="button"
+              variant="destructive"
+              className="w-full"
+              onClick={handleDeleteAccount}
+              disabled={isPending || isDeleting}
+            >
+              {isDeleting && <Loader className="animate-spin" />}
+              Delete Account
+            </Button>
+          </div>
         </form>
       </DialogContent>
     </Dialog>
