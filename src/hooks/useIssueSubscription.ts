@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import io, { Socket } from 'socket.io-client';
+import { baseURL } from '@/lib/base-url';
 
 interface UseIssueSubscriptionProps {
   workspaceId: string;
@@ -24,12 +25,24 @@ export function useIssueSubscription({
     if (!enabled || !workspaceId) return;
 
     // Socket.IO server URL
-    const socketUrl =
-      import.meta.env.VITE_SOCKET_URL ||
-      'http://localhost:5000/api/v1/issues';
+    let socketUrl = import.meta.env.VITE_SOCKET_URL as string | undefined;
+
+    if (socketUrl) {
+      socketUrl = socketUrl.replace(/\/$/, '');
+      socketUrl = `${socketUrl}/issues`;
+    } else {
+      try {
+        const url = new URL(baseURL);
+        socketUrl = `${url.origin}/issues`;
+      } catch {
+        socketUrl = '/issues';
+      }
+    }
 
     // Connect to WebSocket gateway
     const socket: Socket = io(socketUrl, {
+      transports: ['websocket', 'polling'],
+      withCredentials: true,
       reconnection: true,
       reconnectionDelay: 1000,
       reconnectionDelayMax: 5000,
