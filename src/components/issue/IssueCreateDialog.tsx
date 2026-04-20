@@ -47,6 +47,7 @@ import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
 import { useKanbanAppContext } from '@/contexts/KanbanAppContext';
 import { useAuthContext } from '@/context/auth-provider';
+import { showAlertDialog } from '@/lib/modal-alert';
 
 interface IssueCreateDialogProps {
     isOpen: boolean;
@@ -1046,7 +1047,11 @@ export function IssueCreateDialog({
                                 });
                                 
                                 if (files.length !== validFiles.length) {
-                                    alert('Some files were skipped because they exceed the 2MB limit.');
+                                    void showAlertDialog({
+                                        title: 'File size limit',
+                                        description: 'Some files were skipped because they exceed the 2MB limit.',
+                                        confirmText: 'OK',
+                                    });
                                 }
 
                                 if (validFiles.length > 0) {

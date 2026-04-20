@@ -47,6 +47,7 @@ import FileUpload from "@/components/ui/file-upload";
 import { useGetWorkspaceStatuses } from '@/hooks/use-get-workspace-statuses';
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { getStatusIcon } from "./table/data";
+import { showConfirmDialog } from "@/lib/modal-alert";
 
 interface Task {
   _id: string;
@@ -236,7 +237,14 @@ export default function EditTaskForm(props: {
   };
 
   const handleDeleteAttachment = async (att: AttachmentUI) => {
-    if (!confirm("Are you sure you want to delete this attachment?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete attachment?",
+      description: "Are you sure you want to delete this attachment?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     setDeletingAttachment(att._id || att.url);
     try {

@@ -12,6 +12,7 @@ import {
   MemberDetails,
 } from '@/components/member';
 import type { Member } from '@/api/member/types';
+import { showAlertDialog } from '@/lib/modal-alert';
 
 interface MemberPageProps {
   workspaceId: string;
@@ -132,8 +133,11 @@ export const MemberManagementPage: React.FC<MemberPageProps> = ({
                       const link = inviteCode ? `${window.location.origin}/invite/workspace/${inviteCode}/join` : '';
                       if (link) {
                         navigator.clipboard?.writeText(link).then(() => {
-                          // simple feedback
-                          alert('Invite link copied to clipboard');
+                          void showAlertDialog({
+                            title: 'Copied',
+                            description: 'Invite link copied to clipboard',
+                            confirmText: 'OK',
+                          });
                         });
                       }
                     }}

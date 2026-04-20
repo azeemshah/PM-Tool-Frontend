@@ -243,6 +243,8 @@ if (!baseURL) {
         requestUrl.includes("/pm-auth/register") ||
         requestUrl.includes("/pm-auth/forgot-password") ||
         requestUrl.includes("/pm-auth/reset-password") ||
+        requestUrl.includes("/pm-auth/resend-otp") ||
+        requestUrl.includes("/pm-auth/verify-otp") ||
         requestUrl.includes("/pm-auth/verify-login-otp") ||
         requestUrl.includes("/pm-auth/verify-email");
 

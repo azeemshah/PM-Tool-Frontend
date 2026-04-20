@@ -9,6 +9,7 @@ import { badgeVariants } from '@/components/ui/badge';
 import { getStatusIcon } from '@/components/workspace/task/table/data';
 import { getGanttStatusColor } from '@/components/gantt-chart/utils/colorMaps';
 import { cn } from '@/lib/utils';
+import { showConfirmDialog } from '@/lib/modal-alert';
 
 interface SprintColumnProps {
   title: string;
@@ -53,9 +54,15 @@ const SprintColumn: React.FC<SprintColumnProps> = ({
             </div>
             <button
               className="text-inherit hover:text-inherit hover:bg-black/10 p-1 rounded-md transition-colors"
-              onClick={() => {
-                const ok = confirm('Are You Sure?');
-                if (!ok) return;
+              onClick={async () => {
+                const confirmed = await showConfirmDialog({
+                  title: 'Delete column?',
+                  description: 'Are you sure you want to delete this column?',
+                  confirmText: 'Delete',
+                  cancelText: 'Cancel',
+                  variant: 'destructive',
+                });
+                if (!confirmed) return;
                 onDelete && onDelete(columnId);
               }}
               title="Delete Column"

@@ -6,6 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { useMember } from '@/hooks/useMember';
 import type { CreateMemberDTO } from '@/api/member/types';
+import { showAlertDialog } from '@/lib/modal-alert';
 
 interface AddMemberProps {
   workspaceId: string;
@@ -48,7 +49,11 @@ export const AddMember: React.FC<AddMemberProps> = ({
     setSuccessMessage('');
 
     if (!formData.userId || !formData.roleId) {
-      alert('Please select both user and role');
+      await showAlertDialog({
+        title: 'Missing fields',
+        description: 'Please select both user and role',
+        confirmText: 'OK',
+      });
       return;
     }
 

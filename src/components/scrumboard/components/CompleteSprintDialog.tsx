@@ -19,6 +19,7 @@ import { Sprint } from "@/api/scrumboard/types";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { showAlertDialog } from "@/lib/modal-alert";
 
 interface CompleteSprintDialogProps {
   open: boolean;
@@ -40,12 +41,16 @@ const CompleteSprintDialog: React.FC<CompleteSprintDialogProps> = ({
   const [sendToBacklog, setSendToBacklog] = useState(true);
   const [selectedSprintId, setSelectedSprintId] = useState<string>("");
 
-  const handleConfirm = () => {
+  const handleConfirm = async () => {
     if (sendToBacklog) {
       onConfirm();
     } else {
       if (!selectedSprintId) {
-        alert("Please select a sprint");
+        await showAlertDialog({
+          title: "Select sprint",
+          description: "Please select a sprint",
+          confirmText: "OK",
+        });
         return;
       }
       onConfirm(selectedSprintId);

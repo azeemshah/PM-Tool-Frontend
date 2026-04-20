@@ -6,6 +6,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { issueApiService } from '@/api/issue/services/issueApiService';
 import { useToast } from '@/hooks/use-toast';
 import { formatDuration } from '@/lib/helper';
+import { showConfirmDialog } from '@/lib/modal-alert';
 
 export interface TimeLog {
   _id: string;
@@ -86,7 +87,14 @@ export const TimeLogsList: React.FC<TimeLogsListProps> = ({
   };
 
   const deleteLog = async (logId: string) => {
-    if (!confirm('Delete this time log? This cannot be undone.')) return;
+    const confirmed = await showConfirmDialog({
+      title: 'Delete time log?',
+      description: 'Delete this time log? This cannot be undone.',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
 
     try {
       setLoading(true);

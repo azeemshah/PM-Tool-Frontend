@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { showConfirmDialog } from "@/lib/modal-alert";
 
 const EditProfileDialog = (props: {
   isOpen: boolean;
@@ -68,16 +69,21 @@ const EditProfileDialog = (props: {
       });
       navigate("/");
     },
-    onError: (error: any, variables) => {
+    onError: async (error: any, variables) => {
       const message = error?.response?.data?.message || error?.message || "Failed to delete account";
       const isOwnedWorkspaceConflict =
         error?.response?.status === 409 &&
         String(message).toLowerCase().includes("workspace");
 
       if (isOwnedWorkspaceConflict && !variables?.deleteOwnedWorkspaces) {
-        const shouldDeleteAll = window.confirm(
-          "You own one or more workspaces. Do you want to delete all owned workspaces and your account?",
-        );
+        const shouldDeleteAll = await showConfirmDialog({
+          title: "Delete owned workspaces?",
+          description:
+            "You own one or more workspaces. Do you want to delete all owned workspaces and your account?",
+          confirmText: "Delete all",
+          cancelText: "Cancel",
+          variant: "destructive",
+        });
 
         if (shouldDeleteAll) {
           deleteAccount({ deleteOwnedWorkspaces: true });
@@ -112,12 +118,17 @@ const EditProfileDialog = (props: {
     });
   };
 
-  const handleDeleteAccount = () => {
-    const confirmed = window.confirm(
-      "Are you sure you want to permanently delete your account? This action cannot be undone.",
-    );
+  const handleDeleteAccount = async () => {
+    const confirmed = await showConfirmDialog({
+      title: "Are you sure?",
+      description:
+        "Are you sure you want to permanently delete your account? This action cannot be undone.",
+      confirmText: "Delete account",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
     if (!confirmed) return;
-    deleteAccount();
+    deleteAccount({});
   };
 
   return (

@@ -11,6 +11,7 @@ import CompleteSprintDialog from './CompleteSprintDialog';
 import { useDeleteSprint } from '@/api/scrumboard/hooks/sprints/useDeleteSprint';
 import useWorkspaceId from '@/hooks/use-workspace-id';
 import { toast } from '@/hooks/use-toast';
+import { showConfirmDialog } from '@/lib/modal-alert';
 
 interface SprintListProps {
   sprints: Sprint[];
@@ -226,21 +227,28 @@ const SprintList: React.FC<SprintListProps> = ({
                   size="sm"
                   variant="destructive"
                   className="text-xs h-7"
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm('Do you want to delete the Sprint')) {
-                      deleteSprintMutation.mutate(
-                        { sprintId: sprint._id, workspaceId },
-                        {
-                          onSuccess: () => {
-                            toast({ title: 'Deleted', description: 'Sprint deleted Succusfully' });
-                          },
-                          onError: () => {
-                            toast({ title: 'Error', description: 'Sprint not deleted', variant: 'destructive' });
-                          },
-                        }
-                      );
-                    }
+                    const confirmed = await showConfirmDialog({
+                      title: 'Delete sprint?',
+                      description: 'Do you want to delete the sprint?',
+                      confirmText: 'Delete',
+                      cancelText: 'Cancel',
+                      variant: 'destructive',
+                    });
+                    if (!confirmed) return;
+
+                    deleteSprintMutation.mutate(
+                      { sprintId: sprint._id, workspaceId },
+                      {
+                        onSuccess: () => {
+                          toast({ title: 'Deleted', description: 'Sprint deleted Succusfully' });
+                        },
+                        onError: () => {
+                          toast({ title: 'Error', description: 'Sprint not deleted', variant: 'destructive' });
+                        },
+                      }
+                    );
                   }}
                   disabled={deleteSprintMutation.isPending}
                 >

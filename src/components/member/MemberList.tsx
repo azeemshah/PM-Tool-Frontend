@@ -7,6 +7,7 @@ import React, { useEffect } from 'react';
 import { useMember } from '@/hooks/useMember';
 import type { Member } from '@/api/member/types';
 import { getProfileImageUrl } from '@/lib/helper';
+import { showConfirmDialog } from '@/lib/modal-alert';
 
 interface MemberListProps {
   workspaceId: string;
@@ -28,10 +29,17 @@ export const MemberList: React.FC<MemberListProps> = ({
   }, [workspaceId, fetchWorkspaceMembers]);
 
   const handleRemove = async (memberId: string) => {
-    if (confirm('Are you sure you want to remove this member?')) {
-      const success = await removeMember(memberId);
-      if (success && onRemoveMember) onRemoveMember(memberId);
-    }
+    const confirmed = await showConfirmDialog({
+      title: 'Remove member?',
+      description: 'Are you sure you want to remove this member?',
+      confirmText: 'Remove',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+
+    const success = await removeMember(memberId);
+    if (success && onRemoveMember) onRemoveMember(memberId);
   };
 
   const initials = (name?: string) => {

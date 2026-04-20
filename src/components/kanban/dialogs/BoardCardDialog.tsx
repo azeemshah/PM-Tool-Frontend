@@ -42,6 +42,7 @@ import { TimeLogsList } from '@/components/time-tracking/TimeLogsList';
 import { TimeTrackingSummary } from '@/components/time-tracking/TimeTrackingSummary';
 import { LabelsSelector } from './LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
+import { showConfirmDialog } from '@/lib/modal-alert';
 
 export function BoardCardDialog() {
   const {
@@ -943,8 +944,15 @@ export function BoardCardDialog() {
     );
   };
 
-  const handleDelete = () => {
-    if (!confirm('Are you sure you want to delete this issue?')) return;
+  const handleDelete = async () => {
+    const confirmed = await showConfirmDialog({
+      title: 'Delete issue?',
+      description: 'Are you sure you want to delete this issue?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
 
     deleteIssueApi(
       issue._id,

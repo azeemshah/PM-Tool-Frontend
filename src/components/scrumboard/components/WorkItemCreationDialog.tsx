@@ -51,6 +51,7 @@ import { getAvatarColor, getAvatarFallbackText, getProfileImageUrl } from '@/lib
 import { LabelsSelector } from '@/components/kanban/dialogs/LabelsSelector';
 import { TagInput } from '@/components/tag/TagInput';
 import { useAuthContext } from '@/context/auth-provider';
+import { showAlertDialog } from '@/lib/modal-alert';
 
 const workItemSchema = z.object({
   title: z.string().min(1, 'Title is required'),
@@ -713,7 +714,11 @@ const WorkItemCreationDialog: React.FC<WorkItemCreationDialogProps> = ({
                   const validFiles = files.filter(f => f.size <= 2 * 1024 * 1024);
 
                   if (files.length !== validFiles.length) {
-                    alert('Some files were skipped because they exceed the 2MB limit.');
+                    void showAlertDialog({
+                      title: 'File size limit',
+                      description: 'Some files were skipped because they exceed the 2MB limit.',
+                      confirmText: 'OK',
+                    });
                   }
 
                   if (validFiles.length > 0) {

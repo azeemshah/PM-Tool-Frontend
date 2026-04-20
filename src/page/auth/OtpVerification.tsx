@@ -8,11 +8,13 @@ import Logo from "@/components/logo";
 import { toast } from "@/hooks/use-toast";
 import API from "@/lib/axios-client";
 import { Loader2 } from "lucide-react";
+import { authApiService } from "@/api/auth/services";
 
 const OtpVerification = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [otp, setOtp] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
   const email = location.state?.email;
 
   useEffect(() => {
@@ -20,6 +22,16 @@ const OtpVerification = () => {
       navigate("/");
     }
   }, [email, navigate]);
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setResendCooldown((previous) => (previous > 0 ? previous - 1 : 0));
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [resendCooldown]);
 
   const { mutate, isPending } = useMutation({
     mutationFn: async (data: { email: string; otp: string }) => {
@@ -54,10 +66,33 @@ const OtpVerification = () => {
     },
   });
 
+  const { mutate: resendOtp, isPending: isResending } = useMutation({
+    mutationFn: () => authApiService.resendOtp({ email }),
+    onSuccess: (data: any) => {
+      setResendCooldown(30);
+      toast({
+        title: "OTP Resent",
+        description: data?.message || "A new OTP has been sent to your email.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error?.response?.data?.message || "Failed to resend OTP",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (otp.length < 6) return;
     mutate({ email, otp });
+  };
+
+  const handleResendOtp = () => {
+    if (resendCooldown > 0 || isResending) return;
+    resendOtp();
   };
 
   if (!email) return null;
@@ -90,6 +125,17 @@ const OtpVerification = () => {
                 <Button type="submit" disabled={isPending || otp.length < 6}>
                   {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                   Verify & Login
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={handleResendOtp}
+                  disabled={isResending || resendCooldown > 0}
+                >
+                  {isResending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {resendCooldown > 0
+                    ? `Resend OTP in ${resendCooldown}s`
+                    : "Resend OTP"}
                 </Button>
                 <div className="text-center text-sm">
                    <Link to="/" className="text-primary hover:underline">Back to Login</Link>

@@ -13,6 +13,7 @@ import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import { showConfirmDialog } from "@/lib/modal-alert";
 
 interface Story {
   _id: string;
@@ -40,8 +41,15 @@ export default function StoriesList({ epicId }: { epicId: string }) {
     mutationFn: issueApiService.deleteStory,
   });
 
-  const handleDelete = (storyId: string) => {
-    if (!confirm("Are you sure you want to delete this story?")) return;
+  const handleDelete = async (storyId: string) => {
+    const confirmed = await showConfirmDialog({
+      title: "Delete story?",
+      description: "Are you sure you want to delete this story?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     deleteStory(storyId, {
       onSuccess: () => {

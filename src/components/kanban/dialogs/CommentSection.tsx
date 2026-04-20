@@ -25,6 +25,7 @@ import {
 import { commentApiService } from '@/api/comment/services/commentApiService';
 import API from '@/lib/axios-client';
 import { useCommentsSubscription } from '@/hooks/useCommentsSubscription';
+import { showAlertDialog, showConfirmDialog } from '@/lib/modal-alert';
 
 interface CommentSectionProps {
   workItemId: string;
@@ -93,7 +94,11 @@ const CommentItem = ({
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 2 * 1024 * 1024) {
-        alert('File size must be less than 2MB');
+        void showAlertDialog({
+          title: 'File too large',
+          description: 'File size must be less than 2MB',
+          confirmText: 'OK',
+        });
         setErrorMsg('File size must be less than 2MB');
         if (replyFileInputRef.current) replyFileInputRef.current.value = '';
         return;
@@ -375,7 +380,11 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       if (file.size > 2 * 1024 * 1024) {
-        alert('File size must be less than 2MB');
+        void showAlertDialog({
+          title: 'File too large',
+          description: 'File size must be less than 2MB',
+          confirmText: 'OK',
+        });
         setErrorMsg('File size must be less than 2MB');
         if (fileInputRef.current) fileInputRef.current.value = '';
         return;
@@ -445,10 +454,16 @@ export function CommentSection({ workItemId, workspaceId }: CommentSectionProps)
     setNewComment('');
   };
 
-  const handleDelete = (id: string) => {
-    if (confirm('Are you sure you want to delete this comment?')) {
-      deleteComment(id);
-    }
+  const handleDelete = async (id: string) => {
+    const confirmed = await showConfirmDialog({
+      title: 'Delete comment?',
+      description: 'Are you sure you want to delete this comment?',
+      confirmText: 'Delete',
+      cancelText: 'Cancel',
+      variant: 'destructive',
+    });
+    if (!confirmed) return;
+    deleteComment(id);
   };
 
   const startEdit = (comment: any) => {

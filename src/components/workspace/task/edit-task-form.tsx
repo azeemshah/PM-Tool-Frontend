@@ -50,6 +50,7 @@ import { LogWorkDialog } from "@/components/issue/LogWorkDialog";
 import { TimeTrackingSummary, TimerButton, TimeLogsList } from "@/components/time-tracking";
 import { getGanttStatusColor } from "@/components/gantt-chart/utils/colorMaps";
 import { getStatusIcon } from "./table/data";
+import { showConfirmDialog } from "@/lib/modal-alert";
 
 const API_PRIORITY_MAP = {
   LOW: "low",
@@ -377,7 +378,14 @@ export default function EditTaskForm({ task, onClose }: { task: TaskType; onClos
 
 
   const handleDeleteAttachment = async (att: AttachmentUI) => {
-    if (!confirm("Are you sure you want to delete this attachment?")) return;
+    const confirmed = await showConfirmDialog({
+      title: "Delete attachment?",
+      description: "Are you sure you want to delete this attachment?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     setDeletingAttachment(att._id || att.url);
     try {

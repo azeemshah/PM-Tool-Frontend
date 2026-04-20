@@ -3,6 +3,7 @@ import { X } from "lucide-react";
 import useTags from "@/hooks/api/use-tags";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
+import { showAlertDialog } from "@/lib/modal-alert";
 
 interface TagInputProps {
   workspaceId: string;
@@ -228,8 +229,11 @@ export const TagInput: React.FC<TagInputProps> = ({
        console.error("Failed to create tag", error);
        // show quick feedback
        try {
-         // friendly alert for now; UI toast can be used later
-         alert("Failed to create tag: " + (error?.message || "unknown error"));
+         void showAlertDialog({
+           title: "Tag creation failed",
+           description: "Failed to create tag: " + (error?.message || "unknown error"),
+           confirmText: "OK",
+         });
        } catch (e) {}
        // Revert
        const latestTags = selectedTagsRef.current;

@@ -26,6 +26,7 @@ import { workspaceApiService } from "@/api/workspace/services";
 import { memberApiService } from "@/api/member/services/memberApiService";
 import { toast } from "@/hooks/use-toast";
 import { Permissions } from "@/constant";
+import { showConfirmDialog } from "@/lib/modal-alert";
 const AllMembers = () => {
   const { user, hasPermission } = useAuthContext();
   const [openPopoverId, setOpenPopoverId] = useState<string | null>(null);
@@ -103,10 +104,16 @@ const AllMembers = () => {
     });
   };
 
-  const handleRemove = (memberId: string) => {
+  const handleRemove = async (memberId: string) => {
     if (!memberId) return;
 
-    const confirmed = window.confirm('Are you sure you want to remove this member from the workspace?');
+    const confirmed = await showConfirmDialog({
+      title: "Remove member?",
+      description: "Are you sure you want to remove this member from the workspace?",
+      confirmText: "Remove",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
     if (!confirmed) return;
 
     removeMember(memberId, {

@@ -23,6 +23,11 @@ export const authApiService = {
     return response.data;
   },
 
+  resendOtp: async (data: { email: string }) => {
+    const response = await API.post("/pm-auth/resend-otp", data);
+    return response.data;
+  },
+
   resetPassword: async (data: { token: string; newPassword: string }) => {
     const response = await API.post("/pm-auth/reset-password", data);
     return response.data;

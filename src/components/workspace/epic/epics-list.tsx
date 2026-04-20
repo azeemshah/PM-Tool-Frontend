@@ -13,6 +13,7 @@ import { issueApiService } from "@/api/issue/services/issueApiService";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { Loader } from "lucide-react";
+import { showConfirmDialog } from "@/lib/modal-alert";
 
 interface Epic {
   _id: string;
@@ -40,8 +41,15 @@ export default function EpicsList({ projectId }: { projectId: string }) {
     mutationFn: issueApiService.deleteEpic,
   });
 
-  const handleDelete = (epicId: string) => {
-    if (!confirm("Are you sure you want to delete this epic?")) return;
+  const handleDelete = async (epicId: string) => {
+    const confirmed = await showConfirmDialog({
+      title: "Delete epic?",
+      description: "Are you sure you want to delete this epic?",
+      confirmText: "Delete",
+      cancelText: "Cancel",
+      variant: "destructive",
+    });
+    if (!confirmed) return;
 
     deleteEpic(epicId, {
       onSuccess: () => {
